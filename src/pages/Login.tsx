@@ -121,9 +121,9 @@ const Login = () => {
                             style={{
                                 padding: '12px',
                                 borderRadius: '6px',
-                                border: '1px solid #333',
-                                background: '#222',
-                                color: 'white',
+                                border: '1px solid var(--border-primary)',
+                                background: 'var(--bg-primary)',
+                                color: 'var(--text-primary)',
                                 fontSize: '1rem',
                                 width: '100%',
                                 boxSizing: 'border-box'

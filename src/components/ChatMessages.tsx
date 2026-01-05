@@ -30,42 +30,38 @@ const ChatMessages = ({
       <div className="chat-width-limiter">
         <div className="chat-messages" ref={messagesListRef}>
           {isFetchingMore && (
-            <div className="loading-more" style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              gap: '0.8rem', 
-              padding: '1rem', 
-              opacity: 0.7 
+            <div className="loading-more" style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.8rem',
+              padding: '1rem',
+              opacity: 0.7
             }}>
               <div className="loading-spinner"></div>
             </div>
           )}
           {isLoading && messages.length === 0 && (
-            <div className="loading-state" style={{ 
-              flex: 1, 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              height: '100dvh', 
-              marginTop: '-100px' 
+            <div className="loading-state" style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100dvh',
+              marginTop: '-100px'
             }}>
               <div className="loading-spinner large"></div>
             </div>
           )}
           {messages.map((msg, idx) => (
             <div key={msg.id || idx} className={`message ${msg.role}`}>
-              <div className="message-avatar">
-                {msg.role === ChatRole.ASSISTANT ? (
-                  <img src="/logo.png" alt="AI" style={{ width: 32, height: 32, borderRadius: '50%' }} />
-                ) : (
-                  user?.avatar ? (
-                    <img src={user.avatar} alt="User" style={{ width: 32, height: 32, borderRadius: '50%' }} />
-                  ) : (
-                    <div className="user-avatar">U</div>
-                  )
-                )}
-              </div>
+              {msg.role !== ChatRole.USER && (
+                <div className="message-avatar">
+                  {msg.role === ChatRole.ASSISTANT ? (
+                    <img src="/logo.png" alt="AI" style={{ width: 32, height: 32, borderRadius: '50%' }} />
+                  ) : null}
+                </div>
+              )}
               <div className="message-bubble">
                 {(msg.role === ChatRole.ASSISTANT && idx === messages.length - 1 && isStreaming) ? (
                   <TypewriterEffect content={msg.content || ''} isStreaming={true} />

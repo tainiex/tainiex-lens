@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { IUser, IChatSession } from '@tainiex/tainiex-shared';
 import { apiClient } from '../utils/apiClient';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface AppSidebarProps {
     user: IUser | null;
@@ -26,6 +27,7 @@ const AppSidebar = ({
     onRenameSession
 }: AppSidebarProps) => {
     // Removed local session state and fetching logic
+    const { theme, toggleTheme } = useTheme();
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
     const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -98,7 +100,7 @@ const AppSidebar = ({
             <div className="sidebar-divider" style={{
                 height: '1px',
                 background: 'rgba(255, 255, 255, 0.08)',
-                margin: '1.5rem 0',
+                margin: '0.5rem 0',
                 flexShrink: 0
             }} />
 
@@ -106,11 +108,12 @@ const AppSidebar = ({
                 <div className="history-label" style={{
                     fontSize: '0.75rem',
                     fontWeight: 600,
-                    color: '#71717a',
+                    color: 'var(--text-tertiary)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                     marginBottom: '0.5rem',
-                    paddingLeft: '0.75rem'
+                    paddingLeft: '0.75rem',
+                    flexShrink: 0
                 }}>
                     Your chats
                 </div>
@@ -119,7 +122,8 @@ const AppSidebar = ({
                     flexDirection: 'column',
                     gap: '0.15rem',
                     overflowY: 'auto',
-                    flex: 1
+                    flex: 1,
+                    minHeight: 0
                 }}>
                     {sessions.map((session) => (
                         <div
@@ -133,10 +137,9 @@ const AppSidebar = ({
                                 borderRadius: '6px',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
-                                background: currentSessionId === session.id ? 'rgba(255, 255, 255, 0.08)' : undefined,
-                                borderLeft: currentSessionId === session.id ? '2px solid #3b82f6' : '2px solid transparent',
                                 position: 'relative',
-                                overflow: 'hidden' // Ensure text doesn't spill if it gets weird, but mostly for ripple if we had one
+                                overflow: 'hidden', // Ensure text doesn't spill if it gets weird, but mostly for ripple if we had one
+                                flexShrink: 0
                             }}
                             onMouseEnter={e => {
                                 const actions = e.currentTarget.querySelector('.session-actions') as HTMLElement;
@@ -163,28 +166,13 @@ const AppSidebar = ({
                                         }
                                     }}
                                     onClick={(e) => e.stopPropagation()}
-                                    style={{
-                                        background: 'transparent',
-                                        border: 'none',
-                                        borderBottom: '1px solid #3b82f6',
-                                        color: 'white',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 500,
-                                        lineHeight: '1.5',
-                                        borderRadius: '0',
-                                        padding: '0',
-                                        margin: '0',
-                                        width: '100%',
-                                        outline: 'none',
-                                        fontFamily: 'inherit'
-                                    }}
+                                    className="history-item-input"
                                 />
                             ) : (
                                 <>
-                                    <span style={{
+                                    <span className="history-item-text" style={{
                                         fontSize: '0.85rem',
                                         fontWeight: 500,
-                                        color: currentSessionId === session.id ? 'white' : '#a1a1aa',
                                         whiteSpace: 'nowrap',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
@@ -201,8 +189,6 @@ const AppSidebar = ({
                                         right: '0.5rem', // Match padding-right of container
                                         top: '50%',
                                         transform: 'translateY(-50%)',
-                                        background: currentSessionId === session.id ? '#202025' : '#19191e',
-                                        boxShadow: `-12px 0 20px ${currentSessionId === session.id ? '#202025' : '#19191e'}`,
                                         zIndex: 10,
                                         height: '100%',
                                         alignItems: 'center',
@@ -229,7 +215,7 @@ const AppSidebar = ({
                                                 handleDelete(session.id);
                                             }}
                                             style={{
-                                                background: 'transparent', border: 'none', color: '#a1a1aa', cursor: 'pointer', padding: '2px',
+                                                background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '2px',
                                                 display: 'flex', alignItems: 'center'
                                             }}
                                         >
@@ -257,7 +243,16 @@ const AppSidebar = ({
                     >
                         {isProfileMenuOpen && (
                             <div className="profile-menu">
-                                <div className="profile-menu-item" onClick={async (e) => {
+                                <div className="profile-menu-item" onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleTheme();
+                                }}>
+                                    <div className="theme-toggle-row">
+                                        <span>{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</span>
+                                        <div className={`theme-switch ${theme === 'dark' ? 'active' : ''}`} />
+                                    </div>
+                                </div>
+                                <div className="profile-menu-item danger" onClick={async (e) => {
                                     e.stopPropagation();
                                     try {
                                         await apiClient.post('/api/auth/logout');
@@ -289,34 +284,36 @@ const AppSidebar = ({
                 )}
             </div>
             {/* Delete Confirmation Modal */}
-            {deleteConfirmationId && (
-                <div className="modal-overlay" onClick={() => setDeleteConfirmationId(null)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <div className="modal-title">Delete Chat</div>
-                        <div className="modal-description">
-                            Are you sure you want to delete this chat? This action cannot be undone.
-                        </div>
-                        <div className="modal-actions">
-                            <button
-                                className="btn-modal btn-cancel"
-                                onClick={() => setDeleteConfirmationId(null)}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="btn-modal btn-delete"
-                                onClick={() => {
-                                    onDeleteSession?.(deleteConfirmationId);
-                                    setDeleteConfirmationId(null);
-                                }}
-                            >
-                                Delete
-                            </button>
+            {
+                deleteConfirmationId && (
+                    <div className="modal-overlay" onClick={() => setDeleteConfirmationId(null)}>
+                        <div className="modal-content" onClick={e => e.stopPropagation()}>
+                            <div className="modal-title">Delete Chat</div>
+                            <div className="modal-description">
+                                Are you sure you want to delete this chat? This action cannot be undone.
+                            </div>
+                            <div className="modal-actions">
+                                <button
+                                    className="btn-modal btn-cancel"
+                                    onClick={() => setDeleteConfirmationId(null)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="btn-modal btn-delete"
+                                    onClick={() => {
+                                        onDeleteSession?.(deleteConfirmationId);
+                                        setDeleteConfirmationId(null);
+                                    }}
+                                >
+                                    Delete
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 

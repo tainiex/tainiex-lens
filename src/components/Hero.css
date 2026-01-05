@@ -20,7 +20,7 @@
     font-size: 3.5rem;
     font-weight: 800;
     line-height: 1.1;
-    background: linear-gradient(to right, #ffffff 40%, #a5b4fc 100%);
+    background: linear-gradient(to right, var(--text-primary) 40%, var(--accent-primary) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;

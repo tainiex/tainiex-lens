@@ -151,6 +151,7 @@ const AppDashboard = () => {
                     />
                     <main className="dashboard-main">
                         <ChatInterface
+                            key={currentSessionId || 'new'}
                             user={user}
                             onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
                             currentSessionId={currentSessionId}

@@ -10,7 +10,7 @@ const Header = () => {
       <div className="container header-content">
         <div className="logo-section">
           <div className="logo-icon">
-            <img src="/logo.png" alt="Tainiex" className="logo-image" style={{ height: '32px', width: 'auto' }} />
+            <img src="/logo.png" alt="Tainiex" className="logo-image" style={{ height: '32px', width: 'auto', borderRadius: '6px' }} />
           </div>
           <Link to="/" className="logo-text" style={{ textDecoration: 'none', color: 'inherit' }}>Tainiex</Link>
         </div>
