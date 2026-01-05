@@ -25,28 +25,13 @@ export function useChatSocket() {
     /**
      * 添加连接错误通知
      */
+    /**
+     * 添加连接错误通知 (Disabled per user request - subtle UI only)
+     */
     const showConnectionError = useCallback((error: ApiError, attempt: number) => {
-        const notificationType = ErrorHandler.getNotificationType(error);
-        const userMessage = ErrorHandler.getUserMessage(error);
-        const suggestedAction = ErrorHandler.getSuggestedAction(error);
-
-        let message = userMessage;
-        if (attempt <= maxReconnectAttempts) {
-            message += ` (重连尝试 ${attempt}/${maxReconnectAttempts})`;
-        }
-
-        addNotification({
-            type: notificationType,
-            title: '连接失败',
-            message,
-            action: suggestedAction ? {
-                label: suggestedAction,
-                onClick: () => window.location.reload()
-            } : undefined,
-            duration: attempt <= maxReconnectAttempts ? 0 : 8000, // 重连期间不自动消失
-            persistent: attempt <= maxReconnectAttempts
-        });
-    }, [addNotification]);
+        // Silent failing - using UI indicator instead
+        console.warn('Connection error (silent):', error.message, 'Attempt:', attempt);
+    }, []);
 
     /**
      * 处理连接状态变化
@@ -120,17 +105,9 @@ export function useChatSocket() {
             if (reason === 'io server disconnect') {
                 // 服务器主动断开，不自动重连
                 updateConnectionState('disconnected', 0);
-                addNotification({
-                    type: 'warning',
-                    title: '连接已断开',
-                    message: '与服务器的连接已断开，请刷新页面重试',
-                    action: {
-                        label: '刷新页面',
-                        onClick: () => window.location.reload()
-                    },
-                    duration: 0,
-                    persistent: true
-                });
+                // 服务器主动断开，不自动重连
+                updateConnectionState('disconnected', 0);
+                // Notification removed per request
             } else {
                 // 网络断开，尝试重连
                 updateConnectionState('reconnecting', attemptRef.current + 1);
@@ -153,12 +130,15 @@ export function useChatSocket() {
             updateConnectionState('connected', 0);
 
             // 成功重连时显示通知
+            // 成功重连时显示通知 (Removed per request)
+            /*
             addNotification({
                 type: 'success',
                 title: '重连成功',
                 message: '已重新建立连接',
                 duration: 3000
             });
+            */
         });
 
         socket.on('reconnect_error', (err) => {
@@ -174,17 +154,9 @@ export function useChatSocket() {
             const apiError = ErrorHandler.parseError(new Error('重连失败'), 'WebSocket reconnection');
             updateConnectionState('failed', maxReconnectAttempts, apiError);
 
-            addNotification({
-                type: 'error',
-                title: '重连失败',
-                message: '无法重新建立连接，请检查网络或刷新页面',
-                action: {
-                    label: '重新连接',
-                    onClick: reconnect
-                },
-                duration: 0,
-                persistent: true
-            });
+            updateConnectionState('failed', maxReconnectAttempts, apiError);
+
+            // Notification removed per request
         });
 
         socketRef.current = socket;
