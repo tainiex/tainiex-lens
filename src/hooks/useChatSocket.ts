@@ -104,9 +104,21 @@ export function useChatSocket() {
 
             // Determine if we should reconnect based on reason
             if (reason === 'io server disconnect') {
-                // Server disconnected us, do not auto-reconnect
+                // Server disconnected us, likely due to auth failure
                 updateConnectionState('disconnected', 0);
-                // Notification removed per request
+
+                console.warn('Socket disconnected by server, attempting auth refresh...');
+                // Try to refresh token and reconnect
+                apiClient.ensureAuth().then((success) => {
+                    if (success) {
+                        console.log('Auth restored, reconnecting socket...');
+                        reconnect();
+                    } else {
+                        console.warn('Auth refresh failed, staying disconnected');
+                    }
+                }).catch((err) => {
+                    console.error('Auth refresh error during socket recovery:', err);
+                });
             } else {
                 // Network disconnect, try to reconnect
                 updateConnectionState('reconnecting', attemptRef.current + 1);
