@@ -1,0 +1,171 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { ChatRole, IChatMessage } from '@tainiex/tainiex-shared';
+import { apiClient } from '../utils/apiClient';
+import { useChatSocket } from './useChatSocket';
+import { useSendMessage } from './useSendMessage';
+
+// Hardcoded fallback list for Production or when API fails
+const SUPPORTED_MODELS = [
+  { name: 'gemini-2.5-pro' },
+  { name: 'gemini-2.5-flash' },
+  { name: 'gemini-3-flash-preview' },
+  { name: 'gemini-3-pro-preview' }
+];
+
+interface UseChatProps {
+  currentSessionId: string | null;
+  setCurrentSessionId: (id: string | null) => void;
+  messages: Partial<IChatMessage>[];
+  setMessages: (messages: Partial<IChatMessage>[] | ((prev: Partial<IChatMessage>[]) => Partial<IChatMessage>[])) => void;
+  selectedModel: string;
+  setIsLoading: (loading: boolean) => void;
+  setIsStreaming: (streaming: boolean) => void;
+  onSessionCreated?: () => void;
+  enableAutoScroll: () => void;
+}
+
+export function useChat({
+  currentSessionId,
+  setCurrentSessionId,
+  messages,
+  setMessages,
+  selectedModel,
+  setIsLoading,
+  setIsStreaming,
+  onSessionCreated,
+  enableAutoScroll
+}: UseChatProps) {
+  const [models, setModels] = useState<(string | { name: string })[]>([]);
+
+  // WebSocket hooks
+  const { socket, isConnected, error: wsError } = useChatSocket();
+  const { sendMessage: wsSendMessage, isStreaming: wsStreaming, streamingText } = useSendMessage(socket);
+
+  // Refs
+  const currentSessionIdRef = useRef(currentSessionId);
+  const shouldSkipHistoryFetchRef = useRef(false);
+
+  useEffect(() => {
+    currentSessionIdRef.current = currentSessionId;
+  }, [currentSessionId]);
+
+  useEffect(() => {
+    setIsStreaming(wsStreaming);
+  }, [wsStreaming, setIsStreaming]);
+
+  // Sync streaming text from WebSocket to messages state
+  useEffect(() => {
+    if (streamingText) {
+      setMessages(prev => {
+        const lastMsg = prev[prev.length - 1];
+        if (lastMsg && lastMsg.role === ChatRole.ASSISTANT) {
+          return prev.map((msg, idx) =>
+            idx === prev.length - 1 ? { ...msg, content: streamingText } : msg
+          );
+        }
+        return prev;
+      });
+    }
+  }, [streamingText, setMessages]);
+
+  // Fetch available models
+  useEffect(() => {
+    apiClient.get('/api/chat/models')
+      .then(res => {
+        if (!res.ok) throw new Error('API not available');
+        return res.json();
+      })
+      .then(data => {
+        const list = Array.isArray(data) ? data : (data.models || []);
+        if (list.length > 0) {
+          setModels(list);
+        } else {
+          setModels(SUPPORTED_MODELS);
+        }
+      })
+      .catch(() => {
+        setModels(SUPPORTED_MODELS);
+      });
+  }, []);
+
+  const handleSend = useCallback(async (inputValue: string) => {
+    if (!inputValue.trim()) return;
+
+    // Reset scroll lock when sending a new message to follow the new response
+    enableAutoScroll();
+
+    const msgToSend = inputValue;
+    setIsLoading(true);
+
+    let sessionId = currentSessionId;
+
+    try {
+      // 1. Create session if it doesn't exist
+      if (!sessionId) {
+        const sessionRes = await apiClient.post('/api/chat/sessions', {
+          title: msgToSend.slice(0, 30) + (msgToSend.length > 30 ? '...' : '')
+        });
+        if (!sessionRes.ok) throw new Error('Failed to create session');
+        const sessionData = await sessionRes.json();
+        sessionId = sessionData.id;
+        // Prevent the upcoming prop update from triggering a history fetch
+        shouldSkipHistoryFetchRef.current = true;
+        setCurrentSessionId(sessionId);
+        onSessionCreated?.();
+      }
+
+      // 2. Add local user message
+      const userMessage: Partial<IChatMessage> = {
+        id: Date.now().toString(),
+        role: ChatRole.USER,
+        content: msgToSend
+      };
+      const assistantMsgId = (Date.now() + 10).toString();
+
+      setMessages(prev => [
+        ...prev.filter(m => m.id !== 'welcome'),
+        userMessage,
+        { id: assistantMsgId, role: ChatRole.ASSISTANT, content: '' }
+      ]);
+
+      // 3. Send message via WebSocket
+      await wsSendMessage({
+        sessionId: sessionId!,
+        content: msgToSend,
+        model: selectedModel
+      });
+
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMsg = "\n[Error: Connection failed]";
+      setMessages(prev => {
+        const lastMsg = prev[prev.length - 1];
+        if (lastMsg && lastMsg.role === ChatRole.ASSISTANT) {
+          return prev.map((msg, idx) =>
+            idx === prev.length - 1 ? { ...msg, content: (msg.content || '') + errorMsg } : msg
+          );
+        }
+        return prev;
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [
+    currentSessionId,
+    setCurrentSessionId,
+    setMessages,
+    selectedModel,
+    setIsLoading,
+    onSessionCreated,
+    wsSendMessage,
+    enableAutoScroll
+  ]);
+
+  return {
+    models,
+    isConnected,
+    wsError,
+    handleSend,
+    shouldSkipHistoryFetchRef
+  };
+}

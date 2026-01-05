@@ -1,0 +1,167 @@
+import { useEffect, useRef } from 'react';
+import { IUser, ChatRole } from '@tainiex/tainiex-shared';
+import { ChatProvider, useChatContext } from '../contexts/ChatContext';
+import { useChat } from '../hooks/useChat';
+import { useMessageHistory } from '../hooks/useMessageHistory';
+import { useChatScroll } from '../hooks/useChatScroll';
+import ChatHeader from './ChatHeader';
+import ChatMessages from './ChatMessages';
+import ChatInput from './ChatInput';
+
+interface ChatInterfaceProps {
+  user: IUser | null;
+  onMenuClick?: () => void;
+  currentSessionId: string | null;
+  setCurrentSessionId: (id: string | null) => void;
+  currentSession?: { id: string; title?: string };
+  onSessionCreated?: () => void;
+}
+
+function ChatInterfaceContent({
+  user,
+  onMenuClick,
+  onSessionCreated
+}: Omit<ChatInterfaceProps, 'currentSessionId' | 'setCurrentSessionId' | 'currentSession'>) {
+  const {
+    currentSessionId,
+    setCurrentSessionId,
+    messages,
+    setMessages,
+    selectedModel,
+    setIsLoading,
+    setIsStreaming,
+    isLoading,
+    isStreaming
+  } = useChatContext();
+
+  // Initialize scroll management first (needs to be available for other hooks)
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const {
+    fetchHistory,
+    isFetchingMore,
+    hasMore,
+    nextCursor,
+    scrollHeightBeforeRef,
+    resetHistory
+  } = useMessageHistory({
+    currentSessionId,
+    setMessages,
+    setIsLoading,
+    scrollContainerRef
+  });
+
+  const {
+    scrollContainerRef: scrollRef,
+    messagesListRef,
+    scrollToBottom,
+    handleScroll,
+    resetScrollState,
+    enableAutoScroll
+  } = useChatScroll({
+    messages,
+    isLoading,
+    isStreaming,
+    isFetchingMore,
+    hasMore,
+    nextCursor,
+    scrollHeightBeforeRef,
+    fetchHistory
+  });
+
+  // Sync the refs
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollContainerRef.current = scrollRef.current;
+    }
+  }, [scrollRef]);
+
+  const {
+    models,
+    isConnected,
+    wsError,
+    handleSend,
+    shouldSkipHistoryFetchRef
+  } = useChat({
+    currentSessionId,
+    setCurrentSessionId,
+    messages,
+    setMessages,
+    selectedModel,
+    setIsLoading,
+    setIsStreaming,
+    onSessionCreated,
+    enableAutoScroll
+  });
+
+  // Fetch message history when session changes
+  useEffect(() => {
+    if (!currentSessionId) {
+      setMessages([{ 
+        id: 'welcome', 
+        role: ChatRole.ASSISTANT, 
+        content: "Hello, I'm your AI assistant. How can I help you today?" 
+      }]);
+      resetHistory();
+      return;
+    }
+
+    if (shouldSkipHistoryFetchRef.current) {
+      shouldSkipHistoryFetchRef.current = false;
+      return;
+    }
+
+    resetScrollState();
+    setMessages([]);
+    setIsLoading(true);
+    fetchHistory();
+  }, [currentSessionId, fetchHistory, resetHistory, resetScrollState, setIsLoading, setMessages, shouldSkipHistoryFetchRef]);
+
+  return (
+    <div className="chat-interface" style={{ position: 'relative' }}>
+      <ChatHeader
+        onMenuClick={onMenuClick}
+        models={models}
+        isConnected={isConnected}
+        wsError={wsError}
+      />
+      <ChatMessages
+        user={user}
+        isFetchingMore={isFetchingMore}
+        scrollContainerRef={scrollRef}
+        messagesListRef={messagesListRef}
+        handleScroll={handleScroll}
+      />
+      <ChatInput
+        onSend={handleSend}
+        isConnected={isConnected}
+        scrollToBottom={scrollToBottom}
+      />
+    </div>
+  );
+}
+
+const ChatInterface = ({
+  user,
+  onMenuClick,
+  currentSessionId,
+  setCurrentSessionId,
+  currentSession,
+  onSessionCreated
+}: ChatInterfaceProps) => {
+  return (
+    <ChatProvider
+      initialSessionId={currentSessionId}
+      initialSession={currentSession}
+      onSessionIdChange={setCurrentSessionId}
+    >
+      <ChatInterfaceContent
+        user={user}
+        onMenuClick={onMenuClick}
+        onSessionCreated={onSessionCreated}
+      />
+    </ChatProvider>
+  );
+};
+
+export default ChatInterface;

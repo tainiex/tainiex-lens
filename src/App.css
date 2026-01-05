@@ -1,0 +1,16 @@
+/* Cleared default styles */
+
+.layout-public {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    position: relative;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    /* Ensure it sits above background if needed, but background is sibling */
+}
