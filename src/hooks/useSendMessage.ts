@@ -16,7 +16,7 @@ interface MessageState {
   error?: string;
   timestamp: number;
   retryCount: number;
-  lastActivity: number; // 添加最后活动时间
+  lastActivity: number; // Last activity timestamp
 }
 
 export function useSendMessage(socket: Socket | null) {
@@ -25,7 +25,7 @@ export function useSendMessage(socket: Socket | null) {
   const [currentMessage, setCurrentMessage] = useState<MessageState | null>(null);
   const { addNotification } = useNotifications();
   const streamTimeoutRef = useRef<NodeJS.Timeout>();
-  const streamMonitorRef = useRef<NodeJS.Timeout>(); // 流监控定时器
+  const streamMonitorRef = useRef<NodeJS.Timeout>(); // Stream monitor timer
   const isStreamingRef = useRef(false);
   const maxRetries = 3;
 
@@ -44,7 +44,7 @@ export function useSendMessage(socket: Socket | null) {
 
     // Provide detailed suggestions for stream timeout errors
     let enhancedMessage = userMessage;
-    if (error.message.includes('Stream timeout') || error.message.includes('流超时')) {
+    if (error.message.includes('Stream timeout')) {
       enhancedMessage += '\n\nSuggestions:\n• AI model is processing a complex request, please wait patiently\n• If the issue persists, try simplifying your question or try again later\n• Check your network connection';
     }
 
@@ -67,7 +67,7 @@ export function useSendMessage(socket: Socket | null) {
   /**
    * Core logic for sending messages
    */
-  const sendMessageCore = useCallback((payload: ChatSendPayload, retryCount: number = 0): Promise<void> => {
+  const sendMessageCore = useCallback((payload: ChatSendPayload, _retryCount: number = 0): Promise<void> => {
     return new Promise((resolve, reject) => {
       if (!socket) {
         const error = ErrorHandler.parseError(new Error('Socket not connected'), 'send message');
@@ -347,7 +347,7 @@ export function useSendMessage(socket: Socket | null) {
    */
   const calculateSmartRetryDelay = useCallback((retryCount: number, error: ApiError): number => {
     // Use shorter retry intervals for stream timeout errors
-    if (error.message.includes('Stream timeout') || error.message.includes('流超时') || error.message.includes('timeout')) {
+    if (error.message.includes('Stream timeout') || error.message.includes('timeout')) {
       // 1st retry: 5s, subsequent: 10s, 15s
       const delays = [5000, 10000, 15000];
       return delays[Math.min(retryCount - 1, delays.length - 1)];

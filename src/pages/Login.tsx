@@ -84,11 +84,13 @@ const Login = () => {
             });
 
             if (res.ok) {
-                const data = await res.json();
-                const token = data.accessToken || data.access_token || data.token;
-                if (token) {
-                    localStorage.setItem('access_token', token);
-                }
+                // Strict Cookie-Only enforcement: Do NOT store token in localStorage
+                // const data = await res.json();
+                // Strict Cookie-Only enforcement: Do NOT store token in localStorage
+                // const token = data.accessToken || data.access_token || data.token;
+                // if (token) {
+                //     localStorage.setItem('access_token', token);
+                // }
                 const params = new URLSearchParams(location.search);
                 const redirect = params.get('redirect');
                 navigate(redirect || '/app');

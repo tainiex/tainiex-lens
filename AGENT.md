@@ -61,7 +61,12 @@
 └─────────────────────────────────────────────┘
 ```
 
-**Session Management**: Cookie-based (backend sets cookies; frontend stores NO token in localStorage or headers. Must use `credentials: 'include'`).
+**Session Management**: Cookie-based only. Backend sets HTTP-only cookies; frontend **MUST NOT** store tokens in localStorage, sessionStorage, or headers. All API requests must use `credentials: 'include'`.
+
+### Testing
+- **Framework**: Vitest + React Testing Library
+- **Command**: `npm test`
+- **Location**: Co-located with source files (e.g., `apiClient.test.ts`)
 
 ### Directory Structure
 

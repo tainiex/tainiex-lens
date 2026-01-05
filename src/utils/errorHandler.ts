@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// 错误类型分类 Schema
+// Error Type Schema
 const ErrorTypeSchema = z.enum(['NETWORK', 'AUTH', 'VALIDATION', 'SERVER', 'UNKNOWN']);
 export type ErrorType = z.infer<typeof ErrorTypeSchema>;
 
@@ -27,19 +27,19 @@ export const isApiError = (error: unknown): error is ApiError => {
 
 export class ErrorHandler {
   /**
-   * 解析错误为标准化的 ApiError
+   * Parse error into standardized ApiError
    */
   static parseError(error: Error | Response | any, context?: string): ApiError {
-    // 处理 Response 对象
+    // Handle Response object
     if (error instanceof Response) {
       const status = error.status;
       const statusText = error.statusText;
-      
+
       switch (status) {
         case 400:
           return {
             type: 'VALIDATION',
-            message: '请求参数错误，请检查输入内容',
+            message: 'Invalid request parameters, please check your input',
             status,
             retryable: false,
             context
@@ -47,7 +47,7 @@ export class ErrorHandler {
         case 401:
           return {
             type: 'AUTH',
-            message: '登录已过期，请重新登录',
+            message: 'Session expired, please login again',
             status,
             retryable: false,
             context
@@ -55,7 +55,7 @@ export class ErrorHandler {
         case 403:
           return {
             type: 'AUTH',
-            message: '权限不足，无法访问此内容',
+            message: 'Access denied, insufficient permissions',
             status,
             retryable: false,
             context
@@ -63,7 +63,7 @@ export class ErrorHandler {
         case 404:
           return {
             type: 'SERVER',
-            message: '请求的资源不存在',
+            message: 'Requested resource not found',
             status,
             retryable: false,
             context
@@ -71,7 +71,7 @@ export class ErrorHandler {
         case 408:
           return {
             type: 'NETWORK',
-            message: '请求超时，请重试',
+            message: 'Request timeout, please retry',
             status,
             retryable: true,
             context
@@ -79,7 +79,7 @@ export class ErrorHandler {
         case 422:
           return {
             type: 'VALIDATION',
-            message: '数据验证失败，请检查输入',
+            message: 'Data validation failed, please check your input',
             status,
             retryable: false,
             context
@@ -87,7 +87,7 @@ export class ErrorHandler {
         case 429:
           return {
             type: 'SERVER',
-            message: '请求过于频繁，请稍后再试',
+            message: 'Too many requests, please try again later',
             status,
             retryable: true,
             context
@@ -98,7 +98,7 @@ export class ErrorHandler {
         case 504:
           return {
             type: 'SERVER',
-            message: '服务器暂时不可用，请稍后重试',
+            message: 'Server temporarily unavailable, please try again later',
             status,
             retryable: true,
             context
@@ -106,7 +106,7 @@ export class ErrorHandler {
         default:
           return {
             type: status >= 500 ? 'SERVER' : 'UNKNOWN',
-            message: `请求失败 (${status}): ${statusText}`,
+            message: `Request failed (${status}): ${statusText}`,
             status,
             retryable: status >= 500,
             context
@@ -114,34 +114,34 @@ export class ErrorHandler {
       }
     }
 
-    // 处理网络错误
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+    // Handle network errors
+    if (error?.name === 'TypeError' && error.message?.includes('fetch')) {
       return {
         type: 'NETWORK',
-        message: '网络连接失败，请检查网络设置',
+        message: 'Network connection failed, please check your settings',
         originalError: error,
         retryable: true,
         context
       };
     }
 
-    // 处理超时错误
-    if (error.name === 'AbortError' || error.message.includes('timeout') || error.message.includes('超时')) {
+    // Handle timeout errors
+    if (error?.name === 'AbortError' || error?.message?.includes('timeout')) {
       return {
         type: 'NETWORK',
-        message: error.message.includes('流超时') ? 
-          'AI模型处理超时，请稍后重试' : 
-          '请求超时，请重试',
+        message: (error.message?.includes('Stream timeout')) ?
+          'AI processing timeout, please try again later' :
+          'Request timeout, please retry',
         originalError: error,
         retryable: true,
         context
       };
     }
 
-    // 处理其他错误
+    // Handle other errors
     return {
       type: 'UNKNOWN',
-      message: error.message || '发生未知错误',
+      message: error.message || 'An unknown error occurred',
       originalError: error,
       retryable: false,
       context
@@ -149,39 +149,39 @@ export class ErrorHandler {
   }
 
   /**
-   * 判断错误是否可重试
+   * Check if error is retryable
    */
   static isRetryable(error: ApiError): boolean {
     return error.retryable;
   }
 
   /**
-   * 获取用户友好的错误消息
+   * Get user-friendly error message
    */
   static getUserMessage(error: ApiError): string {
     return error.message;
   }
 
   /**
-   * 获取错误的具体建议操作
+   * Get suggested action for error
    */
   static getSuggestedAction(error: ApiError): string | null {
     switch (error.type) {
       case 'NETWORK':
-        return '请检查网络连接或稍后重试';
+        return 'Check network or retry later';
       case 'AUTH':
-        return '请重新登录以继续使用';
+        return 'Please login again to continue';
       case 'VALIDATION':
-        return '请检查输入内容是否正确';
+        return 'Please check your input';
       case 'SERVER':
-        return '请稍后重试或联系技术支持';
+        return 'Retry later or contact support';
       default:
         return null;
     }
   }
 
   /**
-   * 记录错误到控制台
+   * Log error to console
    */
   static logError(error: ApiError, context?: string): void {
     const contextInfo = context ? ` [${context}]` : '';
@@ -202,17 +202,17 @@ export class ErrorHandler {
   }
 
   /**
-   * 指数退避重试计算
+   * Calculate exponential backoff delay
    */
   static calculateRetryDelay(attempt: number, baseDelay: number = 1000): number {
-    // 指数退避：baseDelay * 2^(attempt-1) + 随机抖动
+    // Exponential backoff: baseDelay * 2^(attempt-1) + jitter
     const exponentialDelay = baseDelay * Math.pow(2, attempt - 1);
-    const jitter = Math.random() * 0.1 * exponentialDelay; // 10% 随机抖动
-    return Math.min(exponentialDelay + jitter, 30000); // 最大30秒
+    const jitter = Math.random() * 0.1 * exponentialDelay; // 10% jitter
+    return Math.min(exponentialDelay + jitter, 30000); // Max 30s
   }
 
   /**
-   * 获取错误类型对应的通知类型
+   * Get notification type for error
    */
   static getNotificationType(error: ApiError): 'error' | 'warning' | 'info' {
     switch (error.type) {

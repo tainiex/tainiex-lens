@@ -8,9 +8,9 @@ interface NotificationItemProps {
 }
 
 const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onClose }) => {
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
-  // 清除定时器
+  // Clear timer
   const clearTimer = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -18,7 +18,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onClo
     }
   };
 
-  // 鼠标悬停时暂停自动消失
+  // Pause auto-dismiss on hover
   const handleMouseEnter = () => {
     clearTimer();
   };
@@ -56,7 +56,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onClo
   };
 
   return (
-    <div 
+    <div
       className={getTypeClass()}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -66,7 +66,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onClo
       <div className="notification-icon">
         {getIcon()}
       </div>
-      
+
       <div className="notification-content">
         {notification.title && (
           <div className="notification-title">
@@ -77,7 +77,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onClo
           {notification.message}
         </div>
         {notification.action && (
-          <button 
+          <button
             className="notification-action"
             onClick={notification.action.onClick}
           >
@@ -87,10 +87,10 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onClo
       </div>
 
       {notification.dismissible && (
-        <button 
+        <button
           className="notification-close"
           onClick={() => onClose(notification.id)}
-          aria-label="关闭通知"
+          aria-label="Close notification"
         >
           ×
         </button>
@@ -102,7 +102,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onClo
 const NotificationContainer: React.FC = () => {
   const { notifications, removeNotification } = useNotifications();
 
-  // 如果没有通知则不渲染
+  // Don't render if no notifications
   if (notifications.length === 0) {
     return null;
   }

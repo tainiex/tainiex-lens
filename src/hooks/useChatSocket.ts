@@ -23,10 +23,10 @@ export function useChatSocket() {
     const reconnectDelay = 1000;
 
     /**
-     * 添加连接错误通知
+     * Show connection error notification
      */
     /**
-     * 添加连接错误通知 (Disabled per user request - subtle UI only)
+     * Show connection error notification (Disabled per user request - subtle UI only)
      */
     const showConnectionError = useCallback((error: ApiError, attempt: number) => {
         // Silent failing - using UI indicator instead
@@ -34,7 +34,7 @@ export function useChatSocket() {
     }, []);
 
     /**
-     * 处理连接状态变化
+     * Handle connection state changes
      */
     const updateConnectionState = useCallback((status: ConnectionState['status'], attempt: number = 0, error?: ApiError) => {
         attemptRef.current = attempt;
@@ -48,7 +48,7 @@ export function useChatSocket() {
     }, []);
 
     /**
-     * 手动重连
+     * Manual reconnect
      */
     const reconnect = useCallback(() => {
         if (socketRef.current) {
@@ -56,14 +56,14 @@ export function useChatSocket() {
         }
         updateConnectionState('disconnected', 0);
 
-        // 延迟重连以避免频繁重连
+        // Delay reconnection to avoid flapping
         setTimeout(() => {
             setupSocket();
         }, 100);
     }, [updateConnectionState]);
 
     /**
-     * 设置 Socket 连接
+     * Setup Socket Connection
      */
     const setupSocket = useCallback(() => {
         // Socket.IO connection configuration
@@ -87,10 +87,10 @@ export function useChatSocket() {
         const socket = io(wsUrl, {
             transports: ['websocket'],
             withCredentials: true,  // Include cookies for authentication
-            reconnection: false, // 我们自己处理重连
+            reconnection: false, // We handle reconnection manually
             reconnectionDelay: reconnectDelay,
             reconnectionAttempts: maxReconnectAttempts,
-            timeout: 10000 // 10秒连接超时
+            timeout: 10000 // 10s connection timeout
         });
 
         socket.on('connect', () => {
@@ -101,15 +101,13 @@ export function useChatSocket() {
         socket.on('disconnect', (reason) => {
             console.log('WebSocket disconnected:', reason);
 
-            // 判断断开原因决定是否重连
+            // Determine if we should reconnect based on reason
             if (reason === 'io server disconnect') {
-                // 服务器主动断开，不自动重连
-                updateConnectionState('disconnected', 0);
-                // 服务器主动断开，不自动重连
+                // Server disconnected us, do not auto-reconnect
                 updateConnectionState('disconnected', 0);
                 // Notification removed per request
             } else {
-                // 网络断开，尝试重连
+                // Network disconnect, try to reconnect
                 updateConnectionState('reconnecting', attemptRef.current + 1);
             }
         });
@@ -129,13 +127,13 @@ export function useChatSocket() {
             console.log('WebSocket reconnected after', attemptNumber, 'attempts');
             updateConnectionState('connected', 0);
 
-            // 成功重连时显示通知
-            // 成功重连时显示通知 (Removed per request)
+            // Show notification on successful reconnection
+            // (Removed per request)
             /*
             addNotification({
                 type: 'success',
-                title: '重连成功',
-                message: '已重新建立连接',
+                title: 'Reconnected',
+                message: 'Connection exhausted',
                 duration: 3000
             });
             */
@@ -151,9 +149,7 @@ export function useChatSocket() {
 
         socket.on('reconnect_failed', () => {
             console.error('WebSocket reconnection failed after maximum attempts');
-            const apiError = ErrorHandler.parseError(new Error('重连失败'), 'WebSocket reconnection');
-            updateConnectionState('failed', maxReconnectAttempts, apiError);
-
+            const apiError = ErrorHandler.parseError(new Error('Reconnection failed'), 'WebSocket reconnection');
             updateConnectionState('failed', maxReconnectAttempts, apiError);
 
             // Notification removed per request

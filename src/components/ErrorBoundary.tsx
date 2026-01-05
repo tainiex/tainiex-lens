@@ -28,13 +28,13 @@ class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
-    
+
     this.setState({
       error,
       errorInfo
     });
 
-    // 调用外部错误处理函数
+    // Call external error handler
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
@@ -50,53 +50,53 @@ class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      // 如果提供了自定义的 fallback UI
+      // If custom fallback UI provided
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
-      // 默认的错误 UI
+      // Default Error UI
       return (
         <div className="error-boundary">
           <div className="error-boundary-content">
             <div className="error-icon">⚠️</div>
-            <h2 className="error-title">页面出现了问题</h2>
+            <h2 className="error-title">Something went wrong</h2>
             <p className="error-message">
-              抱歉，页面遇到了一些问题。请尝试刷新页面或返回上一页。
+              Sorry, an error occurred. Please try refreshing the page or going back.
             </p>
             <div className="error-actions">
-              <button 
+              <button
                 className="error-button error-button-primary"
                 onClick={this.handleRetry}
               >
-                重试
+                Retry
               </button>
-              <button 
+              <button
                 className="error-button error-button-secondary"
                 onClick={this.handleReload}
               >
-                刷新页面
+                Refresh Page
               </button>
-              <button 
+              <button
                 className="error-button error-button-tertiary"
                 onClick={() => window.history.back()}
               >
-                返回上一页
+                Go Back
               </button>
             </div>
-            
-            {/* 开发环境下显示错误详情 */}
+
+            {/* Show error details in development */}
             {process.env.NODE_ENV === 'development' && this.state.error && (
               <details className="error-details">
-                <summary>错误详情 (开发模式)</summary>
+                <summary>Error Details (Dev Mode)</summary>
                 <div className="error-stack">
-                  <h4>错误信息:</h4>
+                  <h4>Error Message:</h4>
                   <pre>{this.state.error.message}</pre>
-                  <h4>错误堆栈:</h4>
+                  <h4>Stack Trace:</h4>
                   <pre>{this.state.error.stack}</pre>
                   {this.state.errorInfo && (
                     <>
-                      <h4>组件堆栈:</h4>
+                      <h4>Component Stack:</h4>
                       <pre>{this.state.errorInfo.componentStack}</pre>
                     </>
                   )}

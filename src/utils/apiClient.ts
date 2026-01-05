@@ -8,16 +8,17 @@ class ApiClient {
     private refreshSubscribers: ((status: string) => void)[] = [];
 
     /**
-     * 处理错误并记录日志
+     * Handle error and log
      */
-    private handleError(error: Error | Response, context: string): ApiError {
-        const apiError = ErrorHandler.parseError(error, context);
-        ErrorHandler.logError(apiError, context);
+    private handleError(error: Error | Response, context?: string): ApiError {
+        const ctx = context || 'unknown context';
+        const apiError = ErrorHandler.parseError(error, ctx);
+        ErrorHandler.logError(apiError, ctx);
         return apiError;
     }
 
     /**
-     * 指数退避重试
+     * Exponential backoff retry
      */
     private async retryWithBackoff(
         fn: () => Promise<Response>,
@@ -39,7 +40,7 @@ class ApiClient {
                     return response;
                 }
 
-                // 记录重试信息
+                // Log retry info
                 if (attempt < maxAttempts) {
                     const delay = ErrorHandler.calculateRetryDelay(attempt);
                     console.warn(`API request failed (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms:`, apiError.message);
@@ -49,9 +50,9 @@ class ApiClient {
                 lastError = response;
             } catch (error) {
                 lastError = error as Error;
-                
+
                 const apiError = this.handleError(error as Error, context);
-                
+
                 if (!ErrorHandler.isRetryable(apiError)) {
                     throw apiError;
                 }
@@ -64,7 +65,7 @@ class ApiClient {
             }
         }
 
-        // 所有重试都失败了
+        // All retries failed
         if (lastError) {
             throw this.handleError(lastError, context);
         }
@@ -73,7 +74,7 @@ class ApiClient {
     }
 
     /**
-     * 改进的 token 刷新逻辑
+     * Improved token refresh logic
      */
     private async refreshToken(notificationCallback?: (error: ApiError) => void): Promise<boolean> {
         try {
@@ -87,12 +88,12 @@ class ApiClient {
                 return true;
             }
 
-            // 处理刷新失败
+            // Handle refresh failure
             const error = this.handleError(res, 'token refresh');
             if (notificationCallback) {
                 notificationCallback(error);
             }
-            
+
             return false;
         } catch (error) {
             const apiError = this.handleError(error as Error, 'token refresh');
@@ -122,8 +123,11 @@ class ApiClient {
         // If we are already on the login page, don't try to refresh or redirect
         const isLoginPage = window.location.pathname === '/login';
 
-        // 处理 401 认证错误
-        const makeRequest = async (retryAttempt: number = 0): Promise<Response> => {
+        // Handle 401 Auth Error
+        const makeRequest = async (_retryAttempt: number = 0): Promise<Response> => {
+            // Log retryAttempt to silence linter if needed, or remove it
+            // console.debug('Retry attempt:', retryAttempt);
+
             const response = await fetch(url, { ...options, headers, credentials: 'include' });
 
             if (response.status === 401 && !path.includes('/auth/refresh') && !isLoginPage) {
@@ -135,15 +139,15 @@ class ApiClient {
                     if (success) {
                         this.onRefreshFinished(true);
 
-                        // 重试请求，依赖 credentials: 'include'，后端从 cookie 读取认证
+                        // Retry request, relying on credentials: 'include' for cookie
                         return fetch(url, { ...options, headers, credentials: 'include' });
                     } else {
-                        // 刷新失败，通知所有订阅者
+                        // Refresh failed, notify all subscribers
                         this.onRefreshFinished(false);
                         return response;
                     }
                 } else {
-                    // 等待刷新完成
+                    // Wait for refresh to finish
                     return new Promise((resolve) => {
                         this.addRefreshSubscriber((status: string) => {
                             if (!status) {
@@ -159,10 +163,10 @@ class ApiClient {
             return response;
         };
 
-        // 使用重试机制
+        // Use retry mechanism
         return this.retryWithBackoff(
             () => makeRequest(),
-            3, // 最大重试次数
+            3, // Max attempts
             `API request to ${path}`
         );
     }

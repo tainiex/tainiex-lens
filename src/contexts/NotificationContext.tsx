@@ -9,9 +9,9 @@ export interface Notification {
     label: string;
     onClick: () => void;
   };
-  duration?: number; // 自动消失时间，毫秒
+  duration?: number; // Duration in ms
   dismissible?: boolean;
-  persistent?: boolean; // 不自动消失
+  persistent?: boolean; // Do not auto-dismiss
   timestamp: number;
 }
 
@@ -38,9 +38,9 @@ interface NotificationProviderProps {
   maxNotifications?: number;
 }
 
-export const NotificationProvider: React.FC<NotificationProviderProps> = ({ 
-  children, 
-  maxNotifications = 5 
+export const NotificationProvider: React.FC<NotificationProviderProps> = ({
+  children,
+  maxNotifications = 5
 }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
@@ -50,18 +50,18 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
       ...notification,
       id,
       timestamp: Date.now(),
-      dismissible: notification.dismissible !== false, // 默认可关闭
+      dismissible: notification.dismissible !== false, // Default is dismissible
     };
 
     setNotifications(prev => {
       const updated = [newNotification, ...prev];
-      // 限制通知数量
+      // Limit number of notifications
       return updated.slice(0, maxNotifications);
     });
 
-    // 设置自动消失
+    // Setup auto-dismiss
     if (!newNotification.persistent && newNotification.duration !== 0) {
-      const duration = newNotification.duration || 5000; // 默认5秒
+      const duration = newNotification.duration || 5000; // Default 5 seconds
       setTimeout(() => {
         removeNotification(id);
       }, duration);
