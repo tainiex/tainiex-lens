@@ -216,6 +216,39 @@ class ApiClient {
             throw error;
         }
     }
+
+    /**
+     * Manually ensure authentication is valid (triggers refresh if needed)
+     */
+    async ensureAuth(): Promise<boolean> {
+        try {
+            // We use a lightweight protected endpoint to check auth status
+            // If this fails with 401, the internal interceptor will trigger a refresh
+            // We use '/api/auth/me' or similar user profile endpoint if available,
+            // or we can try to refresh directly if we suspect auth is broken.
+            // But 'refreshToken' is private. Let's make a request that forces the logic.
+            // However, simply calling refreshToken directly might be better if we expose it or use a check.
+
+            // Since refreshToken is private and specific to 401 handling,
+            // let's try to verify the session using the refresh endpoint directly if we think we are expired.
+            // Or better, just make a call to 'get /api/auth/check' (or similar)
+            // If that fails, the Interceptor logic in request() will attempt refresh.
+
+            // Assuming /api/auth/session or /api/user/profile exists.
+            // Let's rely on the internal logic: call an endpoint, if 401, it refreshes.
+            // If request() returns 401 ultimately, then we are truly logged out.
+
+            // NOTE: Using a non-existent endpoint might cause 404.
+            // We should use an endpoint that exists. `ChatInterface` fetches models.
+            // Let's use a lightweight one.
+            // If we don't know one, we can just try to refresh token directly since this method is called when we suspect trouble.
+
+            return await this.refreshToken();
+        } catch (error) {
+            console.warn('Manual auth check failed:', error);
+            return false;
+        }
+    }
 }
 
 export const apiClient = new ApiClient();

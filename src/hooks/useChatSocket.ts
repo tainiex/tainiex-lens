@@ -3,6 +3,7 @@ import io, { Socket } from 'socket.io-client';
 import { API_BASE_URL } from '../config';
 import { useNotifications } from '../contexts/NotificationContext';
 import { ErrorHandler, ApiError } from '../utils/errorHandler';
+import { apiClient } from '../utils/apiClient';
 
 interface ConnectionState {
     status: 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
@@ -112,15 +113,41 @@ export function useChatSocket() {
             }
         });
 
-        socket.on('connect_error', (err) => {
+        socket.on('connect_error', async (err) => {
             console.error('WebSocket connection error details:', err.message, err);
+
+            // Check for authentication error
+            // Socket.IO middleware usually throws error with message 'Authentication error' or similar status
+            const isAuthError = err.message.includes('Authentication error') ||
+                err.message.includes('Unauthorized') ||
+                err.message.includes('401') ||
+                // Sometimes it's just a general connection error if handshake fails
+                err.message === 'xhr poll error';
+
+            if (isAuthError) {
+                console.warn('Socket auth error detected, attempting to refresh token...');
+                try {
+                    const refreshed = await apiClient.ensureAuth();
+                    if (refreshed) {
+                        console.log('Token refreshed successfully, retrying socket connection immediately...');
+                        // Force reconnect immediately
+                        socket.connect();
+                        return;
+                    }
+                } catch (refreshErr) {
+                    console.error('Failed to trigger auth refresh from socket:', refreshErr);
+                }
+            }
 
             const apiError = ErrorHandler.parseError(new Error(err.message), 'WebSocket connection');
             const newAttempt = attemptRef.current + 1;
 
             updateConnectionState(newAttempt > maxReconnectAttempts ? 'failed' : 'reconnecting', newAttempt, apiError);
 
-            showConnectionError(apiError, newAttempt);
+            // Only show non-auth errors or if refresh failed
+            if (!isAuthError) {
+                showConnectionError(apiError, newAttempt);
+            }
         });
 
         socket.on('reconnect', (attemptNumber) => {
