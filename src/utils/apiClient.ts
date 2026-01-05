@@ -120,8 +120,7 @@ class ApiClient {
             ...options.headers,
         };
 
-        // If we are already on the login page, don't try to refresh or redirect
-        const isLoginPage = window.location.pathname === '/login';
+
 
         // Handle 401 Auth Error
         const makeRequest = async (_retryAttempt: number = 0): Promise<Response> => {
@@ -130,7 +129,7 @@ class ApiClient {
 
             const response = await fetch(url, { ...options, headers, credentials: 'include' });
 
-            if (response.status === 401 && !path.includes('/auth/refresh') && !isLoginPage) {
+            if (response.status === 401 && !path.includes('/auth/refresh')) {
                 if (!this.isRefreshing) {
                     this.isRefreshing = true;
                     const success = await this.refreshToken(notificationCallback);
