@@ -197,7 +197,7 @@
 }
 
 .message-bubble {
-    background-color: var(--bg-active);
+    background-color: var(--bg-message-ai);
     padding: 0.75rem 1rem;
     border-radius: 12px;
     max-width: 70%;
@@ -206,7 +206,7 @@
 }
 
 .message.user .message-bubble {
-    background-color: var(--bg-secondary);
+    background-color: var(--bg-message-user);
     /* Zinc-800 for user */
     color: var(--text-primary);
 }
@@ -360,6 +360,15 @@
 .history-item .session-actions {
     background: var(--bg-secondary);
     box-shadow: -12px 0 20px var(--bg-secondary);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.history-item:hover .session-actions,
+.session-actions.open {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 /* Markdown Styles in Chat */

@@ -36,7 +36,8 @@ const ChatMessages = ({
               justifyContent: 'center',
               gap: '0.8rem',
               padding: '1rem',
-              opacity: 0.7
+              opacity: 0.7,
+              marginTop: '2rem'
             }}>
               <div className="loading-spinner"></div>
             </div>
@@ -47,21 +48,14 @@ const ChatMessages = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              height: '100dvh',
-              marginTop: '-100px'
+              height: '100dvh'
             }}>
               <div className="loading-spinner large"></div>
             </div>
           )}
           {messages.map((msg, idx) => (
             <div key={msg.id || idx} className={`message ${msg.role}`}>
-              {msg.role !== ChatRole.USER && (
-                <div className="message-avatar">
-                  {msg.role === ChatRole.ASSISTANT ? (
-                    <img src="/logo.png" alt="AI" style={{ width: 32, height: 32, borderRadius: '50%' }} />
-                  ) : null}
-                </div>
-              )}
+
               <div className="message-bubble">
                 {(msg.role === ChatRole.ASSISTANT && idx === messages.length - 1 && isStreaming) ? (
                   <TypewriterEffect content={msg.content || ''} isStreaming={true} />

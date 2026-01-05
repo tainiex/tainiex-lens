@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import './ModelSelector.css';
 
 interface Model {
     name: string;
@@ -38,27 +39,14 @@ const ModelSelector = ({ models, selectedModel, onSelect, disabled }: ModelSelec
     };
 
     return (
-        <div className="model-selector" ref={dropdownRef} style={{ position: 'relative' }}>
+        <div className="model-selector" ref={dropdownRef}>
             <button
                 type="button"
                 className="model-selector-btn"
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 disabled={disabled}
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid #333',
-                    background: '#1a1a1a',
-                    color: '#e0e0e0',
-                    fontSize: '0.85rem',
-                    cursor: disabled ? 'not-allowed' : 'pointer',
-                    transition: 'border-color 0.2s'
-                }}
             >
-                <span style={{ fontWeight: 500 }}>{selectedModel || 'Select Model'}</span>
+                <span>{selectedModel || 'Select Model'}</span>
                 <svg
                     width="12"
                     height="12"
@@ -66,50 +54,22 @@ const ModelSelector = ({ models, selectedModel, onSelect, disabled }: ModelSelec
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
-                    style={{
-                        transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.2s'
-                    }}
+                    className={`model-selector-arrow ${isOpen ? 'open' : ''}`}
                 >
                     <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
             </button>
 
             {isOpen && (
-                <div
-                    className="model-dropdown-menu"
-                    style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        marginTop: '4px',
-                        minWidth: '180px',
-                        background: '#1a1a1a',
-                        border: '1px solid #333',
-                        borderRadius: '6px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                        zIndex: 100,
-                        overflow: 'hidden'
-                    }}
-                >
+                <div className="model-dropdown-menu">
                     {models.map((model, idx) => {
                         const name = getModelName(model);
                         return (
                             <button
                                 key={`${name}-${idx}`}
                                 type="button"
+                                className={`model-option ${name === selectedModel ? 'selected' : ''}`}
                                 onClick={() => handleSelect(name)}
-                                style={{
-                                    display: 'block',
-                                    width: '100%',
-                                    textAlign: 'left',
-                                    padding: '8px 12px',
-                                    background: name === selectedModel ? '#2a2a2a' : 'transparent',
-                                    color: name === selectedModel ? '#fff' : '#aaa',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    fontSize: '0.85rem'
-                                }}
                             >
                                 {name}
                             </button>

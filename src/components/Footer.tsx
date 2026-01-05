@@ -27,7 +27,7 @@ const Footer = () => {
                     </a>
                 </div>
 
-                <p className="copyright">© 2024 Tainiex. All rights reserved.</p>
+                <p className="copyright">© 2026 Tainiex. All rights reserved.</p>
             </div>
         </footer>
     );

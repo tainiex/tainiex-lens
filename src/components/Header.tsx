@@ -12,15 +12,15 @@ const Header = () => {
           <div className="logo-icon">
             <img src="/logo.png" alt="Tainiex" className="logo-image" style={{ height: '32px', width: 'auto', borderRadius: '6px' }} />
           </div>
-          <Link to="/" className="logo-text" style={{ textDecoration: 'none', color: 'inherit' }}>Tainiex</Link>
+          <Link to="/" className="logo-text" style={{ textDecoration: 'none', color: 'inherit' }}>Tainiex AI</Link>
         </div>
 
         <nav className="nav-links">
         </nav>
 
         <div className="header-actions">
-          {location.pathname !== '/login' && location.pathname !== '/' && (
-            <Link to="/login" className="btn btn-primary btn-sm">Sign In</Link>
+          {location.pathname !== '/login' && (
+            <Link to="/login" className="btn btn-adaptive btn-sm">Login</Link>
           )}
         </div>
       </div>

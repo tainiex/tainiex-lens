@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { IUser, IChatSession } from '@tainiex/tainiex-shared';
 import { apiClient } from '../utils/apiClient';
 import { useTheme } from '../contexts/ThemeContext';
@@ -32,22 +33,28 @@ const AppSidebar = ({
     const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
     const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
     const [editTitle, setEditTitle] = useState('');
+    const [activeSessionMenuId, setActiveSessionMenuId] = useState<string | null>(null);
+    const [menuPosition, setMenuPosition] = useState<{ x: number, y: number } | null>(null);
     const profileMenuRef = useRef<HTMLDivElement>(null);
+    const sessionMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
                 setIsProfileMenuOpen(false);
             }
+            if (sessionMenuRef.current && !sessionMenuRef.current.contains(event.target as Node)) {
+                setActiveSessionMenuId(null);
+            }
         };
 
-        if (isProfileMenuOpen) {
+        if (isProfileMenuOpen || activeSessionMenuId) {
             document.addEventListener('mousedown', handleClickOutside);
         }
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isProfileMenuOpen]);
+    }, [isProfileMenuOpen, activeSessionMenuId]);
 
     const handleDelete = (sessionId: string) => {
         setDeleteConfirmationId(sessionId);
@@ -64,7 +71,7 @@ const AppSidebar = ({
             <div className="sidebar-brand">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
                     <img src="/logo.png" alt="Logo" style={{ width: 24, height: 24 }} />
-                    <span>Tainiex</span>
+                    <span>Tainiex AI</span>
                 </div>
                 <button
                     className="mobile-close-btn"
@@ -117,7 +124,7 @@ const AppSidebar = ({
                 }}>
                     Your chats
                 </div>
-                <div className="history-list" style={{
+                <div className="history-list" onScroll={() => setActiveSessionMenuId(null)} style={{
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.15rem',
@@ -138,16 +145,7 @@ const AppSidebar = ({
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
                                 position: 'relative',
-                                overflow: 'hidden', // Ensure text doesn't spill if it gets weird, but mostly for ripple if we had one
                                 flexShrink: 0
-                            }}
-                            onMouseEnter={e => {
-                                const actions = e.currentTarget.querySelector('.session-actions') as HTMLElement;
-                                if (actions) actions.style.opacity = '1';
-                            }}
-                            onMouseLeave={e => {
-                                const actions = e.currentTarget.querySelector('.session-actions') as HTMLElement;
-                                if (actions) actions.style.opacity = '0';
                             }}
                         >
                             {editingSessionId === session.id ? (
@@ -180,13 +178,12 @@ const AppSidebar = ({
                                     }}>
                                         {session.title || 'New chat'}
                                     </span>
-                                    <div className="session-actions" style={{
+                                    <div className={`session-actions ${activeSessionMenuId === session.id ? 'open' : ''}`} style={{
                                         display: 'flex',
                                         gap: '4px',
-                                        opacity: 0,
                                         transition: 'opacity 0.2s',
                                         position: 'absolute',
-                                        right: '0.5rem', // Match padding-right of container
+                                        right: '0',
                                         top: '50%',
                                         transform: 'translateY(-50%)',
                                         zIndex: 10,
@@ -194,33 +191,34 @@ const AppSidebar = ({
                                         alignItems: 'center',
                                         paddingLeft: '4px'
                                     }}>
-                                        <button
-                                            title="Rename"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setEditingSessionId(session.id);
-                                                setEditTitle(session.title || '');
-                                            }}
-                                            style={{
-                                                background: 'transparent', border: 'none', color: '#a1a1aa', cursor: 'pointer', padding: '2px',
-                                                display: 'flex', alignItems: 'center'
-                                            }}
-                                        >
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                                        </button>
-                                        <button
-                                            title="Delete"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDelete(session.id);
-                                            }}
-                                            style={{
-                                                background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '2px',
-                                                display: 'flex', alignItems: 'center'
-                                            }}
-                                        >
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                        </button>
+                                        <div style={{ position: 'relative' }} ref={activeSessionMenuId === session.id ? sessionMenuRef : null}>
+                                            <button
+                                                className="icon-btn"
+                                                onMouseDown={(e) => e.stopPropagation()}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (activeSessionMenuId === session.id) {
+                                                        setActiveSessionMenuId(null);
+                                                        setMenuPosition(null);
+                                                    } else {
+                                                        const rect = e.currentTarget.getBoundingClientRect();
+                                                        setMenuPosition({ x: rect.right, y: rect.top });
+                                                        setActiveSessionMenuId(session.id);
+                                                    }
+                                                }}
+                                                style={{
+                                                    padding: '2px',
+                                                    color: 'var(--text-secondary)',
+                                                    background: 'transparent'
+                                                }}
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <circle cx="12" cy="12" r="1" />
+                                                    <circle cx="12" cy="5" r="1" />
+                                                    <circle cx="12" cy="19" r="1" />
+                                                </svg>
+                                            </button>
+                                        </div>
                                     </div>
                                 </>
                             )}
@@ -283,6 +281,86 @@ const AppSidebar = ({
                     </div>
                 )}
             </div>
+
+            {/* Session Action Menu Portal */}
+            {activeSessionMenuId && menuPosition && createPortal(
+                <div
+                    ref={sessionMenuRef}
+                    className="session-menu-dropdown"
+                    style={{
+                        position: 'fixed',
+                        left: menuPosition.x,
+                        top: menuPosition.y,
+                        background: 'var(--bg-tertiary)',
+                        border: '1px solid var(--border-primary)',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                        zIndex: 9999,
+                        minWidth: '120px',
+                        overflow: 'hidden',
+                        marginLeft: '4px' // Little gap from the button
+                    }}
+                >
+                    <div
+                        className="menu-item"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            const session = sessions.find(s => s.id === activeSessionMenuId);
+                            if (session) {
+                                setEditingSessionId(session.id);
+                                setEditTitle(session.title || '');
+                            }
+                            setActiveSessionMenuId(null);
+                        }}
+                        style={{
+                            padding: '8px 12px',
+                            fontSize: '0.85rem',
+                            color: 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--bg-hover)';
+                            e.currentTarget.style.color = 'var(--text-primary)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = 'var(--text-secondary)';
+                        }}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                        Rename
+                    </div>
+                    <div
+                        className="menu-item danger"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (activeSessionMenuId) handleDelete(activeSessionMenuId);
+                            setActiveSessionMenuId(null);
+                        }}
+                        style={{
+                            padding: '8px 12px',
+                            fontSize: '0.85rem',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        Delete
+                    </div>
+                </div>,
+                document.body
+            )}
+
             {/* Delete Confirmation Modal */}
             {
                 deleteConfirmationId && (
