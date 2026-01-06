@@ -142,4 +142,31 @@ export GITHUB_TOKEN=your_github_pat_here
 
 # Windows CMD
 set GITHUB_TOKEN=your_github_pat_here
+```
+
+---
+
+## UI & UX Standards
+
+### Sidebar Layout
+- **Compactness**: Reduced vertical and horizontal spacing to maximize screen real estate for content.
+- **Menu Order**: Strict ordering: **Chat**, **Notes**, **Memories**, **Tools**.
+- **Scrollbar**: Scrollbars for long lists (e.g., chat history) should be pinned to the right edge/border of the sidebar for clean UI.
+
+### Theme Toggle
+- **Toggle Style**: "Light" and "Dark" labels flank a switch with a white knob.
+- **Colors**:
+    - Dark mode: Dark switch background with indigo glow.
+    - Light mode: Indigo switch background with white knob.
+
+### Layout Consistency
+- **Alignment**: Welcome screen content "Hi [User]" must always align exactly with the left edge of the chat input area's text placeholder across all viewport sizes.
+- **Limiter**: Use `max-width: 900px;` and `margin: 0 auto;` on specific content containers (.chat-messages, .welcome-container, .chat-input-area) rather than a shared wrapper to avoid alignment drift on wide screens.
+
+---
+
+## Routing Standards
+
+### 404 Handling
+- **Approach**: All unmatched routes in the public and root `Routes` blocks are redirected to `/` using the `Navigate` component from `react-router-dom` to ensure a smooth user experience and prevent blank screens.
 
