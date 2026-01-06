@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { IUser, ChatRole } from '@tainiex/tainiex-shared';
+import { IUser } from '@tainiex/tainiex-shared';
 import { ChatProvider, useChatContext } from '../contexts/ChatContext';
 import { useChat } from '../hooks/useChat';
 import { useMessageHistory } from '../hooks/useMessageHistory';
@@ -101,11 +101,7 @@ function ChatInterfaceContent({
   // Fetch message history when session changes
   useEffect(() => {
     if (!currentSessionId) {
-      setMessages([{
-        id: 'welcome',
-        role: ChatRole.ASSISTANT,
-        content: "Hello, I'm your AI assistant. How can I help you today?"
-      }]);
+      setMessages([]);
       resetHistory();
       return;
     }

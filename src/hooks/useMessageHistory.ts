@@ -6,7 +6,7 @@ interface UseMessageHistoryProps {
   currentSessionId: string | null;
   setMessages: (messages: Partial<IChatMessage>[] | ((prev: Partial<IChatMessage>[]) => Partial<IChatMessage>[])) => void;
   setIsLoading: (loading: boolean) => void;
-  scrollContainerRef: React.RefObject<HTMLDivElement>;
+  scrollContainerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export function useMessageHistory({
@@ -18,7 +18,7 @@ export function useMessageHistory({
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
-  
+
   // Refs for immediate synchronous guarding against redundant/recursive calls
   const isLoadingRef = useRef(false);
   const isFetchingMoreRef = useRef(false);

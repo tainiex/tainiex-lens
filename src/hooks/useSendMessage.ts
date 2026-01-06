@@ -24,8 +24,8 @@ export function useSendMessage(socket: Socket | null, onSessionUpdate?: (title?:
   const [streamingText, setStreamingText] = useState('');
   const [currentMessage, setCurrentMessage] = useState<MessageState | null>(null);
   const { addNotification } = useNotifications();
-  const streamTimeoutRef = useRef<NodeJS.Timeout>();
-  const streamMonitorRef = useRef<NodeJS.Timeout>(); // Stream monitor timer
+  const streamTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const streamMonitorRef = useRef<NodeJS.Timeout | undefined>(undefined); // Stream monitor timer
   const isStreamingRef = useRef(false);
   const maxRetries = 3;
 
@@ -449,12 +449,6 @@ export function useSendMessage(socket: Socket | null, onSessionUpdate?: (title?:
    */
   const retryCurrentMessage = useCallback(() => {
     if (currentMessage && currentMessage.hasError && currentMessage.retryCount < maxRetries) {
-      const payload: ChatSendPayload = {
-        content: currentMessage.content,
-        sessionId: '', // This should be passed from outside or context
-        model: ''
-      };
-
       // Needs sessionId from outside, temporarily empty string
       // In practice, this hook should accept sessionId as argument
       console.warn('retryCurrentMessage called without sessionId, please update the hook signature');

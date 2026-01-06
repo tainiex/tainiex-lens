@@ -137,6 +137,42 @@ const AppSidebar = ({
                             key={session.id}
                             className={`history-item ${currentSessionId === session.id ? 'active' : ''}`}
                             onClick={() => onSessionSelect(session.id)}
+                            onContextMenu={(e) => {
+                                // Prevent default context menu on mobile long press
+                                if (window.innerWidth <= 768) {
+                                    e.preventDefault();
+                                }
+                            }}
+                            onTouchStart={(e) => {
+                                // Only for mobile
+                                if (window.innerWidth > 768) return;
+
+                                const touch = e.touches[0];
+                                const currentTarget = e.currentTarget;
+
+                                const timerId = setTimeout(() => {
+                                    if (navigator.vibrate) navigator.vibrate(50);
+
+                                    // Position menu near the touch point or center
+                                    setMenuPosition({
+                                        x: touch.clientX,
+                                        y: touch.clientY
+                                    });
+                                    setActiveSessionMenuId(session.id);
+                                }, 600); // 600ms long press
+
+                                // Store timer ID on the element or a ref map would be better, 
+                                // but for simplicity using a data attribute equivalent or just relying on closure cleanup?
+                                // Closure cleanup via strict touch end handling:
+                                const clearTimer = () => {
+                                    clearTimeout(timerId);
+                                    currentTarget.removeEventListener('touchend', clearTimer);
+                                    currentTarget.removeEventListener('touchmove', clearTimer);
+                                };
+
+                                currentTarget.addEventListener('touchend', clearTimer);
+                                currentTarget.addEventListener('touchmove', clearTimer);
+                            }}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',

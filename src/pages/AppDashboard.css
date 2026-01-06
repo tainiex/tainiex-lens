@@ -15,7 +15,7 @@
     border-right: 1px solid var(--border-primary);
     display: flex;
     flex-direction: column;
-    padding: 1.5rem 1rem 1rem;
+    padding: 1.5rem 1rem 0;
     flex-shrink: 0;
     height: 100%;
     overflow: hidden;
@@ -540,6 +540,69 @@
 }
 
 /* User Profile Menu */
+/* Welcome Screen */
+.welcome-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-start;
+    padding: 0;
+    margin-left: -1rem;
+    /* Pull left to compensate for limiter padding diff */
+    margin-bottom: -1.75rem;
+    /* Aggressively pull down to counteract parent padding (2rem) */
+    margin-top: auto;
+    animation: fadeIn 0.5s ease-out;
+    width: 100%;
+    max-width: 900px;
+}
+
+/* New Chat Button */
+.new-chat-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.new-chat-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+    .new-chat-text {
+        display: none;
+    }
+
+    .new-chat-btn {
+        padding: 6px;
+    }
+}
+
+.welcome-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+    letter-spacing: -0.01em;
+}
+
+.welcome-subtitle {
+    font-size: 1rem;
+    color: var(--text-tertiary);
+    font-weight: 400;
+    margin: 0;
+}
+
 .sidebar-footer {
     flex-shrink: 0;
 }
@@ -556,6 +619,8 @@
     transition: background 0.2s;
     border-radius: 6px;
     padding: 0.5rem;
+    /* Ensure no extra margin interfering with bottom */
+    margin-bottom: 0;
 }
 
 .user-profile:hover {
@@ -681,6 +746,12 @@
 }
 
 @media (max-width: 768px) {
+
+    /* Hide three-dot menu on mobile */
+    .session-actions {
+        display: none !important;
+    }
+
     .app-sidebar {
         position: fixed;
         left: -100%;
@@ -751,6 +822,14 @@
     .chat-input-area {
         padding: 0.6rem 0.8rem;
         gap: 0.5rem;
+    }
+
+    .welcome-container {
+        /* Mobile: Limiter padding 1rem. Input padding 0.8rem.
+           Limiter content at +1rem. Input text at +1rem+0.8rem.
+           Need to push welcome RIGHT by 0.8rem. */
+        margin-left: 0;
+        padding-left: 0.8rem;
     }
 }
 

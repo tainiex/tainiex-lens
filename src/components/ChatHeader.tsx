@@ -69,15 +69,15 @@ const ChatHeader = ({ onMenuClick, isConnected, wsError }: ChatHeaderProps) => {
 
         <button
           type="button"
-          className="icon-btn"
+          className="new-chat-btn"
           title="New Chat"
           onClick={() => setCurrentSessionId(null)}
-          style={{ padding: '6px', borderRadius: '6px' }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
           </svg>
+          <span className="new-chat-text">New chat</span>
         </button>
       </div>
     </div>

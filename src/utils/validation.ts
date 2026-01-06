@@ -19,7 +19,7 @@ export function validateData<T>(
     return schema.parse(data);
   } catch (error) {
     if (error instanceof ZodError) {
-      console.error(`[${context || 'Validation'}]`, error.errors);
+      console.error(`[${context || 'Validation'}]`, error.issues);
       throw new ValidationError(error);
     }
     throw error;

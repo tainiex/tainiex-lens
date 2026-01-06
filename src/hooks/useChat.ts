@@ -28,7 +28,6 @@ interface UseChatProps {
 export function useChat({
   currentSessionId,
   setCurrentSessionId,
-  messages,
   setMessages,
   selectedModel,
   setIsLoading,

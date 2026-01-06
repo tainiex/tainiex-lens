@@ -7,8 +7,8 @@ import { useChatContext } from '../contexts/ChatContext';
 interface ChatMessagesProps {
   user: IUser | null;
   isFetchingMore: boolean;
-  scrollContainerRef: React.RefObject<HTMLDivElement>;
-  messagesListRef: React.RefObject<HTMLDivElement>;
+  scrollContainerRef: React.RefObject<HTMLDivElement | null>;
+  messagesListRef: React.RefObject<HTMLDivElement | null>;
   handleScroll: () => void;
 }
 
@@ -27,8 +27,14 @@ const ChatMessages = ({
       ref={scrollContainerRef}
       onScroll={handleScroll}
     >
-      <div className="chat-width-limiter">
-        <div className="chat-messages" ref={messagesListRef}>
+      <div className="chat-width-limiter" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div className="chat-messages" ref={messagesListRef} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {!isLoading && messages.length === 0 && (
+            <div className="welcome-container">
+              <h1 className="welcome-title">Hi {user?.username}</h1>
+              <p className="welcome-subtitle">Where should we start?</p>
+            </div>
+          )}
           {isFetchingMore && (
             <div className="loading-more" style={{
               display: 'flex',
