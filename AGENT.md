@@ -63,7 +63,7 @@
 ```
 
 **Session Management**: Cookie-based only. Backend sets HTTP-only cookies; frontend **MUST NOT** store tokens in localStorage, sessionStorage, or headers. All API requests must use `credentials: 'include'`.
-- **WebSocket Auth**: Automatically handles authentication errors by triggering token refresh via `apiClient.ensureAuth()` with a retry mechanism and backoff.
+- **WebSocket Auth**: Automatically handles authentication errors by triggering token refresh via `apiClient.ensureAuth()` with a retry mechanism and backoff. Errors are logged to the console; UI toast notifications are disabled.
 
 
 ### Testing

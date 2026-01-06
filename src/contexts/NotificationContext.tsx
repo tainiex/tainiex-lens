@@ -39,36 +39,26 @@ interface NotificationProviderProps {
 }
 
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({
-  children,
-  maxNotifications = 5
+  children
 }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp'>) => {
     const id = `notification_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const newNotification: Notification = {
-      ...notification,
-      id,
-      timestamp: Date.now(),
-      dismissible: notification.dismissible !== false, // Default is dismissible
-    };
 
-    setNotifications(prev => {
-      const updated = [newNotification, ...prev];
-      // Limit number of notifications
-      return updated.slice(0, maxNotifications);
-    });
-
-    // Setup auto-dismiss
-    if (!newNotification.persistent && newNotification.duration !== 0) {
-      const duration = newNotification.duration || 5000; // Default 5 seconds
-      setTimeout(() => {
-        removeNotification(id);
-      }, duration);
+    // Log to console instead of showing UI toast
+    const logPrefix = `[${notification.type.toUpperCase()}] ${notification.title ? notification.title + ': ' : ''}`;
+    if (notification.type === 'error') {
+      console.error(`${logPrefix}${notification.message}`, notification.action ? '(Action available in logs)' : '');
+    } else if (notification.type === 'warning') {
+      console.warn(`${logPrefix}${notification.message}`);
+    } else {
+      console.log(`${logPrefix}${notification.message}`);
     }
 
+    // Return a dummy ID, no state update
     return id;
-  }, [maxNotifications]);
+  }, []);
 
   const removeNotification = useCallback((id: string) => {
     setNotifications(prev => prev.filter(notification => notification.id !== id));

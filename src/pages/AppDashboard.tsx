@@ -4,7 +4,6 @@ import AppSidebar from '../components/AppSidebar';
 import ChatInterface from '../components/ChatInterface';
 import { NotificationProvider } from '../contexts/NotificationContext';
 import ErrorBoundary from '../components/ErrorBoundary';
-import NotificationContainer from '../components/NotificationContainer';
 import './AppDashboard.css';
 import { IUser } from '@tainiex/tainiex-shared';
 import { apiClient } from '../utils/apiClient';
@@ -170,7 +169,6 @@ const AppDashboard = () => {
                         />
                     </main>
                 </div>
-                <NotificationContainer />
             </ErrorBoundary>
         </NotificationProvider>
     );
