@@ -3,6 +3,32 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { useTheme } from '../contexts/ThemeContext';
+
+const Mermaid = ({ chart }: { chart: string }) => {
+    // Basic btoa implementation for mermaid.ink
+    const encodedChart = btoa(unescape(encodeURIComponent(chart)));
+    const src = `https://mermaid.ink/svg/${encodedChart}`;
+
+    return (
+        <div className="mermaid-container" style={{
+            margin: '1.5rem 0',
+            textAlign: 'center',
+            background: 'var(--bg-secondary)',
+            padding: '1rem',
+            borderRadius: '8px',
+            border: '1px solid var(--border-primary)',
+            minHeight: '100px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+        }}>
+            <img src={src} alt="Mermaid Diagram" style={{ maxWidth: '100%', display: 'block' }} />
+        </div>
+    );
+};
 
 interface TypewriterEffectProps {
     content: string;
@@ -11,6 +37,7 @@ interface TypewriterEffectProps {
 
 const TypewriterEffect = ({ content, isStreaming }: TypewriterEffectProps) => {
     const [displayedContent, setDisplayedContent] = useState('');
+    const { theme } = useTheme();
     const indexRef = useRef(0);
     const contentRef = useRef(content);
     const isFirstMount = useRef(true);
@@ -69,10 +96,22 @@ const TypewriterEffect = ({ content, isStreaming }: TypewriterEffectProps) => {
                 components={{
                     code({ inline, className, children, ...props }: any) {
                         const match = /language-(\w+)/.exec(className || '');
+
                         if (!inline && match && match[1] === 'mermaid' && !isStreaming) {
                             return <Mermaid chart={String(children).replace(/\n$/, '')} />;
                         }
-                        return (
+
+                        return !inline && match ? (
+                            <SyntaxHighlighter
+                                style={theme === 'dark' ? vscDarkPlus : oneLight}
+                                language={match[1]}
+                                PreTag="div"
+                                customStyle={{ background: 'transparent', padding: 0, margin: 0 }}
+                                {...props}
+                            >
+                                {String(children).replace(/\n$/, '')}
+                            </SyntaxHighlighter>
+                        ) : (
                             <code className={className} {...props}>
                                 {children}
                             </code>

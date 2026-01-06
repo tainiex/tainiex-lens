@@ -8,12 +8,14 @@ const Header = () => {
   return (
     <header className="header">
       <div className="container header-content">
-        <div className="logo-section">
+        <Link to="/" className="logo-section" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div className="logo-icon">
-            <img src="/logo.png" alt="Tainiex" className="logo-image" style={{ height: '32px', width: 'auto', borderRadius: '6px' }} />
+            <img src="/logo.png" alt="Tainiex" className="logo-image" style={{ height: '48px', width: 'auto', borderRadius: '8px' }} />
           </div>
-          <Link to="/" className="logo-text" style={{ textDecoration: 'none', color: 'inherit' }}>Tainiex AI</Link>
-        </div>
+          <div className="brand-text">
+            <span className="brand-tai">Tai</span><span className="brand-ni">ni</span><span className="brand-ex">EX</span><span className="brand-ai">AI</span>
+          </div>
+        </Link>
 
         <nav className="nav-links">
         </nav>

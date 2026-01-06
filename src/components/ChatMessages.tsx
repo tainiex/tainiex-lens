@@ -3,8 +3,11 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { IUser, ChatRole } from '@tainiex/tainiex-shared';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import TypewriterEffect from './TypewriterEffect';
 import { useChatContext } from '../contexts/ChatContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface ChatMessagesProps {
   user: IUser | null;
@@ -22,6 +25,7 @@ const ChatMessages = ({
   handleScroll
 }: ChatMessagesProps) => {
   const { messages, isLoading, isStreaming } = useChatContext();
+  const { theme } = useTheme();
 
   return (
     <div
@@ -74,7 +78,18 @@ const ChatMessages = ({
                       rehypePlugins={[rehypeKatex]}
                       components={{
                         code({ inline, className, children, ...props }: any) {
-                          return (
+                          const match = /language-(\w+)/.exec(className || '');
+                          return !inline && match ? (
+                            <SyntaxHighlighter
+                              style={theme === 'dark' ? vscDarkPlus : oneLight}
+                              language={match[1]}
+                              PreTag="div"
+                              customStyle={{ background: 'transparent', padding: 0, margin: 0 }}
+                              {...props}
+                            >
+                              {String(children).replace(/\n$/, '')}
+                            </SyntaxHighlighter>
+                          ) : (
                             <code className={className} {...props}>
                               {children}
                             </code>

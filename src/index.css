@@ -326,13 +326,60 @@ a {
 /* Code Blocks */
 .message-bubble pre {
   background-color: var(--bg-active);
-  padding: 0.85rem;
-  /* Slightly tighter */
+  padding: 0.85rem 1rem;
+  /* Slightly wider padding for syntax hl */
   border-radius: 8px;
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: 700px;
   margin: 0.75rem 0;
-  /* Tightened from 1rem */
   border: 1px solid var(--border-primary);
+}
+
+.brand-text {
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+}
+
+.brand-tai,
+.brand-ni {
+  color: #8b5cf6;
+  /* Modern Purple */
+}
+
+.brand-ex {
+  color: #1d4ed8;
+  /* Premium Dark Blue */
+  font-size: 0.7em;
+  /* Even smaller */
+}
+
+.brand-ai {
+  margin-left: 0.4rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.message-bubble pre::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.message-bubble pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.message-bubble pre::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 10px;
+}
+
+.message-bubble pre::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
 }
 
 .message-bubble pre code {

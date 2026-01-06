@@ -70,9 +70,8 @@ const AppSidebar = ({
     return (
         <div className={`app-sidebar ${isOpen ? 'open' : ''}`}>
             <div className="sidebar-brand">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: 1 }}>
-                    <img src="/logo.png" alt="Logo" style={{ width: 24, height: 24 }} />
-                    <span>Tainiex AI</span>
+                <div style={{ display: 'flex', alignItems: 'center', flex: 1, padding: '0.4rem 0', gap: '0.75rem' }}>
+                    <img src="/header-logo.png" alt="Tainiex" style={{ height: '32px', width: 'auto', filter: theme === 'light' ? 'none' : 'brightness(1.2)' }} />
                 </div>
                 <button
                     className="mobile-close-btn"

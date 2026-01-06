@@ -12,8 +12,8 @@
 
 ### Basic Info
 - **Project Name**: Tainiex Lens — frontend for Tainiex AI Memory & Knowledge Infrastructure
-- **Package Name**: `Tainiex AI` (placeholder; product name is Tainiex Lens)
-- **Version**: v0.0.0 (pre-release)
+- **Package Name**: `Tainiex Lens`
+- **Version**: v0.0.2 (header branding renovated)
 - **Positioning**: Production-grade frontend for long-term AI systems; core UI implemented, backend API integration pending
 - **Quick Start**: `npm install` → `npm run dev` (port 2000)
 
@@ -90,7 +90,7 @@ c:\Users\Cselerity\Codes\tainiex-lens\
 │   │   └── AppDashboard.tsx        # Protected dashboard (3-column layout)
 │   │
 │   └── components/
-│       ├── Header.tsx              # Top nav with conditional sign-in
+│       ├── Header.tsx              # Top nav with large logo & text (home only)
 │       ├── Header.css              # Header styles
 │       ├── Hero.tsx                # Hero section with CTA
 │       ├── Hero.css                # Hero styles
