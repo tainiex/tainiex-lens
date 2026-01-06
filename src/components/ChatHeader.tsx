@@ -1,22 +1,19 @@
-import ModelSelector from './ModelSelector';
+/* removed ModelSelector import */
 import { useChatContext } from '../contexts/ChatContext';
 import './ChatHeader.css';
 
 interface ChatHeaderProps {
   onMenuClick?: () => void;
-  models: (string | { name: string })[];
+  /* removed models prop */
   isConnected: boolean;
   wsError: string | null;
 }
 
-const ChatHeader = ({ onMenuClick, models, isConnected, wsError }: ChatHeaderProps) => {
+const ChatHeader = ({ onMenuClick, isConnected, wsError }: ChatHeaderProps) => {
   const {
     currentSessionId,
     currentSession,
-    selectedModel,
-    setSelectedModel,
-    setCurrentSessionId,
-    isLoading
+    setCurrentSessionId
   } = useChatContext();
 
   const sessionTitle = currentSession?.title || (currentSessionId ? 'Chat' : 'New Chat');
@@ -69,14 +66,7 @@ const ChatHeader = ({ onMenuClick, models, isConnected, wsError }: ChatHeaderPro
         <div className="connection-status" title={isConnected ? 'Connected' : (wsError || 'Connecting...')}>
           <div className={`status-dot ${statusClass}`}></div>
         </div>
-        {models.length > 0 && (
-          <ModelSelector
-            models={models}
-            selectedModel={selectedModel}
-            onSelect={setSelectedModel}
-            disabled={isLoading || !isConnected}
-          />
-        )}
+
         <button
           type="button"
           className="icon-btn"

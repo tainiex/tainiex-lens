@@ -30,6 +30,7 @@ function ChatInterfaceContent({
     messages,
     setMessages,
     selectedModel,
+    setSelectedModel,
     setIsLoading,
     setIsStreaming,
     isLoading,
@@ -124,7 +125,6 @@ function ChatInterfaceContent({
     <div className="chat-interface" style={{ position: 'relative' }}>
       <ChatHeader
         onMenuClick={onMenuClick}
-        models={models}
         isConnected={isConnected}
         wsError={wsError}
       />
@@ -139,6 +139,9 @@ function ChatInterfaceContent({
         onSend={handleSend}
         isConnected={isConnected}
         scrollToBottom={scrollToBottom}
+        models={models}
+        selectedModel={selectedModel}
+        onSelectModel={setSelectedModel}
       />
     </div>
   );

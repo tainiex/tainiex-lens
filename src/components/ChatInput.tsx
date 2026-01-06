@@ -1,13 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
+import ModelSelector from './ModelSelector';
 import { useChatContext } from '../contexts/ChatContext';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
   isConnected: boolean;
   scrollToBottom: () => void;
+  models: (string | { name: string })[];
+  selectedModel: string;
+  onSelectModel: (model: string) => void;
 }
 
-const ChatInput = ({ onSend, isConnected, scrollToBottom }: ChatInputProps) => {
+const ChatInput = ({ onSend, isConnected, scrollToBottom, models, selectedModel, onSelectModel }: ChatInputProps) => {
   const { isLoading } = useChatContext();
   const [inputValue, setInputValue] = useState('');
   const [isComposing, setIsComposing] = useState(false);
@@ -44,7 +48,7 @@ const ChatInput = ({ onSend, isConnected, scrollToBottom }: ChatInputProps) => {
 
   return (
     <div className="chat-input-container">
-      <div className="chat-input-area">
+      <div className="chat-input-area" style={{ display: 'flex', flexDirection: 'column' }}>
         <textarea
           ref={textareaRef}
           rows={1}
@@ -59,19 +63,33 @@ const ChatInput = ({ onSend, isConnected, scrollToBottom }: ChatInputProps) => {
             setTimeout(() => scrollToBottom(), 100);
           }}
           disabled={isLoading || !isConnected}
+          style={{ width: '100%', marginBottom: '8px' }}
         />
-        <div className="input-actions" style={{ alignSelf: 'flex-end', marginBottom: '4px' }}>
-          <button 
-            type="button" 
-            className="icon-btn" 
-            onClick={handleSend} 
-            disabled={isLoading || !inputValue.trim() || !isConnected}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
-          </button>
+        <div className="input-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <div className="model-selector-wrapper">
+            {models && models.length > 0 && (
+              <ModelSelector
+                models={models}
+                selectedModel={selectedModel}
+                onSelect={onSelectModel}
+                disabled={isLoading || !isConnected}
+                dropUp={true}
+              />
+            )}
+          </div>
+          <div className="input-actions">
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={handleSend}
+              disabled={isLoading || !inputValue.trim() || !isConnected}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>

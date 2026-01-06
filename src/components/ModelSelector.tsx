@@ -10,9 +10,10 @@ interface ModelSelectorProps {
     selectedModel: string;
     onSelect: (model: string) => void;
     disabled?: boolean;
+    dropUp?: boolean;
 }
 
-const ModelSelector = ({ models, selectedModel, onSelect, disabled }: ModelSelectorProps) => {
+const ModelSelector = ({ models, selectedModel, onSelect, disabled, dropUp }: ModelSelectorProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -61,21 +62,24 @@ const ModelSelector = ({ models, selectedModel, onSelect, disabled }: ModelSelec
             </button>
 
             {isOpen && (
-                <div className="model-dropdown-menu">
-                    {models.map((model, idx) => {
-                        const name = getModelName(model);
-                        return (
-                            <button
-                                key={`${name}-${idx}`}
-                                type="button"
-                                className={`model-option ${name === selectedModel ? 'selected' : ''}`}
-                                onClick={() => handleSelect(name)}
-                            >
-                                {name}
-                            </button>
-                        );
-                    })}
-                </div>
+                <>
+                    <div className="model-selector-backdrop" onClick={() => setIsOpen(false)} />
+                    <div className={`model-dropdown-menu ${dropUp ? 'drop-up' : ''}`}>
+                        {models.map((model, idx) => {
+                            const name = getModelName(model);
+                            return (
+                                <button
+                                    key={`${name}-${idx}`}
+                                    type="button"
+                                    className={`model-option ${name === selectedModel ? 'selected' : ''}`}
+                                    onClick={() => handleSelect(name)}
+                                >
+                                    {name}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </>
             )}
         </div>
     );
