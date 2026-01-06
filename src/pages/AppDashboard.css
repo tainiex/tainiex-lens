@@ -441,6 +441,8 @@
     cursor: pointer;
     transition: all 0.2s;
     height: 32px;
+    max-width: 160px;
+    /* Fixed max width */
 }
 
 .model-selector-trigger:hover:not(:disabled) {
@@ -455,6 +457,9 @@
 
 .selected-model-name {
     font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .model-selector-dropdown {

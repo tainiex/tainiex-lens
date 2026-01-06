@@ -6,7 +6,7 @@ Tainiex Lens is the frontend interface for the Tainiex AI Memory & Knowledge Inf
 
 - **Google Authentication**: Secure login via Google OAuth with backend verification and cookie-based session management.
 - **Adaptive Dashboard**: A responsive, full-height adaptive interface that eliminates unnecessary scrollbars.
-- **Chat Interface**: Real-time chat UI featuring Socket.IO (WebSocket) streaming for instant AI responses.
+- **Chat Interface**: Real-time chat UI featuring Socket.IO (WebSocket) streaming for instant AI responses, with robust auto-reconnection and authentication handling.
 - **Context Panel**: Sidebar panel for displaying relevant context and memories.
 - **Efficient Layout**: Sticky footer design ensuring content fills the screen gracefully on all devices.
 

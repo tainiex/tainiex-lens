@@ -34,6 +34,7 @@
 - ES2020 target
 - ESLint code standards
 - No CSS-in-JS
+- **Improved Reliability**: WebSocket auto-reconnect with auth-refresh logic.
 - Tests not yet added
 
 ---
@@ -62,6 +63,8 @@
 ```
 
 **Session Management**: Cookie-based only. Backend sets HTTP-only cookies; frontend **MUST NOT** store tokens in localStorage, sessionStorage, or headers. All API requests must use `credentials: 'include'`.
+- **WebSocket Auth**: Automatically handles authentication errors by triggering token refresh via `apiClient.ensureAuth()` with a retry mechanism and backoff.
+
 
 ### Testing
 - **Framework**: Vitest + React Testing Library

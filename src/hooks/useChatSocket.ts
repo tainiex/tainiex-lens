@@ -14,6 +14,7 @@ interface ConnectionState {
 export function useChatSocket() {
     const socketRef = useRef<Socket | null>(null);
     const attemptRef = useRef(0);
+    const authRetryCountRef = useRef(0);
     const [connectionState, setConnectionState] = useState<ConnectionState>({
         status: 'disconnected',
         attempt: 0
@@ -97,6 +98,7 @@ export function useChatSocket() {
         socket.on('connect', () => {
             console.log('WebSocket connected successfully, socket ID:', socket.id);
             updateConnectionState('connected', 0);
+            authRetryCountRef.current = 0;
         });
 
         socket.on('disconnect', (reason) => {
@@ -137,18 +139,24 @@ export function useChatSocket() {
                 err.message === 'xhr poll error';
 
             if (isAuthError) {
-                console.warn('Socket auth error detected, attempting to refresh token...');
-                try {
-                    const refreshed = await apiClient.ensureAuth();
-                    if (refreshed) {
-                        console.log('Token refreshed successfully, retrying socket connection immediately...');
-                        // Force reconnect immediately
-                        socket.connect();
-                        return;
+                authRetryCountRef.current++;
+                const delay = Math.min(authRetryCountRef.current * 1000, 10000);
+
+                console.warn(`Socket auth error detected (Attempt ${authRetryCountRef.current}), waiting ${delay}ms to refresh token...`);
+
+                setTimeout(async () => {
+                    try {
+                        const refreshed = await apiClient.ensureAuth();
+                        if (refreshed) {
+                            console.log('Token refreshed successfully, retrying socket connection...');
+                            socket.connect();
+                        }
+                    } catch (refreshErr) {
+                        console.error('Failed to trigger auth refresh from socket:', refreshErr);
                     }
-                } catch (refreshErr) {
-                    console.error('Failed to trigger auth refresh from socket:', refreshErr);
-                }
+                }, delay);
+
+                return;
             }
 
             const apiError = ErrorHandler.parseError(new Error(err.message), 'WebSocket connection');
