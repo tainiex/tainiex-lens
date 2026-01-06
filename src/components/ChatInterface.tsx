@@ -85,7 +85,9 @@ function ChatInterfaceContent({
     isConnected,
     wsError,
     handleSend,
-    shouldSkipHistoryFetchRef
+    shouldSkipHistoryFetchRef,
+    currentMessage,
+    setCurrentMessage
   } = useChat({
     currentSessionId,
     setCurrentSessionId,
@@ -123,8 +125,16 @@ function ChatInterfaceContent({
   useEffect(() => {
     if (isConnected && !wasConnectedRef.current && currentSessionId) {
       console.log('Socket reconnected, performing silent sync of messages...');
-      syncMessages();
+      syncMessages().then(() => {
+        // After successful sync, we need to clear any "phantom" messages 
+        // that were stuck in the useSendMessage state
+        if (typeof setCurrentMessage === 'function') {
+          console.log('Clearing phantom messages from useSendMessage state...');
+          setCurrentMessage(null);
+        }
+      });
     }
+
     wasConnectedRef.current = isConnected;
   }, [isConnected, currentSessionId, syncMessages]);
 

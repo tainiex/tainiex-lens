@@ -279,6 +279,7 @@ export function useSendMessage(socket: Socket | null, onSessionUpdate?: (title?:
     currentMessage,
     retryCurrentMessage,
     cancelCurrentMessage,
+    setCurrentMessage,
     canRetry: currentMessage?.hasError && currentMessage.retryCount < maxRetries
   };
 }

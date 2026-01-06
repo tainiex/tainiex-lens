@@ -40,7 +40,13 @@ export function useChat({
 
   // WebSocket hooks
   const { socket, isConnected, error: wsError } = useChatSocket();
-  const { sendMessage: wsSendMessage, isStreaming: wsStreaming, streamingText } = useSendMessage(socket, onSessionUpdate);
+  const {
+    sendMessage: wsSendMessage,
+    isStreaming: wsStreaming,
+    streamingText,
+    currentMessage,
+    setCurrentMessage
+  } = useSendMessage(socket, onSessionUpdate);
 
   // Refs
   const currentSessionIdRef = useRef(currentSessionId);
@@ -168,6 +174,9 @@ export function useChat({
     isConnected,
     wsError,
     handleSend,
-    shouldSkipHistoryFetchRef
+    shouldSkipHistoryFetchRef,
+    currentMessage,
+    setCurrentMessage
   };
 }
+
