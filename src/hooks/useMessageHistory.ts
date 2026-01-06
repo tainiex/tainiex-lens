@@ -100,16 +100,24 @@ export function useMessageHistory({
       if (res.ok) {
         const data = await res.json();
         if (data.messages) {
-          // Semi-intelligent deduplication: only update if message count or last message content changed
-          // to avoid unnecessary flashes or visual jumps.
           setMessages(prev => {
             const nextMsgs = data.messages;
-            if (JSON.stringify(prev) === JSON.stringify(nextMsgs)) return prev;
+            // When syncing from server, we should generally trust the server's history.
+            // If the last message in our 'prev' is a "temporary" or "streaming" message
+            // and it's NOT in the server's history yet, it means it likely failed 
+            // to persist during the disconnect.
+
+            // To be safe, if we are doing a full sync, we replace everything EXCEPT 
+            // perhaps very recent messages that might still be in flight (though here we trust server info).
+            if (JSON.stringify(prev.filter(m => !m.id?.startsWith('temp_'))) === JSON.stringify(nextMsgs)) {
+              return prev;
+            }
             return nextMsgs;
           });
           setHasMore(data.hasMore);
           setNextCursor(data.nextCursor);
         }
+
 
       }
     } catch (err) {

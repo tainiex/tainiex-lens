@@ -115,19 +115,20 @@ export function useChat({
         onSessionCreated?.();
       }
 
-      // 2. Add local user message
+      // 2. Add local user message (with a temporary ID prefix)
       const userMessage: Partial<IChatMessage> = {
-        id: Date.now().toString(),
+        id: `temp_${Date.now()}`,
         role: ChatRole.USER,
         content: msgToSend
       };
-      const assistantMsgId = (Date.now() + 10).toString();
+      const assistantMsgId = `temp_ai_${Date.now()}`;
 
       setMessages(prev => [
-        ...prev.filter(m => m.id !== 'welcome'),
+        ...prev.filter(m => m.id !== 'welcome' && !m.id?.startsWith('temp_')),
         userMessage,
         { id: assistantMsgId, role: ChatRole.ASSISTANT, content: '' }
       ]);
+
 
       // 3. Send message via WebSocket
       await wsSendMessage({
