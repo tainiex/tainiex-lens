@@ -1,4 +1,5 @@
 import { z, ZodError } from 'zod';
+import { logger } from './logger';
 
 export class ValidationError extends Error {
   public errors: ZodError;
@@ -19,7 +20,7 @@ export function validateData<T>(
     return schema.parse(data);
   } catch (error) {
     if (error instanceof ZodError) {
-      console.error(`[${context || 'Validation'}]`, error.issues);
+      logger.error(`[${context || 'Validation'}]`, error.issues);
       throw new ValidationError(error);
     }
     throw error;

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ChatRole, IChatMessage } from '@tainiex/tainiex-shared';
 import { apiClient } from '../utils/apiClient';
+import { logger } from '../utils/logger';
 import { useChatSocket } from './useChatSocket';
 import { useSendMessage } from './useSendMessage';
 
@@ -144,7 +145,7 @@ export function useChat({
       });
 
     } catch (error) {
-      console.error('Chat error:', error);
+      logger.error('Chat error:', error);
       const errorMsg = "\n[Error: Connection failed]";
       setMessages(prev => {
         const lastMsg = prev[prev.length - 1];

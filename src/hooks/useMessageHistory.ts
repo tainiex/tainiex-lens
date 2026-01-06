@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { IChatMessage } from '@tainiex/tainiex-shared';
 import { apiClient } from '../utils/apiClient';
+import { logger } from '../utils/logger';
 
 interface UseMessageHistoryProps {
   currentSessionId: string | null;
@@ -83,7 +84,7 @@ export function useMessageHistory({
         }
       }
     } catch (err) {
-      console.error('Failed to fetch message history:', err);
+      logger.error('Failed to fetch message history:', err);
     } finally {
       setIsLoading(false);
       isLoadingRef.current = false;
@@ -121,7 +122,7 @@ export function useMessageHistory({
 
       }
     } catch (err) {
-      console.error('Failed to sync messages:', err);
+      logger.error('Failed to sync messages:', err);
     }
   }, [currentSessionId, setMessages]);
 

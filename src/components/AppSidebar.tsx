@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { logger } from '../utils/logger';
 import { createPortal } from 'react-dom';
 import { IUser, IChatSession } from '@tainiex/tainiex-shared';
 import { apiClient } from '../utils/apiClient';
@@ -69,7 +70,7 @@ const AppSidebar = ({
     return (
         <div className={`app-sidebar ${isOpen ? 'open' : ''}`}>
             <div className="sidebar-brand">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: 1 }}>
                     <img src="/logo.png" alt="Logo" style={{ width: 24, height: 24 }} />
                     <span>Tainiex AI</span>
                 </div>
@@ -83,19 +84,19 @@ const AppSidebar = ({
             </div>
 
             <nav className="sidebar-nav">
-                <div className="sidebar-item disabled" title="Coming Soon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>
-                    <span style={{ flex: 1 }}>Memories</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <div className="sidebar-item active" onClick={() => onSessionSelect(null)} style={{ cursor: 'pointer' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                    Chats
                 </div>
                 <div className="sidebar-item disabled" title="Coming Soon">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
                     <span style={{ flex: 1 }}>Notes</span>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                 </div>
-                <div className="sidebar-item active" onClick={() => onSessionSelect(null)} style={{ cursor: 'pointer' }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-                    Chats
+                <div className="sidebar-item disabled" title="Coming Soon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>
+                    <span style={{ flex: 1 }}>Memories</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                 </div>
                 <div className="sidebar-item disabled" title="Coming Soon">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
@@ -107,7 +108,7 @@ const AppSidebar = ({
             <div className="sidebar-divider" style={{
                 height: '1px',
                 background: 'rgba(255, 255, 255, 0.08)',
-                margin: '0.5rem 0',
+                margin: '0.4rem 0.75rem',
                 flexShrink: 0
             }} />
 
@@ -118,7 +119,7 @@ const AppSidebar = ({
                     color: 'var(--text-tertiary)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
-                    marginBottom: '0.5rem',
+                    marginBottom: '0.4rem',
                     paddingLeft: '0.75rem',
                     flexShrink: 0
                 }}>
@@ -176,7 +177,7 @@ const AppSidebar = ({
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                padding: '0.4rem 0.75rem',
+                                padding: '0.35rem 0.6rem',
                                 borderRadius: '6px',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
@@ -282,8 +283,9 @@ const AppSidebar = ({
                                     toggleTheme();
                                 }}>
                                     <div className="theme-toggle-row">
-                                        <span>{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</span>
+                                        <span className={theme === 'light' ? 'active' : ''}>Light</span>
                                         <div className={`theme-switch ${theme === 'dark' ? 'active' : ''}`} />
+                                        <span className={theme === 'dark' ? 'active' : ''}>Dark</span>
                                     </div>
                                 </div>
                                 <div className="profile-menu-item danger" onClick={async (e) => {
@@ -292,7 +294,7 @@ const AppSidebar = ({
                                         await apiClient.post('/api/auth/logout');
                                         window.location.href = '/login';
                                     } catch (e) {
-                                        console.error('Logout failed', e);
+                                        logger.error('Logout failed', e);
                                         window.location.href = '/login';
                                     }
                                 }}>

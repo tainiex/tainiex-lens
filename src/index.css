@@ -20,7 +20,8 @@
   --accent-primary: #4f46e5;
   --accent-glow: rgba(79, 70, 229, 0.5);
 
-  --bg-message-user: rgba(255, 255, 255, 0.08);
+  --bg-message-user: linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(99, 102, 241, 0.12));
+  --bg-message-user-border: rgba(79, 70, 229, 0.25);
   --bg-message-ai: transparent;
 
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
@@ -32,8 +33,8 @@
   /* Zinc-100 */
   --bg-tertiary: #ffffff;
   /* Inputs white on light bg often looks better, or slight off-white */
-  --bg-hover: rgba(0, 0, 0, 0.05);
-  --bg-active: rgba(0, 0, 0, 0.08);
+  --bg-hover: #e8ebf0;
+  --bg-active: #e8ebf0;
 
   --text-primary: #18181b;
   /* Zinc-900 */
@@ -48,7 +49,8 @@
   --accent-primary: #4f46e5;
   --accent-glow: rgba(79, 70, 229, 0.3);
 
-  --bg-message-user: rgba(0, 0, 0, 0.04);
+  --bg-message-user: #f4f4f5;
+  --bg-message-user-border: rgba(0, 0, 0, 0.06);
   --bg-message-ai: transparent;
 }
 
@@ -249,4 +251,144 @@ a {
   100% {
     background-position: -100% 0;
   }
+}
+
+/* Markdown Styles */
+.message-bubble {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.message-bubble p {
+  margin: 0 !important;
+  white-space: pre-wrap;
+}
+
+/* Precise spacing between block elements */
+.message-bubble p+p,
+.message-bubble p+ul,
+.message-bubble p+ol,
+.message-bubble p+pre,
+.message-bubble p+.mermaid-container,
+.message-bubble ul+p,
+.message-bubble ol+p,
+.message-bubble pre+p,
+.message-bubble .mermaid-container+p,
+.message-bubble table+p,
+.message-bubble p+table {
+  margin-top: 0.65em !important;
+}
+
+/* Strong / Bold - Robust for both themes */
+.message-bubble strong,
+.message-bubble b {
+  font-weight: 700;
+  color: var(--text-primary);
+  /* Add a bit of thickness to the font itself for emphasis without relying on color alone */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Lists - Minimal and clean */
+.message-bubble ul,
+.message-bubble ol {
+  margin: 0.4rem 0;
+  padding-left: 1.25rem;
+}
+
+.message-bubble li {
+  margin-bottom: 0.25rem;
+}
+
+.message-bubble li>p {
+  display: inline;
+  margin: 0 !important;
+}
+
+/* Empty paragraphs */
+.message-bubble p:empty {
+  display: none;
+}
+
+/* Inline Code (Quotation) */
+.message-bubble code {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+  padding: 0.15rem 0.3rem;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.9em;
+  border: 1px solid var(--border-primary);
+}
+
+/* Code Blocks */
+.message-bubble pre {
+  background-color: var(--bg-active);
+  padding: 0.85rem;
+  /* Slightly tighter */
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+  /* Tightened from 1rem */
+  border: 1px solid var(--border-primary);
+}
+
+.message-bubble pre code {
+  background-color: transparent !important;
+  color: var(--text-primary) !important;
+  border: none !important;
+  padding: 0 !important;
+  font-size: 0.85rem;
+}
+
+/* Links */
+.message-bubble a {
+  color: var(--accent-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Horizontal Rule */
+.message-bubble hr {
+  border: none;
+  border-top: 1px solid var(--border-primary);
+  margin: 1.5rem 0;
+}
+
+/* Tables */
+.message-bubble table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.25rem 0;
+  font-size: 0.9rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.message-bubble th,
+.message-bubble td {
+  border: 1px solid var(--border-primary);
+  padding: 10px 14px;
+  text-align: left;
+}
+
+.message-bubble th {
+  background-color: var(--bg-hover);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.message-bubble tr:nth-child(even) {
+  background-color: var(--bg-active);
+}
+
+/* Ensure no phantom bars from KaTeX either */
+.katex-display {
+  margin: 1rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
 }

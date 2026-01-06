@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { logger } from '../utils/logger';
 
 export interface Notification {
   id: string;
@@ -49,11 +50,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
     // Log to console instead of showing UI toast
     const logPrefix = `[${notification.type.toUpperCase()}] ${notification.title ? notification.title + ': ' : ''}`;
     if (notification.type === 'error') {
-      console.error(`${logPrefix}${notification.message}`, notification.action ? '(Action available in logs)' : '');
+      logger.error(`${logPrefix}${notification.message}`, notification.action ? '(Action available in logs)' : '');
     } else if (notification.type === 'warning') {
-      console.warn(`${logPrefix}${notification.message}`);
+      logger.warn(`${logPrefix}${notification.message}`);
     } else {
-      console.log(`${logPrefix}${notification.message}`);
+      logger.log(`${logPrefix}${notification.message}`);
     }
 
     // Return a dummy ID, no state update

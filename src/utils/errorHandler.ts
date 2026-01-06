@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { logger } from './logger';
 
 // Error Type Schema
 const ErrorTypeSchema = z.enum(['NETWORK', 'AUTH', 'VALIDATION', 'SERVER', 'UNKNOWN']);
@@ -195,9 +196,9 @@ export class ErrorHandler {
     };
 
     if (error.type === 'SERVER' || error.type === 'NETWORK') {
-      console.warn('API Error:', errorInfo, error.originalError);
+      logger.warn('API Error:', errorInfo, error.originalError);
     } else {
-      console.error('API Error:', errorInfo, error.originalError);
+      logger.error('API Error:', errorInfo, error.originalError);
     }
   }
 

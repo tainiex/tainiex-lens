@@ -1,5 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import { IUser, ChatRole } from '@tainiex/tainiex-shared';
 import TypewriterEffect from './TypewriterEffect';
 import { useChatContext } from '../contexts/ChatContext';
@@ -67,7 +69,44 @@ const ChatMessages = ({
                   <TypewriterEffect content={msg.content || ''} isStreaming={true} />
                 ) : (
                   msg.content ? (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                      components={{
+                        code({ inline, className, children, ...props }: any) {
+                          return (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          );
+                        },
+                        a({ href, children, ...props }: any) {
+                          const handleClick = (e: React.MouseEvent) => {
+                            e.preventDefault();
+                            if (href) {
+                              const confirmed = window.confirm(
+                                `即将跳转到外部网站：\n${href}\n\n是否继续访问？`
+                              );
+                              if (confirmed) {
+                                window.open(href, '_blank', 'noopener,noreferrer');
+                              }
+                            }
+                          };
+                          return (
+                            <a
+                              href={href}
+                              onClick={handleClick}
+                              style={{ cursor: 'pointer' }}
+                              {...props}
+                            >
+                              {children}
+                            </a>
+                          );
+                        }
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
                   ) : (
                     <div className="typing-dots">
                       <div className="typing-dot"></div>

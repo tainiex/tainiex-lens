@@ -7,6 +7,7 @@ Tainiex Lens is the frontend interface for the Tainiex AI Memory & Knowledge Inf
 - **Google Authentication**: Secure login via Google OAuth with backend verification and cookie-based session management.
 - **Adaptive Dashboard**: A responsive, full-height adaptive interface that eliminates unnecessary scrollbars.
 - **Chat Interface**: Real-time chat UI featuring Socket.IO (WebSocket) streaming for instant AI responses, with robust auto-reconnection and authentication handling.
+- **Rich Content Rendering**: Advanced support for Markdown (GFM), LaTeX mathematical formulas (via KaTeX), and Mermaid DSL diagrams.
 - **Context Panel**: Sidebar panel for displaying relevant context and memories.
 - **Efficient Layout**: Sticky footer design ensuring content fills the screen gracefully on all devices.
 
@@ -15,7 +16,7 @@ Tainiex Lens is the frontend interface for the Tainiex AI Memory & Knowledge Inf
 - **Framework**: [React](https://react.dev/) + [Vite](https://vitejs.dev/)
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **Routing**: [React Router](https://reactrouter.com/)
-- **Authentication**: @react-oauth/google
+- **Authentication**: @react-oauth/google (refresh token requests now include `credentials: 'include'` to ensure cookies are sent)
 - **Styling**: Vanilla CSS with CSS Variables
 - **Shared Library**: @tainiex/tainiex-shared (Private GitHub Package)
 

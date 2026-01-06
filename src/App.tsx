@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './components/Header';
 import Background from './components/Background';
 import Footer from './components/Footer';
@@ -26,6 +26,7 @@ function App() {
                     <Route path="/" element={<Home />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/google-oauth" element={<GoogleCallback />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </main>
                 <Footer />

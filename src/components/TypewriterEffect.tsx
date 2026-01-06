@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 
 interface TypewriterEffectProps {
     content: string;
@@ -61,7 +63,46 @@ const TypewriterEffect = ({ content, isStreaming }: TypewriterEffectProps) => {
 
     return (
         <div className={`typewriter-container ${isStreaming ? 'streaming' : ''}`}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+                components={{
+                    code({ inline, className, children, ...props }: any) {
+                        const match = /language-(\w+)/.exec(className || '');
+                        if (!inline && match && match[1] === 'mermaid' && !isStreaming) {
+                            return <Mermaid chart={String(children).replace(/\n$/, '')} />;
+                        }
+                        return (
+                            <code className={className} {...props}>
+                                {children}
+                            </code>
+                        );
+                    },
+                    a({ href, children, ...props }: any) {
+                        const handleClick = (e: React.MouseEvent) => {
+                            e.preventDefault();
+                            if (href) {
+                                const confirmed = window.confirm(
+                                    `即将跳转到外部网站：\n${href}\n\n是否继续访问？`
+                                );
+                                if (confirmed) {
+                                    window.open(href, '_blank', 'noopener,noreferrer');
+                                }
+                            }
+                        };
+                        return (
+                            <a
+                                href={href}
+                                onClick={handleClick}
+                                style={{ cursor: 'pointer' }}
+                                {...props}
+                            >
+                                {children}
+                            </a>
+                        );
+                    }
+                }}
+            >
                 {displayedContent}
             </ReactMarkdown>
         </div>

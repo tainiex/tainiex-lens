@@ -2,6 +2,7 @@ import { API_BASE_URL } from '../config';
 import { ErrorHandler, ApiError } from './errorHandler';
 import { z } from 'zod';
 import { safeJsonParse } from './validation';
+import { logger } from './logger';
 
 class ApiClient {
     private isRefreshing = false;
@@ -43,7 +44,7 @@ class ApiClient {
                 // Log retry info
                 if (attempt < maxAttempts) {
                     const delay = ErrorHandler.calculateRetryDelay(attempt);
-                    console.warn(`API request failed (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms:`, apiError.message);
+                    logger.warn(`API request failed (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms:`, apiError.message);
                     await new Promise(resolve => setTimeout(resolve, delay));
                 }
 
@@ -59,7 +60,7 @@ class ApiClient {
 
                 if (attempt < maxAttempts) {
                     const delay = ErrorHandler.calculateRetryDelay(attempt);
-                    console.warn(`API request failed (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms:`, apiError.message);
+                    logger.warn(`API request failed (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms:`, apiError.message);
                     await new Promise(resolve => setTimeout(resolve, delay));
                 }
             }
@@ -77,16 +78,16 @@ class ApiClient {
      * Improved token refresh logic
      */
     private async refreshToken(notificationCallback?: (error: ApiError) => void): Promise<boolean> {
-        console.log('[AuthDebug] Starting token refresh request...');
+        logger.debug('[AuthDebug] Starting token refresh request...');
         try {
             const refreshUrl = `${API_BASE_URL}/api/auth/refresh`;
-            console.log('[AuthDebug] Fetching:', refreshUrl);
+            logger.debug('[AuthDebug] Fetching:', refreshUrl);
             const res = await fetch(refreshUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
             });
-            console.log('[AuthDebug] Refresh response status:', res.status);
+            logger.debug('[AuthDebug] Refresh response status:', res.status);
 
 
             if (res.ok) {
@@ -101,7 +102,7 @@ class ApiClient {
 
             return false;
         } catch (error) {
-            console.error('[AuthDebug] Refresh exception:', error);
+            logger.error('[AuthDebug] Refresh exception:', error);
             const apiError = this.handleError(error as Error, 'token refresh');
             if (notificationCallback) {
                 notificationCallback(apiError);
@@ -131,18 +132,18 @@ class ApiClient {
         // Handle 401 Auth Error
         const makeRequest = async (_retryAttempt: number = 0): Promise<Response> => {
             // Log retryAttempt to silence linter if needed, or remove it
-            // console.debug('Retry attempt:', retryAttempt);
+            // logger.debug('Retry attempt:', retryAttempt);
 
             const response = await fetch(url, { ...options, headers, credentials: 'include' });
 
             if (response.status === 401 && !path.includes('/auth/refresh')) {
-                console.log('[AuthDebug] 401 detected for:', path, 'isRefreshing:', this.isRefreshing);
+                logger.debug('[AuthDebug] 401 detected for:', path, 'isRefreshing:', this.isRefreshing);
                 if (!this.isRefreshing) {
                     this.isRefreshing = true;
-                    console.log('[AuthDebug] Initiating refresh flow...');
+                    logger.debug('[AuthDebug] Initiating refresh flow...');
                     const success = await this.refreshToken(notificationCallback);
                     this.isRefreshing = false;
-                    console.log('[AuthDebug] Refresh finished. Success:', success);
+                    logger.debug('[AuthDebug] Refresh finished. Success:', success);
 
                     if (success) {
                         this.onRefreshFinished(true);
@@ -156,10 +157,10 @@ class ApiClient {
                     }
                 } else {
                     // Wait for refresh to finish
-                    console.log('[AuthDebug] Waiting for existing refresh...');
+                    logger.debug('[AuthDebug] Waiting for existing refresh...');
                     return new Promise((resolve) => {
                         this.addRefreshSubscriber((status: string) => {
-                            console.log('[AuthDebug] Subscriber notified. Status:', status);
+                            logger.debug('[AuthDebug] Subscriber notified. Status:', status);
                             if (!status) {
                                 resolve(response);
                                 return;
@@ -255,7 +256,7 @@ class ApiClient {
 
             return await this.refreshToken();
         } catch (error) {
-            console.warn('Manual auth check failed:', error);
+            logger.warn('Manual auth check failed:', error);
             return false;
         }
     }

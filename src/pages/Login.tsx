@@ -3,6 +3,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Login.css';
 import { apiClient } from '../utils/apiClient';
+import { logger } from '../utils/logger';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -23,7 +24,7 @@ const Login = () => {
                 }
             } catch (error) {
                 // If checking session fails, just stay on login page
-                console.log('Not logged in');
+                logger.debug('Not logged in');
             }
         };
 
@@ -39,7 +40,7 @@ const Login = () => {
 
                     // Start by trying to parse JSON, as we need to check the body
                     const data = await res.json();
-                    console.log('Login response:', data);
+                    logger.debug('Login response:', data);
 
                     if (res.ok) {
                         // Even if 200 OK, check if invite is required
@@ -61,17 +62,17 @@ const Login = () => {
                             const token = data.signupToken || data.token || data.pendingToken;
                             if (token) setPendingToken(token);
                         } else {
-                            console.error('Backend authentication failed', data);
+                            logger.error('Backend authentication failed', data);
                             setErrorMsg('Authentication failed');
                         }
                     }
                 } catch (error) {
-                    console.error('Login error:', error);
+                    logger.error('Login error:', error);
                     setErrorMsg('Login error occurred');
                 }
             }
         },
-        onError: () => console.log('Login Failed'),
+        onError: () => logger.log('Login Failed'),
     });
 
     const handleSignup = async () => {
@@ -99,7 +100,7 @@ const Login = () => {
                 setErrorMsg(data.message || 'Invalid invite code');
             }
         } catch (error) {
-            console.error('Signup error:', error);
+            logger.error('Signup error:', error);
             setErrorMsg('Signup failed');
         }
     };

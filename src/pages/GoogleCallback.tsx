@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiClient } from '../utils/apiClient';
+import { logger } from '../utils/logger';
 
 const GoogleCallback = () => {
     const [searchParams] = useSearchParams();
@@ -20,7 +21,7 @@ const GoogleCallback = () => {
                         navigate('/login');
                     }
                 } catch (error) {
-                    console.error('Google exchange failed', error);
+                    logger.error('Google exchange failed', error);
                     navigate('/login');
                 }
             };

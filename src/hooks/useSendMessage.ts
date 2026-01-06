@@ -2,11 +2,12 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Socket } from 'socket.io-client';
 import { useNotifications } from '../contexts/NotificationContext';
 import { ErrorHandler, ApiError } from '../utils/errorHandler';
+import { logger } from '../utils/logger';
 
 // Import validation utilities
 import { validateData } from '../utils/validation';
-import { ChatSendPayloadSchema, ChatStreamEventSchema, ChatErrorEventSchema } from '../types/socket';
-import type { ChatSendPayload, ChatStreamEvent, ChatErrorEvent } from '../types/socket';
+import { ChatSendPayloadSchema, ChatStreamEventSchema } from '../types/socket';
+import type { ChatSendPayload, ChatStreamEvent } from '../types/socket';
 
 interface MessageState {
   id: string;
@@ -249,7 +250,7 @@ export function useSendMessage(socket: Socket | null, onSessionUpdate?: (title?:
   const retryCurrentMessage = useCallback(() => {
     if (currentMessage && currentMessage.hasError && currentMessage.retryCount < maxRetries) {
       // Just a placeholder since it requires sessionId/payload
-      console.warn('retryCurrentMessage manually triggered');
+      logger.warn('retryCurrentMessage manually triggered');
     }
   }, [currentMessage]);
 

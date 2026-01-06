@@ -15,7 +15,7 @@
     border-right: 1px solid var(--border-primary);
     display: flex;
     flex-direction: column;
-    padding: 1.5rem 1rem 0;
+    padding: 1rem 0 0;
     flex-shrink: 0;
     height: 100%;
     overflow: hidden;
@@ -25,11 +25,12 @@
 .sidebar-brand {
     font-size: 1.25rem;
     font-weight: 600;
-    margin-bottom: 2rem;
+    margin-bottom: 1.25rem;
+    padding: 0 0.75rem;
     padding-left: 0.75rem;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.6rem;
     flex-shrink: 0;
 }
 
@@ -42,13 +43,14 @@
     flex-direction: column;
     gap: 0.25rem;
     flex-shrink: 0;
+    padding: 0 0.75rem;
 }
 
 .sidebar-item {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.5rem 0.75rem;
+    padding: 0.4rem 0.6rem;
     color: var(--text-secondary);
     text-decoration: none;
     border-radius: 6px;
@@ -127,12 +129,9 @@
 
 .chat-width-limiter {
     width: 100%;
-    max-width: 900px;
-    margin: 0 auto;
     display: flex;
     flex-direction: column;
     padding: 0 2rem 1rem;
-    /* Move gap here from chat-messages if needed or keep structural */
 }
 
 .section-title {
@@ -164,6 +163,9 @@
     gap: 1.5rem;
     padding-bottom: 2rem;
     padding-top: 2rem;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
     /* Overflow handled by parent */
 }
 
@@ -200,15 +202,19 @@
     background-color: var(--bg-message-ai);
     padding: 0.75rem 1rem;
     border-radius: 12px;
-    max-width: 70%;
+    max-width: 100%;
     line-height: 1.5;
     font-size: 0.95rem;
+    width: 100%;
 }
 
 .message.user .message-bubble {
-    background-color: var(--bg-message-user);
-    /* Zinc-800 for user */
+    background: var(--bg-message-user);
     color: var(--text-primary);
+    border: 1px solid var(--bg-message-user-border);
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.08);
+    max-width: 70%;
+    width: fit-content;
 }
 
 .chat-input-area {
@@ -289,6 +295,7 @@
 
 .history-item {
     flex-shrink: 0;
+    margin: 0 0.5rem;
 }
 
 .history-item:hover {
@@ -369,56 +376,6 @@
 .session-actions.open {
     opacity: 1;
     pointer-events: auto;
-}
-
-/* Markdown Styles in Chat */
-.message-bubble p {
-    margin: 0 0 0.5rem 0;
-}
-
-.message-bubble p:last-child {
-    margin-bottom: 0;
-}
-
-.message-bubble code {
-    background-color: rgba(0, 0, 0, 0.2);
-    padding: 2px 4px;
-    border-radius: 4px;
-    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-    font-size: 0.9em;
-}
-
-.message-bubble pre {
-    background-color: rgba(0, 0, 0, 0.3);
-    padding: 1rem;
-    border-radius: 8px;
-    overflow-x: auto;
-    margin: 0.5rem 0;
-}
-
-.message-bubble pre code {
-    background-color: transparent;
-    padding: 0;
-    font-size: 0.9em;
-}
-
-.message-bubble ul,
-.message-bubble ol {
-    margin: 0.5rem 0;
-    padding-left: 1.5rem;
-}
-
-.message-bubble li {
-    margin-bottom: 0.25rem;
-}
-
-.message-bubble a {
-    color: #60a5fa;
-    text-decoration: underline;
-}
-
-.message.user .message-bubble a {
-    color: #dbeafe;
 }
 
 /* Model Selector Styles */
@@ -551,15 +508,15 @@
     flex-direction: column;
     justify-content: flex-end;
     align-items: flex-start;
-    padding: 0;
-    margin-left: -1rem;
-    /* Pull left to compensate for limiter padding diff */
+    padding: 0 1rem;
     margin-bottom: -1.75rem;
     /* Aggressively pull down to counteract parent padding (2rem) */
     margin-top: auto;
     animation: fadeIn 0.5s ease-out;
     width: 100%;
     max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* New Chat Button */
@@ -610,6 +567,7 @@
 
 .sidebar-footer {
     flex-shrink: 0;
+    padding: 0 0.75rem;
 }
 
 .user-profile {
@@ -670,17 +628,30 @@
 .theme-toggle-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    gap: 0.75rem;
     width: 100%;
+}
+
+.theme-toggle-row span {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    transition: color 0.2s;
+}
+
+.theme-toggle-row span.active {
+    color: var(--text-primary);
 }
 
 .theme-switch {
     position: relative;
-    width: 36px;
-    height: 20px;
-    background: var(--bg-hover);
+    width: 44px;
+    height: 22px;
+    background: rgba(0, 0, 0, 0.4);
     border-radius: 20px;
     transition: all 0.3s;
+    cursor: pointer;
     border: 1px solid var(--border-primary);
 }
 
@@ -689,11 +660,12 @@
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    background: var(--text-secondary);
+    background: #ffffff;
     transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
 }
 
 .theme-switch.active {
@@ -702,32 +674,8 @@
 }
 
 .theme-switch.active::after {
-    transform: translateX(16px);
-    background: white;
-}
-
-/* Markdown Table Styles */
-.message-bubble table {
-    border-collapse: collapse;
-    width: 100%;
-    margin: 1rem 0;
-    font-size: 0.9rem;
-}
-
-.message-bubble th,
-.message-bubble td {
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 8px 12px;
-    text-align: left;
-}
-
-.message-bubble th {
-    background-color: var(--bg-hover);
-    font-weight: 600;
-}
-
-.message-bubble tr:nth-child(even) {
-    background-color: var(--bg-active);
+    transform: translateX(22px);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
 }
 
 /* Mobile Responsive Styles */
@@ -830,9 +778,6 @@
     }
 
     .welcome-container {
-        /* Mobile: Limiter padding 1rem. Input padding 0.8rem.
-           Limiter content at +1rem. Input text at +1rem+0.8rem.
-           Need to push welcome RIGHT by 0.8rem. */
         margin-left: 0;
         padding-left: 0.8rem;
     }

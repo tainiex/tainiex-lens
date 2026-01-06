@@ -25,8 +25,9 @@
 | **TypeScript** | 5.9.3 | Strict type checking (strict mode) |
 | **React Router** | 7.11.0 | Client-side routing |
 | **@react-oauth/google** | 0.13.4 | Google OAuth (auth-code flow) |
-| **@tainiex/tainiex-shared** | 0.0.4 | Private shared package (IUser, IChatMessage, ChatRole, etc.) |
+| **@tainiex/tainiex-shared** | 0.0.7 | Private shared package (IUser, IChatMessage, ChatRole, etc.) |
 | **Styling** | Vanilla CSS | Pure CSS with variables; no CSS-in-JS |
+| **Markdown** | `react-markdown` | GFM, LaTeX (KaTeX), and Mermaid support |
 
 **Key Features**
 - React 19 concurrent features
@@ -35,6 +36,7 @@
 - ESLint code standards
 - No CSS-in-JS
 - **Improved Reliability**: WebSocket auto-reconnect with auth-refresh logic.
+- **Rich Content Rendering**: Support for Markdown (GFM), LaTeX (KaTeX), and Mermaid diagrams.
 - Tests not yet added
 
 ---

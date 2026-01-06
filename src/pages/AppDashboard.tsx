@@ -7,6 +7,7 @@ import ErrorBoundary from '../components/ErrorBoundary';
 import './AppDashboard.css';
 import { IUser } from '@tainiex/tainiex-shared';
 import { apiClient } from '../utils/apiClient';
+import { logger } from '../utils/logger';
 
 
 const AppDashboard = () => {
@@ -46,11 +47,11 @@ const AppDashboard = () => {
             const res = await apiClient.get('/api/chat/sessions');
             if (res.ok) {
                 const data = await res.json();
-                console.log('[Debug] Fetched sessions:', data);
+                logger.debug('[Debug] Fetched sessions:', data);
                 setSessions(data.sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
             }
         } catch (error) {
-            console.error('Failed to fetch chat sessions:', error);
+            logger.error('Failed to fetch chat sessions:', error);
         } finally {
             setIsLoadingSessions(false);
         }
@@ -100,12 +101,12 @@ const AppDashboard = () => {
             } else {
                 // Determine if we should revert navigation or show error?
                 // For simplicity, just log error. Ideally show a toast.
-                console.error('Failed to delete session (API error)');
+                logger.error('Failed to delete session (API error)');
                 // If it failed and we navigated away, the user just finds themselves on the new chat screen. 
                 // This is an acceptable failure mode compared to being stuck on a broken chat.
             }
         } catch (error) {
-            console.error('Failed to delete session', error);
+            logger.error('Failed to delete session', error);
         }
     };
 
@@ -120,7 +121,7 @@ const AppDashboard = () => {
                 setSessions(prev => prev.map(s => s.id === id ? { ...s, title: newTitle } : s));
             }
         } catch (error) {
-            console.error('Failed to rename session', error);
+            logger.error('Failed to rename session', error);
         }
     };
 

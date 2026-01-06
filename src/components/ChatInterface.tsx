@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { logger } from '../utils/logger';
 import { IUser } from '@tainiex/tainiex-shared';
 import { ChatProvider, useChatContext } from '../contexts/ChatContext';
 import { useChat } from '../hooks/useChat';
@@ -86,7 +87,6 @@ function ChatInterfaceContent({
     wsError,
     handleSend,
     shouldSkipHistoryFetchRef,
-    currentMessage,
     setCurrentMessage
   } = useChat({
     currentSessionId,
@@ -124,12 +124,12 @@ function ChatInterfaceContent({
   const wasConnectedRef = useRef(isConnected);
   useEffect(() => {
     if (isConnected && !wasConnectedRef.current && currentSessionId) {
-      console.log('Socket reconnected, performing silent sync of messages...');
+      logger.debug('Socket reconnected, performing silent sync of messages...');
       syncMessages().then(() => {
         // After successful sync, we need to clear any "phantom" messages 
         // that were stuck in the useSendMessage state
         if (typeof setCurrentMessage === 'function') {
-          console.log('Clearing phantom messages from useSendMessage state...');
+          logger.debug('Clearing phantom messages from useSendMessage state...');
           setCurrentMessage(null);
         }
       });
