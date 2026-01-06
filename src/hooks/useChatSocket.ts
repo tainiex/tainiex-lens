@@ -15,23 +15,22 @@ export function useChatSocket() {
     const socketRef = useRef<Socket | null>(null);
     const attemptRef = useRef(0);
     const authRetryCountRef = useRef(0);
+    const lastReconnectTimeRef = useRef(0);
+
     const [connectionState, setConnectionState] = useState<ConnectionState>({
         status: 'disconnected',
         attempt: 0
     });
     const [error, setError] = useState<string | null>(null);
     const { addNotification } = useNotifications();
-    const maxReconnectAttempts = 5;
-    const reconnectDelay = 1000;
 
-    /**
-     * Show connection error notification
-     */
+    const maxReconnectAttempts = 10;
+    const reconnectDelay = 2000;
+
     /**
      * Show connection error notification (Disabled per user request - subtle UI only)
      */
     const showConnectionError = useCallback((error: ApiError, attempt: number) => {
-        // Silent failing - using UI indicator instead
         console.warn('Connection error (silent):', error.message, 'Attempt:', attempt);
     }, []);
 
@@ -50,98 +49,70 @@ export function useChatSocket() {
     }, []);
 
     /**
-     * Manual reconnect
-     */
-    const reconnect = useCallback(() => {
-        if (socketRef.current) {
-            socketRef.current.disconnect();
-        }
-        updateConnectionState('disconnected', 0);
-
-        // Delay reconnection to avoid flapping
-        setTimeout(() => {
-            setupSocket();
-        }, 100);
-    }, [updateConnectionState]);
-
-    /**
      * Setup Socket Connection
      */
     const setupSocket = useCallback(() => {
         // Socket.IO connection configuration
-        // Backend uses namespace: '/api/chat'
         let wsUrl: string;
 
         if (import.meta.env.DEV) {
-            // Development: use relative path to leverage Vite proxy (/api/chat)
             wsUrl = '/api/chat';
         } else {
-            // Production: use environment variable or current origin
             const baseUrl = API_BASE_URL || window.location.origin;
             wsUrl = baseUrl.startsWith('http') ? `${baseUrl}/api/chat` : `${window.location.origin}${baseUrl}/api/chat`;
         }
 
         console.log('Connecting to Socket.IO (Cookie-based):', wsUrl);
-
         updateConnectionState('connecting');
 
-        // Connect to Socket.IO - force websocket transport to avoid polling proxy issues
         const socket = io(wsUrl, {
             transports: ['websocket'],
-            withCredentials: true,  // Include cookies for authentication
-            reconnection: false, // We handle reconnection manually
+            withCredentials: true,
+            reconnection: true,
             reconnectionDelay: reconnectDelay,
+            reconnectionDelayMax: 10000,
             reconnectionAttempts: maxReconnectAttempts,
-            timeout: 10000 // 10s connection timeout
+            timeout: 20000,
+            autoConnect: true
         });
 
         socket.on('connect', () => {
             console.log('WebSocket connected successfully, socket ID:', socket.id);
             updateConnectionState('connected', 0);
             authRetryCountRef.current = 0;
+            attemptRef.current = 0;
         });
 
         socket.on('disconnect', (reason) => {
             console.log('WebSocket disconnected:', reason);
 
-            // Determine if we should reconnect based on reason
             if (reason === 'io server disconnect') {
-                // Server disconnected us, likely due to auth failure
                 updateConnectionState('disconnected', 0);
-
                 console.warn('Socket disconnected by server, attempting auth refresh...');
-                // Try to refresh token and reconnect
                 apiClient.ensureAuth().then((success) => {
                     if (success) {
                         console.log('Auth restored, reconnecting socket...');
-                        reconnect();
-                    } else {
-                        console.warn('Auth refresh failed, staying disconnected');
+                        socket.connect();
                     }
-                }).catch((err) => {
-                    console.error('Auth refresh error during socket recovery:', err);
-                });
+                }).catch(err => console.error('Auth refresh error:', err));
+            } else if (reason === 'io client disconnect') {
+                updateConnectionState('disconnected', 0);
             } else {
-                // Network disconnect, try to reconnect
-                updateConnectionState('reconnecting', attemptRef.current + 1);
+                updateConnectionState('reconnecting', attemptRef.current);
             }
         });
 
         socket.on('connect_error', async (err) => {
             console.error('WebSocket connection error details:', err.message, err);
 
-            // Check for authentication error
-            // Socket.IO middleware usually throws error with message 'Authentication error' or similar status
             const isAuthError = err.message.includes('Authentication error') ||
                 err.message.includes('Unauthorized') ||
                 err.message.includes('401') ||
-                // Sometimes it's just a general connection error if handshake fails
                 err.message === 'xhr poll error';
 
             if (isAuthError) {
                 authRetryCountRef.current++;
                 const delay = Math.min(authRetryCountRef.current * 1000, 10000);
-
                 console.warn(`Socket auth error detected (Attempt ${authRetryCountRef.current}), waiting ${delay}ms to refresh token...`);
 
                 setTimeout(async () => {
@@ -155,81 +126,76 @@ export function useChatSocket() {
                         console.error('Failed to trigger auth refresh from socket:', refreshErr);
                     }
                 }, delay);
-
                 return;
             }
 
             const apiError = ErrorHandler.parseError(new Error(err.message), 'WebSocket connection');
             const newAttempt = attemptRef.current + 1;
-
             updateConnectionState(newAttempt > maxReconnectAttempts ? 'failed' : 'reconnecting', newAttempt, apiError);
 
-            // Only show non-auth errors or if refresh failed
             if (!isAuthError) {
                 showConnectionError(apiError, newAttempt);
             }
         });
 
-        socket.on('reconnect', (attemptNumber) => {
-            console.log('WebSocket reconnected after', attemptNumber, 'attempts');
-            updateConnectionState('connected', 0);
-
-            // Show notification on successful reconnection
-            // (Removed per request)
-            /*
-            addNotification({
-                type: 'success',
-                title: 'Reconnected',
-                message: 'Connection exhausted',
-                duration: 3000
-            });
-            */
-        });
-
-        socket.on('reconnect_error', (err) => {
-            console.error('WebSocket reconnection error:', err.message);
-            const apiError = ErrorHandler.parseError(new Error(err.message), 'WebSocket reconnection');
-            const newAttempt = attemptRef.current + 1;
-
-            updateConnectionState(newAttempt > maxReconnectAttempts ? 'failed' : 'reconnecting', newAttempt, apiError);
+        socket.on('reconnect_attempt', (attempt) => {
+            console.log('WebSocket reconnection attempt:', attempt);
+            updateConnectionState('reconnecting', attempt);
         });
 
         socket.on('reconnect_failed', () => {
             console.error('WebSocket reconnection failed after maximum attempts');
             const apiError = ErrorHandler.parseError(new Error('Reconnection failed'), 'WebSocket reconnection');
             updateConnectionState('failed', maxReconnectAttempts, apiError);
+        });
 
-            // Notification removed per request
+        socket.on('reconnect_error', (err) => {
+            console.error('WebSocket reconnection error:', err.message);
         });
 
         socketRef.current = socket;
-
         return socket;
-    }, [updateConnectionState, showConnectionError, addNotification, reconnect]);
+    }, [updateConnectionState, showConnectionError]);
+
+    /**
+     * Manual reconnect
+     */
+    const reconnect = useCallback(() => {
+        const now = Date.now();
+        if (now - lastReconnectTimeRef.current < 2000) {
+            console.log('Reconnection throttled...');
+            return;
+        }
+        lastReconnectTimeRef.current = now;
+
+        if (socketRef.current) {
+            if (socketRef.current.connected) {
+                socketRef.current.disconnect();
+            }
+            updateConnectionState('connecting', 0);
+            socketRef.current.connect();
+        } else {
+            setupSocket();
+        }
+    }, [updateConnectionState, setupSocket]);
 
     useEffect(() => {
-        const socket = setupSocket();
+        setupSocket();
 
-        // Handle visibility change to reconnect when app comes back to foreground (mobile unlock)
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                const currentStatus = connectionState.status;
-                console.log('App successfully became visible. Socket status:', currentStatus);
-                // Only reconnect if we are disconnected or failed, and not manually disconnected (implied by this not being tracked, but good enough)
-                if (currentStatus === 'disconnected' || currentStatus === 'failed') {
-                    console.log('Triggering reconnection on visibility change...');
-                    reconnect();
-                } else if (!socket?.connected) {
-                    console.log('Socket object says disconnected. Reconnecting...');
+                const socket = socketRef.current;
+                console.log('App visible. Socket status:', socket?.connected ? 'connected' : 'disconnected');
+
+                if (socket && !socket.connected) {
                     reconnect();
                 }
             }
         };
 
-        // Also handle window focus as a backup
         const handleFocus = () => {
-            if (!socket?.connected) {
-                console.log('Window focused and socket disconnected. Reconnecting...');
+            const socket = socketRef.current;
+            if (socket && !socket.connected) {
                 reconnect();
             }
         };
@@ -240,8 +206,9 @@ export function useChatSocket() {
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('focus', handleFocus);
-            if (socket) {
-                socket.disconnect();
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+                socketRef.current = null;
             }
         };
     }, [setupSocket, reconnect]);
