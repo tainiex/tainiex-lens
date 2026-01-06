@@ -100,10 +100,17 @@ export function useMessageHistory({
       if (res.ok) {
         const data = await res.json();
         if (data.messages) {
-          setMessages(data.messages);
+          // Semi-intelligent deduplication: only update if message count or last message content changed
+          // to avoid unnecessary flashes or visual jumps.
+          setMessages(prev => {
+            const nextMsgs = data.messages;
+            if (JSON.stringify(prev) === JSON.stringify(nextMsgs)) return prev;
+            return nextMsgs;
+          });
           setHasMore(data.hasMore);
           setNextCursor(data.nextCursor);
         }
+
       }
     } catch (err) {
       console.error('Failed to sync messages:', err);
