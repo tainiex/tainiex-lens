@@ -92,7 +92,26 @@ export function useMessageHistory({
     }
   }, [currentSessionId, setIsLoading, setMessages, scrollContainerRef]);
 
+  const syncMessages = useCallback(async () => {
+    if (!currentSessionId || isLoadingRef.current) return;
+
+    try {
+      const res = await apiClient.get(`/api/chat/sessions/${currentSessionId}/messages`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.messages) {
+          setMessages(data.messages);
+          setHasMore(data.hasMore);
+          setNextCursor(data.nextCursor);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to sync messages:', err);
+    }
+  }, [currentSessionId, setMessages]);
+
   const resetHistory = useCallback(() => {
+
     setHasMore(false);
     setNextCursor(undefined);
     isLoadingRef.current = false;
@@ -102,6 +121,7 @@ export function useMessageHistory({
 
   return {
     fetchHistory,
+    syncMessages,
     isFetchingMore,
     hasMore,
     nextCursor,

@@ -177,6 +177,8 @@ export function useSendMessage(socket: Socket | null, onSessionUpdate?: (title?:
           clearTimeout(streamMonitorRef.current);
           setIsStreaming(false);
           socket.off('chat:stream', handleStream);
+          socket.off('chat:error', handleError);
+          socket.off('disconnect', handleDisconnect);
 
           // Trigger session update to refresh title in sidebar
           if (onSessionUpdate) {
@@ -200,6 +202,7 @@ export function useSendMessage(socket: Socket | null, onSessionUpdate?: (title?:
           setIsStreaming(false);
           socket.off('chat:stream', handleStream);
           socket.off('chat:error', handleError);
+          socket.off('disconnect', handleDisconnect);
 
           const apiError = ErrorHandler.parseError(new Error(validatedEvent.error || 'Unknown stream error'), 'chat stream');
           reject(apiError);
@@ -227,6 +230,7 @@ export function useSendMessage(socket: Socket | null, onSessionUpdate?: (title?:
         setIsStreaming(false);
         socket.off('chat:stream', handleStream);
         socket.off('chat:error', handleError);
+        socket.off('disconnect', handleDisconnect);
 
         // Try to validate error event with schema
         let validatedError: ChatErrorEvent | null = null;
@@ -284,6 +288,24 @@ export function useSendMessage(socket: Socket | null, onSessionUpdate?: (title?:
 
       socket.on('chat:error', handleError);
 
+      const handleDisconnect = (reason: string) => {
+        console.warn('Socket disconnected during message stream:', reason);
+        clearTimeout(streamTimeoutRef.current);
+        clearTimeout(streamMonitorRef.current);
+        setIsStreaming(false);
+        socket.off('chat:stream', handleStream);
+        socket.off('chat:error', handleError);
+        socket.off('disconnect', handleDisconnect);
+
+        const disconnectError = ErrorHandler.parseError(
+          new Error(`Connection lost during streaming (${reason}). Please check your network.`),
+          'chat stream'
+        );
+        reject(disconnectError);
+      };
+
+      socket.on('disconnect', handleDisconnect);
+
       // Send message (with acknowledgment callback)
       try {
         console.log('📝 Preparing to send message:', {
@@ -320,6 +342,7 @@ export function useSendMessage(socket: Socket | null, onSessionUpdate?: (title?:
             setIsStreaming(false);
             socket.off('chat:stream', handleStream);
             socket.off('chat:error', handleError);
+            socket.off('disconnect', handleDisconnect);
 
             const apiError = ErrorHandler.parseError(
               new Error(ackError),
@@ -350,6 +373,7 @@ export function useSendMessage(socket: Socket | null, onSessionUpdate?: (title?:
         setIsStreaming(false);
         socket.off('chat:stream', handleStream);
         socket.off('chat:error', handleError);
+        socket.off('disconnect', handleDisconnect);
         const apiError = ErrorHandler.parseError(error as Error, 'send message');
         reject(apiError);
       }

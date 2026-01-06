@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import io, { Socket } from 'socket.io-client';
 import { API_BASE_URL } from '../config';
-import { useNotifications } from '../contexts/NotificationContext';
 import { ErrorHandler, ApiError } from '../utils/errorHandler';
 import { apiClient } from '../utils/apiClient';
 
@@ -22,7 +21,6 @@ export function useChatSocket() {
         attempt: 0
     });
     const [error, setError] = useState<string | null>(null);
-    const { addNotification } = useNotifications();
 
     const maxReconnectAttempts = 10;
     const reconnectDelay = 2000;

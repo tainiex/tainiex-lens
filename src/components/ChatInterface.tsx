@@ -42,6 +42,7 @@ function ChatInterfaceContent({
 
   const {
     fetchHistory,
+    syncMessages,
     isFetchingMore,
     hasMore,
     nextCursor,
@@ -116,6 +117,16 @@ function ChatInterfaceContent({
     setIsLoading(true);
     fetchHistory();
   }, [currentSessionId, fetchHistory, resetHistory, resetScrollState, setIsLoading, setMessages, shouldSkipHistoryFetchRef]);
+
+  // Auto-sync messages when socket reconnects to "heal" any interrupted streams (especially on mobile)
+  const wasConnectedRef = useRef(isConnected);
+  useEffect(() => {
+    if (isConnected && !wasConnectedRef.current && currentSessionId) {
+      console.log('Socket reconnected, performing silent sync of messages...');
+      syncMessages();
+    }
+    wasConnectedRef.current = isConnected;
+  }, [isConnected, currentSessionId, syncMessages]);
 
   return (
     <div className="chat-interface" style={{ position: 'relative' }}>
