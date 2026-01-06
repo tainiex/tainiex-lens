@@ -752,15 +752,15 @@
     }
 
     .chat-input-container {
-        padding: 0 1rem 1rem;
+        padding: 0 0.5rem 1rem;
     }
 
     .chat-width-limiter {
-        padding: 0 1rem 1rem;
+        padding: 0 0.5rem 1rem;
     }
 
     .message-bubble {
-        max-width: 90%;
+        max-width: 100%;
         font-size: 0.9rem;
     }
 
@@ -777,7 +777,8 @@
 
     .welcome-container {
         margin-left: 0;
-        padding-left: 0.8rem;
+        padding-left: 0.3rem;
+        /* Reduced to match smaller container padding */
     }
 }
 
