@@ -108,7 +108,7 @@ const AppSidebar = ({
             <div className="sidebar-divider" style={{
                 height: '1px',
                 background: 'rgba(255, 255, 255, 0.08)',
-                margin: '0.4rem 0.75rem',
+                margin: '0.4rem 1rem',
                 flexShrink: 0
             }} />
 
@@ -120,7 +120,7 @@ const AppSidebar = ({
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                     marginBottom: '0.4rem',
-                    paddingLeft: '0.75rem',
+                    paddingLeft: '0.6rem',
                     flexShrink: 0
                 }}>
                     Your chats
