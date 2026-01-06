@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { IChatMessage } from '@tainiex/tainiex-shared';
 
 interface ChatContextValue {
@@ -9,7 +9,7 @@ interface ChatContextValue {
   selectedModel: string;
   isLoading: boolean;
   isStreaming: boolean;
-  
+
   // Methods
   setCurrentSessionId: (id: string | null) => void;
   setCurrentSession: (session: { id: string; title?: string } | undefined) => void;
@@ -30,14 +30,27 @@ interface ChatProviderProps {
   onSessionIdChange: (id: string | null) => void;
 }
 
-export function ChatProvider({ 
-  children, 
+export function ChatProvider({
+  children,
   initialSessionId,
   initialSession,
   onSessionIdChange
 }: ChatProviderProps) {
   const [currentSessionId, setCurrentSessionIdState] = useState<string | null>(initialSessionId);
   const [currentSession, setCurrentSession] = useState<{ id: string; title?: string } | undefined>(initialSession);
+
+  // Sync state with props when they change (since we removed the key prop upstream)
+  useEffect(() => {
+    if (initialSessionId !== undefined) {
+      setCurrentSessionIdState(initialSessionId);
+    }
+  }, [initialSessionId]);
+
+  useEffect(() => {
+    if (initialSession) {
+      setCurrentSession(initialSession);
+    }
+  }, [initialSession]);
   const [messages, setMessages] = useState<Partial<IChatMessage>[]>([]);
   const [selectedModel, setSelectedModelState] = useState<string>(() => {
     return localStorage.getItem('selectedModel') || 'gemini-2.5-flash';

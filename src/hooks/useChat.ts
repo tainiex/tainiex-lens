@@ -21,6 +21,7 @@ interface UseChatProps {
   setIsLoading: (loading: boolean) => void;
   setIsStreaming: (streaming: boolean) => void;
   onSessionCreated?: () => void;
+  onSessionUpdate?: (title?: string) => void;
   enableAutoScroll: () => void;
 }
 
@@ -33,13 +34,14 @@ export function useChat({
   setIsLoading,
   setIsStreaming,
   onSessionCreated,
+  onSessionUpdate,
   enableAutoScroll
 }: UseChatProps) {
   const [models, setModels] = useState<(string | { name: string })[]>([]);
 
   // WebSocket hooks
   const { socket, isConnected, error: wsError } = useChatSocket();
-  const { sendMessage: wsSendMessage, isStreaming: wsStreaming, streamingText } = useSendMessage(socket);
+  const { sendMessage: wsSendMessage, isStreaming: wsStreaming, streamingText } = useSendMessage(socket, onSessionUpdate);
 
   // Refs
   const currentSessionIdRef = useRef(currentSessionId);

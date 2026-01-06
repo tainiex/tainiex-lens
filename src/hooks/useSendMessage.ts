@@ -19,7 +19,7 @@ interface MessageState {
   lastActivity: number; // Last activity timestamp
 }
 
-export function useSendMessage(socket: Socket | null) {
+export function useSendMessage(socket: Socket | null, onSessionUpdate?: (title?: string) => void) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [currentMessage, setCurrentMessage] = useState<MessageState | null>(null);
@@ -177,6 +177,20 @@ export function useSendMessage(socket: Socket | null) {
           clearTimeout(streamMonitorRef.current);
           setIsStreaming(false);
           socket.off('chat:stream', handleStream);
+
+          // Trigger session update to refresh title in sidebar
+          if (onSessionUpdate) {
+            if (validatedEvent.title) {
+              // If backend provided title, update immediately
+              onSessionUpdate(validatedEvent.title);
+            } else {
+              // Fallback: fetch list after delay
+              setTimeout(() => {
+                onSessionUpdate();
+              }, 1000);
+            }
+          }
+
           resolve();
         } else if (validatedEvent.type === 'error') {
           // Error occurred

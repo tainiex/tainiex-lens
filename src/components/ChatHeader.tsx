@@ -55,7 +55,7 @@ const ChatHeader = ({ onMenuClick, models, isConnected, wsError }: ChatHeaderPro
         transform: 'translate(-50%, -50%)',
         fontWeight: 600,
         fontSize: '0.95rem',
-        color: 'rgba(255, 255, 255, 0.9)',
+        color: 'var(--text-primary)',
         maxWidth: '40%',
         overflow: 'hidden',
         whiteSpace: 'nowrap',

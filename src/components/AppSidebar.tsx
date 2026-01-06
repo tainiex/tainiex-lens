@@ -168,7 +168,7 @@ const AppSidebar = ({
                                 />
                             ) : (
                                 <>
-                                    <span className="history-item-text" style={{
+                                    <span className="history-item-text" title={session.title || 'New chat'} style={{
                                         fontSize: '0.85rem',
                                         fontWeight: 500,
                                         whiteSpace: 'nowrap',

@@ -15,12 +15,14 @@ interface ChatInterfaceProps {
   setCurrentSessionId: (id: string | null) => void;
   currentSession?: { id: string; title?: string };
   onSessionCreated?: () => void;
+  onSessionUpdate?: (title?: string) => void;
 }
 
 function ChatInterfaceContent({
   user,
   onMenuClick,
-  onSessionCreated
+  onSessionCreated,
+  onSessionUpdate
 }: Omit<ChatInterfaceProps, 'currentSessionId' | 'setCurrentSessionId' | 'currentSession'>) {
   const {
     currentSessionId,
@@ -91,16 +93,17 @@ function ChatInterfaceContent({
     setIsLoading,
     setIsStreaming,
     onSessionCreated,
+    onSessionUpdate,
     enableAutoScroll
   });
 
   // Fetch message history when session changes
   useEffect(() => {
     if (!currentSessionId) {
-      setMessages([{ 
-        id: 'welcome', 
-        role: ChatRole.ASSISTANT, 
-        content: "Hello, I'm your AI assistant. How can I help you today?" 
+      setMessages([{
+        id: 'welcome',
+        role: ChatRole.ASSISTANT,
+        content: "Hello, I'm your AI assistant. How can I help you today?"
       }]);
       resetHistory();
       return;
@@ -147,7 +150,8 @@ const ChatInterface = ({
   currentSessionId,
   setCurrentSessionId,
   currentSession,
-  onSessionCreated
+  onSessionCreated,
+  onSessionUpdate
 }: ChatInterfaceProps) => {
   return (
     <ChatProvider
@@ -159,6 +163,7 @@ const ChatInterface = ({
         user={user}
         onMenuClick={onMenuClick}
         onSessionCreated={onSessionCreated}
+        onSessionUpdate={onSessionUpdate}
       />
     </ChatProvider>
   );

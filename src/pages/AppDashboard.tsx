@@ -47,6 +47,7 @@ const AppDashboard = () => {
             const res = await apiClient.get('/api/chat/sessions');
             if (res.ok) {
                 const data = await res.json();
+                console.log('[Debug] Fetched sessions:', data);
                 setSessions(data.sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
             }
         } catch (error) {
@@ -127,6 +128,14 @@ const AppDashboard = () => {
     // Find current session object for shared state usage (e.g. title in ChatInterface)
     const currentSession = sessions.find(s => s.id === currentSessionId);
 
+    const handleSessionUpdate = (title?: string) => {
+        if (title && currentSessionId) {
+            setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, title } : s));
+        }
+        // Always refresh the full list to stay in sync or handle new sessions
+        fetchSessions();
+    };
+
     return (
         <NotificationProvider>
             <ErrorBoundary>
@@ -151,13 +160,13 @@ const AppDashboard = () => {
                     />
                     <main className="dashboard-main">
                         <ChatInterface
-                            key={currentSessionId || 'new'}
                             user={user}
                             onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
                             currentSessionId={currentSessionId}
                             setCurrentSessionId={handleSessionSelect}
                             currentSession={currentSession}
                             onSessionCreated={fetchSessions} // Refresh list on new chat creation
+                            onSessionUpdate={handleSessionUpdate}
                         />
                     </main>
                 </div>

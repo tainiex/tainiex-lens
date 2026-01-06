@@ -24,7 +24,8 @@ export const ChatSendPayloadSchema: z.ZodType<ChatSendPayload> = z.object({
 export const ChatStreamEventSchema: z.ZodType<ChatStreamEvent> = z.object({
   type: z.enum(['chunk', 'done', 'error']),
   data: z.string().optional(),
-  error: z.string().optional()
+  error: z.string().optional(),
+  title: z.string().optional() // [NEW] Backend added field
 });
 
 // Chat Error Event Schema
