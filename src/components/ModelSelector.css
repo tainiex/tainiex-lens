@@ -29,6 +29,10 @@
 
 .model-selector-btn span {
     font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 }
 
 .model-selector-arrow {
