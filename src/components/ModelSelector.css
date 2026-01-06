@@ -90,7 +90,7 @@
 /* Mobile Bottom Sheet Styles */
 @media (max-width: 768px) {
     .model-selector-btn {
-        max-width: 140px;
+        max-width: 100px;
     }
 
     .model-dropdown-menu.drop-up {
