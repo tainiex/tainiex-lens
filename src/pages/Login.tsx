@@ -15,11 +15,14 @@ const Login = () => {
     const [inviteCode, setInviteCode] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [pendingProvider, setPendingProvider] = useState<'google' | 'microsoft' | null>(null);
 
     useEffect(() => {
         const checkSession = async () => {
             try {
-                const res = await apiClient.get('/api/profile');
+                const res = await apiClient.get('/api/profile', {
+                    retryCount: 0
+                });
                 if (res.ok) {
                     const params = new URLSearchParams(location.search);
                     const redirect = params.get('redirect');
@@ -42,64 +45,90 @@ const Login = () => {
     const { instance } = useMsal();
 
     const handleMicrosoftLogin = () => {
+        setIsLoading(true); // Start loading immediately
         instance.loginPopup(loginRequest)
             .then(async (response) => {
                 logger.debug('Microsoft Login Response:', response);
                 if (response.accessToken) {
+                    setIsLoading(true); // Show loading while verifying with backend
                     try {
                         const res = await apiClient.post('/api/auth/microsoft', {
                             accessToken: response.accessToken,
                             idToken: response.idToken
                         });
 
+                        // Attempt to parse JSON response
+                        const data = await res.json();
+
                         if (res.ok) {
-                            const params = new URLSearchParams(location.search);
-                            const redirect = params.get('redirect');
-                            navigate(redirect || '/app');
+                            if (data.requiresInvite) {
+                                setInviteRequired(true);
+                                setPendingProvider('microsoft');
+                                const token = data.signupToken || data.token || data.pendingToken;
+                                if (token) setPendingToken(token);
+                                setIsLoading(false); // Stop loading to show invite form
+                            } else {
+                                const params = new URLSearchParams(location.search);
+                                const redirect = params.get('redirect');
+                                navigate(redirect || '/app');
+                                // Keep loading true during redirect
+                            }
                         } else {
-                            const data = await res.json();
-                            logger.error('Microsoft backend auth failed', data);
-                            setErrorMsg('Authentication failed');
+                            setIsLoading(false); // Stop loading on error
+                            if (data.requiresInvite) {
+                                setInviteRequired(true);
+                                setPendingProvider('microsoft');
+                                const token = data.signupToken || data.token || data.pendingToken;
+                                if (token) setPendingToken(token);
+                            } else {
+                                logger.error('Microsoft backend auth failed', data);
+                                setErrorMsg('Authentication failed');
+                            }
                         }
                     } catch (error) {
+                        setIsLoading(false); // Stop loading on error
                         logger.error('Microsoft login error:', error);
                         setErrorMsg('Login error occurred');
                     }
                 }
             })
             .catch((e) => {
+                setIsLoading(false); // Reset loading on error/cancel
                 logger.error(e);
             });
     };
 
     const login = useGoogleLogin({
         flow: 'auth-code',
+        redirect_uri: window.location.origin + '/login',
         onSuccess: async (codeResponse) => {
             if (codeResponse.code) {
+                setIsLoading(true); // Show loading while verifying
                 try {
                     const res = await apiClient.post('/api/auth/google', { code: codeResponse.code });
 
-                    // Start by trying to parse JSON, as we need to check the body
+                    // Start by trying to parse JSON
                     const data = await res.json();
                     logger.debug('Login response:', data);
 
                     if (res.ok) {
-                        // Even if 200 OK, check if invite is required
                         if (data.requiresInvite) {
                             setInviteRequired(true);
-                            // Capture token from various possible keys since backend spec is loose
+                            setPendingProvider('google');
                             const token = data.signupToken || data.token || data.pendingToken;
                             if (token) setPendingToken(token);
+                            setIsLoading(false); // Stop loading to show invite form
                         } else {
-                            // Normal success case - cookies are handled by browser
                             const params = new URLSearchParams(location.search);
                             const redirect = params.get('redirect');
                             navigate(redirect || '/app');
+                            // Keep loading true
                         }
                     } else {
-                        // Error status code
+                        setIsLoading(false); // Stop loading on error
                         if (data.requiresInvite) {
                             setInviteRequired(true);
+                            setPendingProvider('google');
                             const token = data.signupToken || data.token || data.pendingToken;
                             if (token) setPendingToken(token);
                         } else {
@@ -108,31 +137,33 @@ const Login = () => {
                         }
                     }
                 } catch (error) {
+                    setIsLoading(false);
                     logger.error('Login error:', error);
                     setErrorMsg('Login error occurred');
                 }
             }
         },
-        onError: () => logger.log('Login Failed'),
+        onError: () => {
+            setIsLoading(false);
+            logger.log('Login Failed');
+        },
     });
 
     const handleSignup = async () => {
         if (!inviteCode.trim()) return;
 
         try {
-            const res = await apiClient.post('/api/auth/google/signup', {
+            const endpoint = pendingProvider === 'microsoft'
+                ? '/api/auth/microsoft/signup'
+                : '/api/auth/google/signup';
+
+            const res = await apiClient.post(endpoint, {
                 invitationCode: inviteCode,
                 signupToken: pendingToken
             });
 
             if (res.ok) {
-                // Strict Cookie-Only enforcement: Do NOT store token in localStorage
-                // const data = await res.json();
-                // Strict Cookie-Only enforcement: Do NOT store token in localStorage
-                // const token = data.accessToken || data.access_token || data.token;
-                // if (token) {
-                //     localStorage.setItem('access_token', token);
-                // }
+                // ... same logic as before ...
                 const params = new URLSearchParams(location.search);
                 const redirect = params.get('redirect');
                 navigate(redirect || '/app');
@@ -160,63 +191,88 @@ const Login = () => {
                 }}>
                     <div className="loading-spinner large" style={{ marginBottom: '1.5rem' }}></div>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Checking authentication...</p>
+                    <button
+                        onClick={() => setIsLoading(false)}
+                        style={{
+                            marginTop: '1.5rem',
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--text-tertiary)',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            textDecoration: 'underline'
+                        }}
+                    >
+                        Cancel
+                    </button>
                 </div>
             ) : (
-                <>
-                    {inviteRequired && (
-                        <div className="invite-modal-overlay">
-                            <div className="invite-modal-content">
-                                <h2 className="invite-modal-title">Enter Invitation Code</h2>
-                                <p style={{ color: '#ccc', fontSize: '0.9rem', textAlign: 'center', margin: 0 }}>
-                                    An invitation code is required to complete your registration.
-                                </p>
-                                <input
-                                    type="text"
-                                    placeholder="Invite Code"
-                                    value={inviteCode}
-                                    onChange={(e) => setInviteCode(e.target.value)}
+                <div className="login-content">
+                    <h1 className="login-title">Sign in to Taini<span style={{ color: '#047857' }}>ex</span></h1>
+
+                    {inviteRequired ? (
+                        <div className="invite-form-container" style={{ width: '100%', maxWidth: '320px', margin: '0 auto', textAlign: 'center', animation: 'fadeIn 0.3s ease-out' }}>
+                            <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: 'var(--text-primary)', fontWeight: 500 }}>Invitation Required</h2>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+                                Please enter your invitation code to complete registration.
+                            </p>
+                            <input
+                                type="text"
+                                placeholder="Enter Invite Code"
+                                value={inviteCode}
+                                onChange={(e) => setInviteCode(e.target.value)}
+                                style={{
+                                    padding: '12px 16px',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border-primary)',
+                                    background: 'var(--bg-secondary)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '1rem',
+                                    width: '100%',
+                                    boxSizing: 'border-box',
+                                    marginBottom: '1rem',
+                                    outline: 'none',
+                                    transition: 'border-color 0.2s'
+                                }}
+                                onFocus={(e) => e.target.style.borderColor = 'var(--accent-color)'}
+                                onBlur={(e) => e.target.style.borderColor = 'var(--border-primary)'}
+                            />
+                            {errorMsg && <p style={{ color: '#ff6b6b', fontSize: '0.85rem', marginBottom: '1rem' }}>{errorMsg}</p>}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <button
+                                    className="btn-social"
+                                    onClick={handleSignup}
                                     style={{
-                                        padding: '12px',
-                                        borderRadius: '6px',
-                                        border: '1px solid var(--border-primary)',
-                                        background: 'var(--bg-primary)',
-                                        color: 'var(--text-primary)',
-                                        fontSize: '1rem',
+                                        justifyContent: 'center',
+                                        background: '#8b5cf6',
+                                        color: 'white',
                                         width: '100%',
-                                        boxSizing: 'border-box'
+                                        border: 'none',
+                                        marginTop: '0.5rem',
+                                        fontWeight: 600,
+                                        fontSize: '0.95rem'
                                     }}
-                                />
-                                {errorMsg && <p style={{ color: '#ff6b6b', fontSize: '0.85rem', textAlign: 'center', margin: 0 }}>{errorMsg}</p>}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    <button
-                                        className="btn-social"
-                                        onClick={handleSignup}
-                                        style={{ justifyContent: 'center', background: 'white', color: 'black', width: '100%' }}
-                                    >
-                                        Complete Signup
-                                    </button>
-                                    <button
-                                        onClick={() => { setInviteRequired(false); setPendingToken(''); setErrorMsg(''); }}
-                                        style={{
-                                            background: 'transparent',
-                                            border: 'none',
-                                            color: '#888',
-                                            cursor: 'pointer',
-                                            fontSize: '0.9rem'
-                                        }}
-                                    >
-                                        Back to Login
-                                    </button>
-                                </div>
+                                >
+                                    Complete Signup
+                                </button>
+                                <button
+                                    onClick={() => { setInviteRequired(false); setPendingToken(''); setErrorMsg(''); setPendingProvider(null); }}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: 'var(--text-secondary)',
+                                        cursor: 'pointer',
+                                        fontSize: '0.9rem',
+                                        padding: '8px'
+                                    }}
+                                >
+                                    Back to Login
+                                </button>
                             </div>
                         </div>
-                    )}
-
-                    <div className="login-content">
-                        <h1 className="login-title">Sign in to Tainiex</h1>
-
+                    ) : (
                         <div className="login-actions">
-                            <button className="btn-social" onClick={() => login()} style={{ fontFamily: 'Roboto, arial, sans-serif' }}>
+                            <button className="btn-social" onClick={() => { setIsLoading(true); login(); }} style={{ fontFamily: 'Roboto, arial, sans-serif' }}>
                                 <svg className="social-icon" width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -236,8 +292,8 @@ const Login = () => {
                                 Continue with Microsoft
                             </button>
                         </div>
-                    </div>
-                </>
+                    )}
+                </div>
             )}
         </div>
     );

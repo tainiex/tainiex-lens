@@ -4,6 +4,12 @@ import { z } from 'zod';
 import { safeJsonParse } from './validation';
 import { logger } from './logger';
 
+
+interface ApiRequestInit extends RequestInit {
+    skipAuthRefresh?: boolean;
+    retryCount?: number;
+}
+
 class ApiClient {
     private isRefreshing = false;
     private refreshSubscribers: ((status: string) => void)[] = [];
@@ -120,7 +126,7 @@ class ApiClient {
         this.refreshSubscribers.push(cb);
     }
 
-    async request(path: string, options: RequestInit = {}, notificationCallback?: (error: ApiError) => void): Promise<Response> {
+    async request(path: string, options: ApiRequestInit = {}, notificationCallback?: (error: ApiError) => void): Promise<Response> {
         const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
 
         const headers = {
@@ -136,7 +142,7 @@ class ApiClient {
 
             const response = await fetch(url, { ...options, headers, credentials: 'include' });
 
-            if (response.status === 401 && !path.includes('/auth/refresh')) {
+            if (response.status === 401 && !path.includes('/auth/refresh') && !options.skipAuthRefresh) {
                 logger.debug('[AuthDebug] 401 detected for:', path, 'isRefreshing:', this.isRefreshing);
                 if (!this.isRefreshing) {
                     this.isRefreshing = true;
@@ -177,16 +183,16 @@ class ApiClient {
         // Use retry mechanism
         return this.retryWithBackoff(
             () => makeRequest(),
-            3, // Max attempts
+            options.retryCount ?? 3, // Max attempts, default to 3
             `API request to ${path}`
         );
     }
 
-    async get(path: string, options: RequestInit = {}, notificationCallback?: (error: ApiError) => void) {
+    async get(path: string, options: ApiRequestInit = {}, notificationCallback?: (error: ApiError) => void) {
         return this.request(path, { ...options, method: 'GET' }, notificationCallback);
     }
 
-    async post(path: string, body?: any, options: RequestInit = {}, notificationCallback?: (error: ApiError) => void) {
+    async post(path: string, body?: any, options: ApiRequestInit = {}, notificationCallback?: (error: ApiError) => void) {
         return this.request(path, {
             ...options,
             method: 'POST',
@@ -198,11 +204,11 @@ class ApiClient {
         }, notificationCallback);
     }
 
-    async delete(path: string, options: RequestInit = {}, notificationCallback?: (error: ApiError) => void) {
+    async delete(path: string, options: ApiRequestInit = {}, notificationCallback?: (error: ApiError) => void) {
         return this.request(path, { ...options, method: 'DELETE' }, notificationCallback);
     }
 
-    async getTyped<T>(path: string, schema: z.ZodSchema<T>, options: RequestInit = {}, notificationCallback?: (error: ApiError) => void): Promise<T> {
+    async getTyped<T>(path: string, schema: z.ZodSchema<T>, options: ApiRequestInit = {}, notificationCallback?: (error: ApiError) => void): Promise<T> {
         const res = await this.get(path, options, notificationCallback);
         if (!res.ok) {
             const error = this.handleError(res, path);
@@ -211,7 +217,7 @@ class ApiClient {
         return safeJsonParse(res, schema, path);
     }
 
-    async postTyped<T>(path: string, body: unknown, schema: z.ZodSchema<T>, options: RequestInit = {}, notificationCallback?: (error: ApiError) => void): Promise<T> {
+    async postTyped<T>(path: string, body: unknown, schema: z.ZodSchema<T>, options: ApiRequestInit = {}, notificationCallback?: (error: ApiError) => void): Promise<T> {
         const res = await this.post(path, body, options, notificationCallback);
         if (!res.ok) {
             const error = this.handleError(res, path);
@@ -220,7 +226,7 @@ class ApiClient {
         return safeJsonParse(res, schema, path);
     }
 
-    async postVoid(path: string, body?: unknown, options: RequestInit = {}, notificationCallback?: (error: ApiError) => void): Promise<void> {
+    async postVoid(path: string, body?: unknown, options: ApiRequestInit = {}, notificationCallback?: (error: ApiError) => void): Promise<void> {
         const res = await this.post(path, body, options, notificationCallback);
         if (!res.ok) {
             const error = this.handleError(res, path);

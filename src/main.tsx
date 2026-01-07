@@ -8,11 +8,12 @@ import App from './App'
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { MsalProvider } from '@azure/msal-react';
 import { msalInstance } from './utils/msalConfig';
+import { SENTRY_DSN } from './config';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 Sentry.init({
-  dsn: "https://f13ada46b10abb1c9af1cb25d2aafb4b@o4510667478466560.ingest.us.sentry.io/4510667479580672",
+  dsn: SENTRY_DSN,
   integrations: [
     Sentry.browserTracingIntegration(),
     Sentry.replayIntegration(),

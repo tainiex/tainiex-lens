@@ -4,7 +4,7 @@ export const msalConfig: Configuration = {
     auth: {
         clientId: import.meta.env.VITE_MICROSOFT_CLIENT_ID || "",
         authority: `https://login.microsoftonline.com/${import.meta.env.VITE_MICROSOFT_TENANT_ID || "common"}`,
-        redirectUri: window.location.origin,
+        redirectUri: window.location.origin + "/login",
     },
     cache: {
         cacheLocation: "sessionStorage", // This configures where your cache will be stored
