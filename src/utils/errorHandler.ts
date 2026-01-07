@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import * as Sentry from "@sentry/react";
 import { logger } from './logger';
 
 // Error Type Schema
@@ -197,8 +198,30 @@ export class ErrorHandler {
 
     if (error.type === 'SERVER' || error.type === 'NETWORK') {
       logger.warn('API Error:', errorInfo, error.originalError);
+
+      // Specifically capture network errors if they are not just retries, or if we want to debug mobile issues
+      if (error.type === 'NETWORK') {
+        Sentry.captureException(error.originalError || new Error(error.message), {
+          tags: {
+            type: error.type,
+            status: error.status,
+            retryable: error.retryable
+          },
+          extra: { context }
+        });
+      }
+
     } else {
       logger.error('API Error:', errorInfo, error.originalError);
+
+      // Capture critical errors
+      Sentry.captureException(error.originalError || new Error(error.message), {
+        tags: {
+          type: error.type,
+          status: error.status
+        },
+        extra: { context }
+      });
     }
   }
 

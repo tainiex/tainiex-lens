@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import io, { Socket } from 'socket.io-client';
+import * as Sentry from "@sentry/react";
 import { API_BASE_URL } from '../config';
 import { ErrorHandler, ApiError } from '../utils/errorHandler';
 import { apiClient } from '../utils/apiClient';
@@ -143,6 +144,14 @@ export function useChatSocket() {
                 logger.warn('WebSocket connection retrying:', err.message);
             }
 
+            // Capture all connection errors to Sentry to analyze mobile issues
+            Sentry.captureException(err, {
+                tags: {
+                    type: 'websocket_connect_error',
+                    attempt: attemptRef.current
+                }
+            });
+
             const isAuthError = err.message.includes('Authentication error') ||
                 err.message.includes('Unauthorized') ||
                 err.message.includes('401') ||
@@ -231,14 +240,29 @@ export function useChatSocket() {
             if (document.visibilityState === 'hidden') {
                 lastHiddenTimeRef.current = now;
                 logger.debug("App hidden, recording timestamp.");
+
+                Sentry.addBreadcrumb({
+                    category: 'app.lifecycle',
+                    message: 'App hidden',
+                    level: 'info'
+                });
+
             } else if (document.visibilityState === 'visible') {
                 const sleepDuration = lastHiddenTimeRef.current ? now - lastHiddenTimeRef.current : 0;
                 logger.log(`App visible. Sleep duration: ${sleepDuration}ms`);
+
+                Sentry.addBreadcrumb({
+                    category: 'app.lifecycle',
+                    message: 'App visible',
+                    data: { sleepDuration },
+                    level: 'info'
+                });
 
                 // If app was backgrounded for more than 60s, force a hard reconnect
                 // This handles cases where the socket is in a zombie state
                 if (sleepDuration > 60000) {
                     logger.warn('App was backgrounded for > 60s, forcing hard socket reconnect...');
+                    Sentry.captureMessage('Forcing hard reconnect after long sleep', { level: 'warning', tags: { sleepDuration } });
                     reconnect();
                     return;
                 }

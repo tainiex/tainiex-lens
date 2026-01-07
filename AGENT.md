@@ -25,6 +25,7 @@
 | **TypeScript** | 5.9.3 | Strict type checking (strict mode) |
 | **React Router** | 7.11.0 | Client-side routing |
 | **@react-oauth/google** | 0.13.4 | Google OAuth (auth-code flow) |
+| **@azure/msal-react** | ^3.x | Microsoft Authentication |
 | **@tainiex/tainiex-shared** | 0.0.7 | Private shared package (IUser, IChatMessage, ChatRole, etc.) |
 | **Styling** | Vanilla CSS | Pure CSS with variables; no CSS-in-JS |
 | **Markdown** | `react-markdown` | GFM, LaTeX (KaTeX), and Mermaid support |
@@ -110,7 +111,7 @@ c:\Users\Cselerity\Codes\tainiex-lens\
 ├── tsconfig.node.json              # TS config for node files
 ├── eslint.config.js                # ESLint rules
 ├── .npmrc                          # Private registry config
-├── .env                            # Env vars (API proxy target, Google Client ID)
+├── .env                            # Env vars (API proxy target, Google/Microsoft Client IDs & Tenant)
 ├── .gitignore                      # Git ignore rules
 └── README.md                       # Project documentation
 ```
@@ -123,6 +124,8 @@ c:\Users\Cselerity\Codes\tainiex-lens\
 - **Node.js**: v18+ (v20+ recommended)
 - **GitHub Personal Access Token (PAT)**: requires `read:packages` scope to install `@tainiex/tainiex-shared`
 - **Google OAuth Client ID**: obtain from Google Cloud Console
+- **Microsoft OAuth Client ID**: obtain from Azure Portal
+- **Microsoft Cloud Tenant ID** (Optional): defaults to `common` (multi-tenant)
 
 ### Configuration Steps
 

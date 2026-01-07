@@ -11,7 +11,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@azure/msal-browser": "^4.27.0",
+    "@azure/msal-react": "^3.0.23",
     "@react-oauth/google": "^0.13.4",
+    "@sentry/react": "^10.32.1",
     "@tainiex/tainiex-shared": "^0.0.8",
     "@tiptap/extension-placeholder": "^3.15.1",
     "@tiptap/react": "^3.15.1",

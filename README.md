@@ -4,7 +4,7 @@ Tainiex Lens is the frontend interface for the Tainiex AI Memory & Knowledge Inf
 
 ## Core Features
 
-- **Google Authentication**: Secure login via Google OAuth with backend verification and cookie-based session management.
+- **Authentication**: Secure login via Google & Microsoft OAuth with backend verification and cookie-based session management.
 - **Adaptive Dashboard**: A responsive, full-height adaptive interface that eliminates unnecessary scrollbars.
 - **Chat Interface**: Real-time chat UI featuring Socket.IO (WebSocket) streaming for instant AI responses, with robust auto-reconnection and authentication handling.
 - **Rich Content Rendering**: Advanced support for Markdown (GFM), LaTeX mathematical formulas (via KaTeX), and Mermaid DSL diagrams.
@@ -50,6 +50,8 @@ Create a `.env` file in the root directory:
 VITE_API_BASE_URL=
 VITE_WS_CHAT_URL=
 VITE_GOOGLE_CLIENT_ID=your_client_id_here
+VITE_MICROSOFT_CLIENT_ID=your_microsoft_client_id_here
+VITE_MICROSOFT_TENANT_ID=common
 ```
 
 *Note: The project uses Vite's proxy to handle API and WebSocket connections. In development, `VITE_API_BASE_URL` can be left empty as the proxy targets `http://localhost:2020` by default in `vite.config.ts`.*
