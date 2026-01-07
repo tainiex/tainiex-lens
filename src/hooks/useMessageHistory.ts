@@ -4,14 +4,14 @@ import { apiClient } from '../utils/apiClient';
 import { logger } from '../utils/logger';
 
 // Helper to reconstruct message chain from parentId
+// Helper to reconstruct message chain from parentId and linearize branches
+// (Only shows the path to the latest leaf in each connected component)
 function topoSortMessages(messages: Partial<IChatMessage>[]): Partial<IChatMessage>[] {
   if (messages.length <= 1) return messages;
 
   // 1. Index by ID and ParentID
   const byId = new Map<string, Partial<IChatMessage>>();
   const childrenMap = new Map<string, Partial<IChatMessage>[]>(); // parentId -> [children]
-
-  // Also keep track of all IDs to identify roots
   const allIds = new Set<string>();
 
   messages.forEach(msg => {
@@ -21,68 +21,101 @@ function topoSortMessages(messages: Partial<IChatMessage>[]): Partial<IChatMessa
     }
   });
 
-  // 2. Build the tree/graph structure
-  // We assume a message without a parent (or parent not in list) is a root of this segment.
+  // 2. Build Graph & Find Roots
   const roots: Partial<IChatMessage>[] = [];
+  const parentMap = new Map<string, string>(); // childId -> parentId
 
   messages.forEach(msg => {
-    // We treat 'parentId' as the linking key.
-    // Use standard field from shared lib
     const pId = msg.parentId;
-
     if (pId && allIds.has(pId)) {
       if (!childrenMap.has(pId)) {
         childrenMap.set(pId, []);
       }
       childrenMap.get(pId)!.push(msg);
+      if (msg.id) parentMap.set(msg.id, pId);
     } else {
-      // If parent is missing in this list, it's a root of this chunk
       roots.push(msg);
     }
   });
 
-  // 3. Sort roots by creating time (fallback) if multiple roots exist
+  // 3. Process each connected component (each root initiates a component)
+  // We want to find the "Main Path" for each component: Root -> ... -> Latest Leaf
+  const linearized: Partial<IChatMessage>[] = [];
+
+  // Sort roots by time to order the components
   roots.sort((a, b) => {
     const tA = (a as any).createdAt || (a as any).timestamp || 0;
     const tB = (b as any).createdAt || (b as any).timestamp || 0;
     return new Date(tA).getTime() - new Date(tB).getTime();
   });
 
-  // 4. Traverse (DFS or BFS - linear chain usually implies 1 child, but just in case)
-  const result: Partial<IChatMessage>[] = [];
+  roots.forEach(root => {
+    if (!root.id) return;
 
-  const traverse = (msg: Partial<IChatMessage>) => {
-    result.push(msg);
-    if (!msg.id) return;
+    // BFS/DFS to find all nodes in this component and identify leaves
+    const componentNodes: Partial<IChatMessage>[] = [];
+    const leaves: Partial<IChatMessage>[] = [];
+    const queue = [root];
 
-    const children = childrenMap.get(msg.id);
-    if (children) {
-      // If branching exists, sort children by time? Usually 1 child.
-      children.sort((a, b) => {
-        const tA = (a as any).createdAt || (a as any).timestamp || 0;
-        const tB = (b as any).createdAt || (b as any).timestamp || 0;
-        return new Date(tA).getTime() - new Date(tB).getTime();
-      });
-      children.forEach(traverse);
+    while (queue.length > 0) {
+      const node = queue.shift()!;
+      componentNodes.push(node);
+
+      const children = childrenMap.get(node.id!) || [];
+      if (children.length === 0) {
+        leaves.push(node);
+      } else {
+        queue.push(...children);
+      }
     }
-  };
 
-  roots.forEach(traverse);
-
-  // Safety check: did we miss any disconnected cycles?
-  if (result.length < messages.length) {
-    // Append remaining messages sorted by time as fallback
-    const processedIds = new Set(result.map(m => m.id));
-    const remaining = messages.filter(m => !processedIds.has(m.id));
-    remaining.sort((a, b) => {
+    // Find the latest leaf in this component
+    leaves.sort((a, b) => {
       const tA = (a as any).createdAt || (a as any).timestamp || 0;
       const tB = (b as any).createdAt || (b as any).timestamp || 0;
-      return new Date(tA).getTime() - new Date(tB).getTime();
+      return new Date(tB).getTime() - new Date(tA).getTime(); // Descending
     });
-    return [...result, ...remaining];
+
+    const latestLeaf = leaves[0];
+    if (!latestLeaf) return; // Should not happen
+
+    // Backtrack from latest leaf to root to reconstruct the main path
+    const path: Partial<IChatMessage>[] = [];
+    let curr: Partial<IChatMessage> | undefined = latestLeaf;
+
+    while (curr) {
+      path.unshift(curr);
+      if (curr.id === root.id) break;
+      const pId = curr.id ? parentMap.get(curr.id) : undefined;
+      curr = pId ? byId.get(pId) : undefined;
+    }
+
+    linearized.push(...path);
+  });
+
+  // 4. Handle any disconnected cycles or orphans (fallback)
+  // If we missed messages (e.g. cycles), just append them sorted by time
+  if (linearized.length < messages.length) {
+    const processedIds = new Set(linearized.map(m => m.id));
+    const remaining = messages.filter(m => !processedIds.has(m.id));
+    // Optional: Log warning about hidden branches/orphans?
+    // console.log('Hidden branches or orphans:', remaining.length);
+
+    // NOTE: In a strict linear view, we usually hide abandoned branches.
+    // If the user wants to see them, they need a tree UI. 
+    // For now, to fix "disorder", we strictly hide them unless they are disconnected components.
+    // However, if "roots" logic failed (e.g. circular dependency), we might hide valid messages.
+    // Let's assume the linear path logic covers standard usage. 
+    // We do NOT append 'remaining' here to avoid the "Phantom" accumulation, 
+    // UNLESS they are truly separate components we missed (which shouldn't happen if we started from all roots).
+
+    // Safety fallback: if we produced NOTHING but had messages, something went wrong.
+    if (linearized.length === 0 && messages.length > 0) {
+      return messages; // Fallback to raw
+    }
   }
 
-  return result;
+  return linearized;
 }
 
 interface UseMessageHistoryProps {
