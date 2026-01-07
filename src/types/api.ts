@@ -9,6 +9,7 @@ export const ChatMessageSchema = z.object({
   id: z.string(),
   role: ChatRoleSchema,
   content: z.string(),
+  parentId: z.string().optional(),
   sessionId: z.string().optional(),
   timestamp: z.string().optional()
 });

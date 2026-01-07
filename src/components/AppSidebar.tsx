@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { logger } from '../utils/logger';
 import { createPortal } from 'react-dom';
 import { IUser, IChatSession } from '@tainiex/tainiex-shared';
@@ -35,6 +36,8 @@ const AppSidebar = ({
     const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
     const [editTitle, setEditTitle] = useState('');
     const [activeSessionMenuId, setActiveSessionMenuId] = useState<string | null>(null);
+    const location = useLocation();
+    const navigate = useNavigate();
     const [menuPosition, setMenuPosition] = useState<{ x: number, y: number } | null>(null);
     const profileMenuRef = useRef<HTMLDivElement>(null);
     const sessionMenuRef = useRef<HTMLDivElement>(null);
@@ -83,15 +86,30 @@ const AppSidebar = ({
             </div>
 
             <nav className="sidebar-nav">
-                <div className="sidebar-item active" onClick={() => onSessionSelect(null)} style={{ cursor: 'pointer' }}>
+                <div
+                    className={`sidebar-item ${!location.pathname.includes('/app/notes') ? 'active' : ''}`}
+                    onClick={() => {
+                        onSessionSelect(null);
+                        navigate('/app');
+                    }}
+                    style={{ cursor: 'pointer' }}
+                >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
                     Chats
                 </div>
-                <div className="sidebar-item disabled" title="Coming Soon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
-                    <span style={{ flex: 1 }}>Notes</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                </div>
+                {import.meta.env.DEV && (
+                    <div
+                        className={`sidebar-item ${location.pathname.includes('/app/notes') ? 'active' : ''}`}
+                        onClick={() => {
+                            navigate('/app/notes');
+                            setIsOpen?.(false);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
+                        <span style={{ flex: 1 }}>Notes</span>
+                    </div>
+                )}
                 <div className="sidebar-item disabled" title="Coming Soon">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>
                     <span style={{ flex: 1 }}>Memories</span>

@@ -3,6 +3,88 @@ import { IChatMessage } from '@tainiex/tainiex-shared';
 import { apiClient } from '../utils/apiClient';
 import { logger } from '../utils/logger';
 
+// Helper to reconstruct message chain from parentId
+function topoSortMessages(messages: Partial<IChatMessage>[]): Partial<IChatMessage>[] {
+  if (messages.length <= 1) return messages;
+
+  // 1. Index by ID and ParentID
+  const byId = new Map<string, Partial<IChatMessage>>();
+  const childrenMap = new Map<string, Partial<IChatMessage>[]>(); // parentId -> [children]
+
+  // Also keep track of all IDs to identify roots
+  const allIds = new Set<string>();
+
+  messages.forEach(msg => {
+    if (msg.id) {
+      byId.set(msg.id, msg);
+      allIds.add(msg.id);
+    }
+  });
+
+  // 2. Build the tree/graph structure
+  // We assume a message without a parent (or parent not in list) is a root of this segment.
+  const roots: Partial<IChatMessage>[] = [];
+
+  messages.forEach(msg => {
+    // We treat 'parentId' as the linking key.
+    // Use standard field from shared lib
+    const pId = msg.parentId;
+
+    if (pId && allIds.has(pId)) {
+      if (!childrenMap.has(pId)) {
+        childrenMap.set(pId, []);
+      }
+      childrenMap.get(pId)!.push(msg);
+    } else {
+      // If parent is missing in this list, it's a root of this chunk
+      roots.push(msg);
+    }
+  });
+
+  // 3. Sort roots by creating time (fallback) if multiple roots exist
+  roots.sort((a, b) => {
+    const tA = (a as any).createdAt || (a as any).timestamp || 0;
+    const tB = (b as any).createdAt || (b as any).timestamp || 0;
+    return new Date(tA).getTime() - new Date(tB).getTime();
+  });
+
+  // 4. Traverse (DFS or BFS - linear chain usually implies 1 child, but just in case)
+  const result: Partial<IChatMessage>[] = [];
+
+  const traverse = (msg: Partial<IChatMessage>) => {
+    result.push(msg);
+    if (!msg.id) return;
+
+    const children = childrenMap.get(msg.id);
+    if (children) {
+      // If branching exists, sort children by time? Usually 1 child.
+      children.sort((a, b) => {
+        const tA = (a as any).createdAt || (a as any).timestamp || 0;
+        const tB = (b as any).createdAt || (b as any).timestamp || 0;
+        return new Date(tA).getTime() - new Date(tB).getTime();
+      });
+      children.forEach(traverse);
+    }
+  };
+
+  roots.forEach(traverse);
+
+  // Safety check: did we miss any disconnected cycles?
+  if (result.length < messages.length) {
+    // Append remaining messages sorted by time as fallback
+    const processedIds = new Set(result.map(m => m.id));
+    const remaining = messages.filter(m => !processedIds.has(m.id));
+    remaining.sort((a, b) => {
+      const tA = (a as any).createdAt || (a as any).timestamp || 0;
+      const tB = (b as any).createdAt || (b as any).timestamp || 0;
+      return new Date(tA).getTime() - new Date(tB).getTime();
+    });
+    return [...result, ...remaining];
+  }
+
+  return result;
+}
+
 interface UseMessageHistoryProps {
   currentSessionId: string | null;
   setMessages: (messages: Partial<IChatMessage>[] | ((prev: Partial<IChatMessage>[]) => Partial<IChatMessage>[])) => void;
@@ -64,7 +146,7 @@ export function useMessageHistory({
         if (isInitial) {
           setMessages(prev => {
             if (data.messages && data.messages.length > 0) {
-              return data.messages;
+              return topoSortMessages(data.messages);
             }
             // If backend empty, keep what we have (optimistic)
             return prev.length > 1 ? prev : (data.messages || []);
@@ -77,7 +159,8 @@ export function useMessageHistory({
             const nextMsgs = data.messages || [];
             const seenIds = new Set(prev.map((m: Partial<IChatMessage>) => m.id).filter(Boolean));
             const uniqueNext = nextMsgs.filter((m: Partial<IChatMessage>) => !m.id || !seenIds.has(m.id));
-            return [...uniqueNext, ...prev];
+            const merged = [...uniqueNext, ...prev];
+            return topoSortMessages(merged);
           });
           setHasMore(data.hasMore);
           setNextCursor(data.nextCursor);
@@ -113,7 +196,7 @@ export function useMessageHistory({
             if (JSON.stringify(prev.filter(m => !m.id?.startsWith('temp_'))) === JSON.stringify(nextMsgs)) {
               return prev;
             }
-            return nextMsgs;
+            return topoSortMessages(nextMsgs);
           });
           setHasMore(data.hasMore);
           setNextCursor(data.nextCursor);

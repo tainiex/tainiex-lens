@@ -47,9 +47,7 @@ export function ChatProvider({
   }, [initialSessionId]);
 
   useEffect(() => {
-    if (initialSession) {
-      setCurrentSession(initialSession);
-    }
+    setCurrentSession(initialSession);
   }, [initialSession]);
   const [messages, setMessages] = useState<Partial<IChatMessage>[]>([]);
   const [selectedModel, setSelectedModelState] = useState<string>(() => {

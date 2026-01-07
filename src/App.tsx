@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import GoogleCallback from './pages/GoogleCallback';
 import AppDashboard from './pages/AppDashboard';
+import Notes from './pages/Notes';
 import { ThemeProvider } from './contexts/ThemeContext';
 import './App.css';
 
@@ -16,6 +17,7 @@ function App() {
         <div className="app">
           <Routes>
             <Route path="/app" element={<AppDashboard />} />
+            {import.meta.env.DEV && <Route path="/app/notes" element={<Notes />} />}
             <Route path="/app/:sessionId" element={<AppDashboard />} />
             <Route path="*" element={
               <div className="layout-public">
