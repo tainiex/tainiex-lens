@@ -18,6 +18,8 @@ export function useChatSocket() {
     const lastReconnectTimeRef = useRef(0);
     const isConnectedRef = useRef(false); // To track if the socket was connected before a server disconnect
 
+    const lastHiddenTimeRef = useRef<number | null>(null);
+
     const [connectionState, setConnectionState] = useState<ConnectionState>({
         status: 'disconnected',
         attempt: 0
@@ -70,6 +72,14 @@ export function useChatSocket() {
      * Setup Socket Connection
      */
     const setupSocket = useCallback(() => {
+        // Ensure any existing socket is fully cleaned up before creating a new one
+        if (socketRef.current) {
+            logger.debug('Cleaning up existing socket before new setup...');
+            socketRef.current.removeAllListeners();
+            socketRef.current.disconnect();
+            socketRef.current = null;
+        }
+
         // Socket.IO connection configuration
         let wsUrl: string;
 
@@ -93,7 +103,8 @@ export function useChatSocket() {
             reconnectionDelayMax: 3000,
             reconnectionAttempts: maxReconnectAttempts,
             timeout: 20000,
-            autoConnect: true
+            autoConnect: true,
+            forceNew: true // Critical for mobile: force a new connection manager
         });
 
         socket.on('connect', () => {
@@ -199,6 +210,7 @@ export function useChatSocket() {
 
         // Hard reset: fully disconnect and clear ref
         if (socketRef.current) {
+            socketRef.current.removeAllListeners(); // Good practice to remove listeners
             socketRef.current.disconnect();
             socketRef.current = null;
         }
@@ -214,12 +226,35 @@ export function useChatSocket() {
         setupSocket();
 
         const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                const socket = socketRef.current;
-                logger.log('App visible. Socket status:', socket?.connected ? 'connected' : 'disconnected');
+            const now = Date.now();
 
-                if (socket && !socket.connected) {
+            if (document.visibilityState === 'hidden') {
+                lastHiddenTimeRef.current = now;
+                logger.debug("App hidden, recording timestamp.");
+            } else if (document.visibilityState === 'visible') {
+                const sleepDuration = lastHiddenTimeRef.current ? now - lastHiddenTimeRef.current : 0;
+                logger.log(`App visible. Sleep duration: ${sleepDuration}ms`);
+
+                // If app was backgrounded for more than 60s, force a hard reconnect
+                // This handles cases where the socket is in a zombie state
+                if (sleepDuration > 60000) {
+                    logger.warn('App was backgrounded for > 60s, forcing hard socket reconnect...');
                     reconnect();
+                    return;
+                }
+
+                const socket = socketRef.current;
+
+                // If not connected, or if we suspect a drop, check connection
+                if (!socket || !socket.connected) {
+                    logger.log('Socket disconnected on wake. Waiting 1s for network radio...');
+                    // Add a small delay for network radio to wake up on mobile
+                    setTimeout(() => {
+                        if (!socketRef.current?.connected) {
+                            logger.log('Still disconnected after wait, reconnecting...');
+                            reconnect();
+                        }
+                    }, 1000);
                 }
             }
         };
@@ -227,6 +262,8 @@ export function useChatSocket() {
         const handleFocus = () => {
             const socket = socketRef.current;
             if (socket && !socket.connected) {
+                // Similar small delay logic can be applied here if needed, 
+                // but visibilityChange is usually the primary trigger on mobile.
                 reconnect();
             }
         };
