@@ -9,9 +9,14 @@ import { IUser } from '@tainiex/tainiex-shared';
 import { apiClient } from '../utils/apiClient';
 import { logger } from '../utils/logger';
 
+import { useLoadingAnimation } from '../hooks/useLoadingAnimation';
+
 const Notes = () => {
     const [user, setUser] = useState<IUser | null>(null);
     const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+
+    const loadingClass = useLoadingAnimation(isLoadingAuth);
+
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     // Session state for sidebar
@@ -101,7 +106,7 @@ const Notes = () => {
         <NotificationProvider>
             <ErrorBoundary>
                 <div className={`app-dashboard ${isSidebarOpen ? 'sidebar-open' : ''}`}>
-                    {isLoadingAuth && <div className="loading-line" style={{ position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 9999 }}></div>}
+                    <div className={`loading-line ${loadingClass}`} style={{ position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 9999 }}></div>
                     {isSidebarOpen && (
                         <div className="mobile-overlay" onClick={() => setIsSidebarOpen(false)} />
                     )}

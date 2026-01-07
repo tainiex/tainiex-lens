@@ -236,20 +236,56 @@ a {
   left: 0;
   width: 100%;
   height: 3px;
-  background: linear-gradient(90deg, transparent, var(--text-primary), transparent);
-  background-size: 200% 100%;
-  animation: loadingLine 1.5s infinite linear;
+  background: transparent;
   z-index: 1000;
   pointer-events: none;
+  overflow: hidden;
+  transition: opacity 0.5s ease-out;
 }
 
-@keyframes loadingLine {
+.loading-line.hidden {
+  opacity: 0;
+}
+
+.loading-line::after {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, #8b5cf6 60%, #fff 100%);
+  box-shadow: 0 0 15px 2px rgba(139, 92, 246, 0.6), 0 0 5px 1px rgba(255, 255, 255, 0.4);
+  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.5));
+  border-radius: 0 2px 2px 0;
+  animation: meteorLine 1.5s infinite ease-in-out;
+}
+
+@keyframes meteorLine {
   0% {
-    background-position: 100% 0;
+    transform: translateX(-100%);
   }
 
   100% {
-    background-position: -100% 0;
+    transform: translateX(300%);
+    /* Move far enough to exit pure containers */
+  }
+}
+
+.loading-line.finishing::after {
+  animation: meteorFinish 0.4s ease-out forwards;
+}
+
+@keyframes meteorFinish {
+  0% {
+    transform: translateX(-10%);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
   }
 }
 
@@ -258,7 +294,7 @@ a {
   color: var(--text-primary);
   font-size: 0.95rem;
   line-height: 1.6;
-  word-break: break-word;
+  word-break: normal;
   overflow-wrap: break-word;
 }
 

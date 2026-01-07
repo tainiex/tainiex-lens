@@ -10,10 +10,16 @@ import { apiClient } from '../utils/apiClient';
 import { logger } from '../utils/logger';
 
 
+import { useLoadingAnimation } from '../hooks/useLoadingAnimation';
+
 const AppDashboard = () => {
     const { sessionId } = useParams<{ sessionId?: string }>();
     const [user, setUser] = useState<IUser | null>(null);
     const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+
+    // Use custom hook for smooth finishing animation
+    const loadingClass = useLoadingAnimation(isLoadingAuth);
+
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(sessionId || null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -140,7 +146,7 @@ const AppDashboard = () => {
         <NotificationProvider>
             <ErrorBoundary>
                 <div className={`app-dashboard ${isSidebarOpen ? 'sidebar-open' : ''}`}>
-                    {isLoadingAuth && <div className="loading-line" style={{ position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 9999 }}></div>}
+                    <div className={`loading-line ${loadingClass}`} style={{ position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 9999 }}></div>
                     {isSidebarOpen && (
                         <div className="mobile-overlay" onClick={() => setIsSidebarOpen(false)} />
                     )}
