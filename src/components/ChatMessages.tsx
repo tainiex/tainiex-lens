@@ -69,6 +69,24 @@ const ChatMessages = ({
             <div key={msg.id || idx} className={`message ${msg.role}`}>
 
               <div className="message-bubble">
+                {((msg as any).createdAt || (msg as any).timestamp) && (
+                  <div className="message-time" style={{
+                    fontSize: '0.7rem',
+                    opacity: 0.6,
+                    marginBottom: '4px',
+                    textAlign: 'left',
+                    userSelect: 'none'
+                  }}>
+                    {new Date((msg as any).createdAt || (msg as any).timestamp).toLocaleString(undefined, {
+                      // year: 'numeric',
+                      // month: 'numeric',
+                      // day: 'numeric',
+                      hour: '2-digit',     // HH
+                      minute: '2-digit',   // mm
+                      second: '2-digit',   // ss
+                    })}
+                  </div>
+                )}
                 {(msg.role === ChatRole.ASSISTANT && idx === messages.length - 1 && isStreaming) ? (
                   <TypewriterEffect content={msg.content || ''} isStreaming={true} />
                 ) : (
@@ -129,24 +147,6 @@ const ChatMessages = ({
                       <div className="typing-dot"></div>
                     </div>
                   )
-                )}
-                {((msg as any).createdAt || (msg as any).timestamp) && (
-                  <div className="message-time" style={{
-                    fontSize: '0.7rem',
-                    opacity: 0.6,
-                    marginTop: '4px',
-                    textAlign: 'right',
-                    userSelect: 'none'
-                  }}>
-                    {new Date((msg as any).createdAt || (msg as any).timestamp).toLocaleString(undefined, {
-                      // year: 'numeric',
-                      // month: 'numeric',
-                      // day: 'numeric',
-                      hour: '2-digit',     // HH
-                      minute: '2-digit',   // mm
-                      second: '2-digit',   // ss
-                    })}
-                  </div>
                 )}
               </div>
             </div>
