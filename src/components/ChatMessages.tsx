@@ -130,6 +130,24 @@ const ChatMessages = ({
                     </div>
                   )
                 )}
+                {((msg as any).createdAt || (msg as any).timestamp) && (
+                  <div className="message-time" style={{
+                    fontSize: '0.7rem',
+                    opacity: 0.6,
+                    marginTop: '4px',
+                    textAlign: 'right',
+                    userSelect: 'none'
+                  }}>
+                    {new Date((msg as any).createdAt || (msg as any).timestamp).toLocaleString(undefined, {
+                      // year: 'numeric',
+                      // month: 'numeric',
+                      // day: 'numeric',
+                      hour: '2-digit',     // HH
+                      minute: '2-digit',   // mm
+                      second: '2-digit',   // ss
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           ))}
