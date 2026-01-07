@@ -24,7 +24,7 @@ export function useChatSocket() {
     });
     const [error, setError] = useState<string | null>(null);
 
-    const maxReconnectAttempts = 10;
+    const maxReconnectAttempts = Infinity;
     const RECONNECT_DELAY = 1000; // Reduced for faster auto-reconnect
 
     /**
@@ -90,7 +90,7 @@ export function useChatSocket() {
             withCredentials: true,
             reconnection: true,
             reconnectionDelay: RECONNECT_DELAY, // Use RECONNECT_DELAY
-            reconnectionDelayMax: 10000,
+            reconnectionDelayMax: 3000,
             reconnectionAttempts: maxReconnectAttempts,
             timeout: 20000,
             autoConnect: true

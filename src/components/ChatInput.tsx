@@ -17,12 +17,24 @@ const ChatInput = ({ onSend, isConnected, scrollToBottom, models, selectedModel,
   const [isComposing, setIsComposing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Restore draft on mount
+  useEffect(() => {
+    const draft = localStorage.getItem('chat_input_draft');
+    if (draft) setInputValue(draft);
+  }, []);
+
+  // Save to stored draft on change
+  useEffect(() => {
+    localStorage.setItem('chat_input_draft', inputValue);
+  }, [inputValue]);
+
   const handleSend = (e?: React.MouseEvent | React.KeyboardEvent) => {
     if (e) e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
 
     onSend(inputValue);
     setInputValue('');
+    localStorage.removeItem('chat_input_draft');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
