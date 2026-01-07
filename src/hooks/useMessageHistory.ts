@@ -86,7 +86,7 @@ function topoSortMessages(messages: Partial<IChatMessage>[]): Partial<IChatMessa
     while (curr) {
       path.unshift(curr);
       if (curr.id === root.id) break;
-      const pId = curr.id ? parentMap.get(curr.id) : undefined;
+      const pId: string | undefined = curr.id ? parentMap.get(curr.id) : undefined;
       curr = pId ? byId.get(pId) : undefined;
     }
 
