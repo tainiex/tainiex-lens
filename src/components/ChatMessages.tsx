@@ -67,87 +67,109 @@ const ChatMessages = ({
           )}
           {messages.map((msg, idx) => (
             <div key={msg.id || idx} className={`message ${msg.role}`}>
-
-              <div className="message-bubble">
-                {((msg as any).createdAt || (msg as any).timestamp) && (
-                  <div className="message-time" style={{
+              <div className="message-inner-container" style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === ChatRole.USER ? 'flex-end' : 'flex-start', maxWidth: '100%' }}>
+                {msg.role === ChatRole.USER && ((msg as any).createdAt || (msg as any).timestamp) && (
+                  <div className="message-time-outside" style={{
                     fontSize: '0.7rem',
                     opacity: 0.6,
                     marginBottom: '4px',
-                    textAlign: 'left',
+                    marginRight: '8px', // Slight offset for visual alignment
                     userSelect: 'none'
                   }}>
                     {new Date((msg as any).createdAt || (msg as any).timestamp).toLocaleString(undefined, {
-                      // year: 'numeric',
-                      // month: 'numeric',
-                      // day: 'numeric',
-                      hour: '2-digit',     // HH
-                      minute: '2-digit',   // mm
-                      second: '2-digit',   // ss
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      timeZoneName: 'short'
                     })}
                   </div>
                 )}
-                {(msg.role === ChatRole.ASSISTANT && idx === messages.length - 1 && isStreaming) ? (
-                  <TypewriterEffect content={msg.content || ''} isStreaming={true} />
-                ) : (
-                  msg.content ? (
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm, remarkMath]}
-                      rehypePlugins={[rehypeKatex]}
-                      components={{
-                        code({ inline, className, children, ...props }: any) {
-                          const match = /language-(\w+)/.exec(className || '');
-                          return !inline && match ? (
-                            <SyntaxHighlighter
-                              style={theme === 'dark' ? vscDarkPlus : oneLight}
-                              language={match[1]}
-                              PreTag="div"
-                              customStyle={{ background: 'transparent', padding: 0, margin: 0 }}
-                              {...props}
-                            >
-                              {String(children).replace(/\n$/, '')}
-                            </SyntaxHighlighter>
-                          ) : (
-                            <code className={className} {...props}>
-                              {children}
-                            </code>
-                          );
-                        },
-                        a({ href, children, ...props }: any) {
-                          const handleClick = (e: React.MouseEvent) => {
-                            e.preventDefault();
-                            if (href) {
-                              const confirmed = window.confirm(
-                                `即将跳转到外部网站：\n${href}\n\n是否继续访问？`
-                              );
-                              if (confirmed) {
-                                window.open(href, '_blank', 'noopener,noreferrer');
-                              }
-                            }
-                          };
-                          return (
-                            <a
-                              href={href}
-                              onClick={handleClick}
-                              style={{ cursor: 'pointer' }}
-                              {...props}
-                            >
-                              {children}
-                            </a>
-                          );
-                        }
-                      }}
-                    >
-                      {msg.content}
-                    </ReactMarkdown>
-                  ) : (
-                    <div className="typing-dots">
-                      <div className="typing-dot"></div>
-                      <div className="typing-dot"></div>
-                      <div className="typing-dot"></div>
+
+                <div className="message-bubble">
+                  {msg.role === ChatRole.ASSISTANT && ((msg as any).createdAt || (msg as any).timestamp) && (
+                    <div className="message-time" style={{
+                      fontSize: '0.7rem',
+                      opacity: 0.6,
+                      marginBottom: '4px',
+                      textAlign: 'left',
+                      userSelect: 'none'
+                    }}>
+                      {new Date((msg as any).createdAt || (msg as any).timestamp).toLocaleString(undefined, {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        timeZoneName: 'short'
+                      })}
                     </div>
-                  )
-                )}
+                  )}
+                  {(msg.role === ChatRole.ASSISTANT && idx === messages.length - 1 && isStreaming) ? (
+                    <TypewriterEffect content={msg.content || ''} isStreaming={true} />
+                  ) : (
+                    msg.content ? (
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm, remarkMath]}
+                        rehypePlugins={[rehypeKatex]}
+                        components={{
+                          code({ inline, className, children, ...props }: any) {
+                            const match = /language-(\w+)/.exec(className || '');
+                            return !inline && match ? (
+                              <SyntaxHighlighter
+                                style={theme === 'dark' ? vscDarkPlus : oneLight}
+                                language={match[1]}
+                                PreTag="div"
+                                customStyle={{ background: 'transparent', padding: 0, margin: 0 }}
+                                {...props}
+                              >
+                                {String(children).replace(/\n$/, '')}
+                              </SyntaxHighlighter>
+                            ) : (
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            );
+                          },
+                          a({ href, children, ...props }: any) {
+                            const handleClick = (e: React.MouseEvent) => {
+                              e.preventDefault();
+                              if (href) {
+                                const confirmed = window.confirm(
+                                  `即将跳转到外部网站：\n${href}\n\n是否继续访问？`
+                                );
+                                if (confirmed) {
+                                  window.open(href, '_blank', 'noopener,noreferrer');
+                                }
+                              }
+                            };
+                            return (
+                              <a
+                                href={href}
+                                onClick={handleClick}
+                                style={{ cursor: 'pointer' }}
+                                {...props}
+                              >
+                                {children}
+                              </a>
+                            );
+                          }
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    ) : (
+                      <div className="typing-dots">
+                        <div className="typing-dot"></div>
+                        <div className="typing-dot"></div>
+                        <div className="typing-dot"></div>
+                      </div>
+                    )
+                  )}
+                </div>
               </div>
             </div>
           ))}
