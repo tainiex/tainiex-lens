@@ -17,6 +17,33 @@ interface ChatMessagesProps {
   handleScroll: () => void;
 }
 
+const formatMessageTime = (dateStr: string | undefined): string => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+
+  // Basic date time
+  // Using standard slashes YYYY/MM/DD
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+
+  const timeStr = `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+
+  // Timezone info
+  const timeZoneID = Intl.DateTimeFormat().resolvedOptions().timeZone; // e.g. "Asia/Shanghai"
+
+  const offsetMinutes = -date.getTimezoneOffset();
+  const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+  const offsetMins = Math.abs(offsetMinutes) % 60;
+  const offsetSign = offsetMinutes >= 0 ? '+' : '-';
+  const offsetStr = `UTC${offsetSign}${offsetHours}${offsetMins > 0 ? `:${offsetMins}` : ''}`;
+
+  return `${timeStr} ${timeZoneID} (${offsetStr})`;
+};
+
 const ChatMessages = ({
   user,
   isFetchingMore,
@@ -76,15 +103,7 @@ const ChatMessages = ({
                     marginRight: '8px', // Slight offset for visual alignment
                     userSelect: 'none'
                   }}>
-                    {new Date((msg as any).createdAt || (msg as any).timestamp).toLocaleString(undefined, {
-                      year: 'numeric',
-                      month: '2-digit',
-                      day: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      second: '2-digit',
-                      timeZoneName: 'short'
-                    })}
+                    {formatMessageTime((msg as any).createdAt || (msg as any).timestamp)}
                   </div>
                 )}
 
@@ -97,15 +116,7 @@ const ChatMessages = ({
                       textAlign: 'left',
                       userSelect: 'none'
                     }}>
-                      {new Date((msg as any).createdAt || (msg as any).timestamp).toLocaleString(undefined, {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                        timeZoneName: 'short'
-                      })}
+                      {formatMessageTime((msg as any).createdAt || (msg as any).timestamp)}
                     </div>
                   )}
                   {(msg.role === ChatRole.ASSISTANT && idx === messages.length - 1 && isStreaming) ? (
