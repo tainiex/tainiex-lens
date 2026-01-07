@@ -181,9 +181,17 @@ class ApiClient {
         };
 
         // Use retry mechanism
+        const retryCount = options.retryCount ?? 3;
+        // If retryCount is 0, we still want to make 1 attempt.
+        // So maxAttempts should be retryCount + 1 if we interpret retryCount as "number of retries".
+        // But if retryCount is interpreted as "max attempts", then 0 is invalid.
+        // Given Login.tsx passes 0, it likely means "do not retry".
+        // So we ensure at least 1 attempt.
+        const maxAttempts = retryCount === 0 ? 1 : retryCount;
+        
         return this.retryWithBackoff(
             () => makeRequest(),
-            options.retryCount ?? 3, // Max attempts, default to 3
+            maxAttempts,
             `API request to ${path}`
         );
     }

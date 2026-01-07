@@ -19,7 +19,7 @@ const Footer = () => {
                             <path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772" />
                         </svg>
                     </a>
-                    <a href="#discord" aria-label="Discord">
+                    <a href="https://discord.gg/5xVMd5MbT6" aria-label="Discord" target="_blank" rel="noopener noreferrer">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="12" cy="12" r="10"></circle>
                             <circle cx="12" cy="12" r="2"></circle>

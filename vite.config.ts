@@ -25,6 +25,7 @@ export default defineConfig({
       '/socket.io': {
         target: 'http://localhost:2020',
         changeOrigin: true,
+        ws: true,
       },
     },
   },

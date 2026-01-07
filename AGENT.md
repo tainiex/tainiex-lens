@@ -154,7 +154,7 @@ set GITHUB_TOKEN=your_github_pat_here
 
 ### Sidebar Layout
 - **Compactness**: Reduced vertical and horizontal spacing to maximize screen real estate for content.
-- **Menu Order**: Strict ordering: **Chat**, **Notes**, **Memories**, **Tools**.
+- **Menu Order**: Strict ordering: **Chat**, **Notes**.
 - **Scrollbar**: Scrollbars for long lists (e.g., chat history) should be pinned to the right edge/border of the sidebar for clean UI.
 
 ### Theme Toggle

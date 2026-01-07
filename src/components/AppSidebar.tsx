@@ -3,8 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { logger } from '../utils/logger';
 import { createPortal } from 'react-dom';
 import { IUser, IChatSession } from '@tainiex/tainiex-shared';
+import type { INote } from '../types/collaboration';
 import { apiClient } from '../utils/apiClient';
 import { useTheme } from '../contexts/ThemeContext';
+import { groupItemsByDate } from '../utils/dateGrouping';
 
 interface AppSidebarProps {
     user: IUser | null;
@@ -16,6 +18,12 @@ interface AppSidebarProps {
     isLoading?: boolean;
     onDeleteSession?: (id: string) => void;
     onRenameSession?: (id: string, newTitle: string) => void;
+    // Notes props
+    notes?: INote[];
+    isLoadingNotes?: boolean;
+    onNoteSelect?: (id: string | null) => void;
+    onCreateNote?: () => void;
+    onDeleteNote?: (id: string) => void;
 }
 
 const AppSidebar = ({
@@ -27,20 +35,29 @@ const AppSidebar = ({
     sessions = [],
     isLoading = false,
     onDeleteSession,
-    onRenameSession
+    onRenameSession,
+    notes = [],
+    isLoadingNotes = false,
+    onNoteSelect,
+    onCreateNote,
+    onDeleteNote
 }: AppSidebarProps) => {
-    // Removed local session state and fetching logic
     const { theme, toggleTheme } = useTheme();
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
+    const [deleteNoteId, setDeleteNoteId] = useState<string | null>(null);
     const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
     const [editTitle, setEditTitle] = useState('');
     const [activeSessionMenuId, setActiveSessionMenuId] = useState<string | null>(null);
+    const [noteSearch, setNoteSearch] = useState('');
     const location = useLocation();
     const navigate = useNavigate();
     const [menuPosition, setMenuPosition] = useState<{ x: number, y: number } | null>(null);
     const profileMenuRef = useRef<HTMLDivElement>(null);
     const sessionMenuRef = useRef<HTMLDivElement>(null);
+
+    // Active Tab State (derived from URL)
+    const activeTab = location.pathname.includes('/notes') ? 'notes' : 'chats';
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -70,6 +87,22 @@ const AppSidebar = ({
         setEditingSessionId(null);
     };
 
+    const formatTime = (dateString: string) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffDays === 0) return 'Today';
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return `${diffDays}d ago`;
+
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+        });
+    };
+
     return (
         <div className={`app-sidebar ${isOpen ? 'open' : ''}`}>
             <div className="sidebar-brand">
@@ -85,205 +118,225 @@ const AppSidebar = ({
                 </button>
             </div>
 
-            <nav className="sidebar-nav">
-                <div
-                    className={`sidebar-item ${!location.pathname.includes('/app/notes') ? 'active' : ''}`}
-                    onClick={() => {
-                        onSessionSelect(null);
-                        navigate('/app');
-                    }}
-                    style={{ cursor: 'pointer' }}
-                >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-                    Chats
-                </div>
-                {import.meta.env.DEV && (
-                    <div
-                        className={`sidebar-item ${location.pathname.includes('/app/notes') ? 'active' : ''}`}
+            {/* Tab Switcher (Segmented Control) */}
+            <div className="sidebar-tabs-container">
+                <div className="sidebar-segmented-control">
+                    <button
+                        className={`sidebar-tab ${activeTab === 'chats' ? 'active' : ''}`}
+                        onClick={() => {
+                            onSessionSelect(null);
+                            navigate('/app');
+                        }}
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                        Chats
+                    </button>
+                    <button
+                        className={`sidebar-tab ${activeTab === 'notes' ? 'active' : ''}`}
                         onClick={() => {
                             navigate('/app/notes');
-                            setIsOpen?.(false);
                         }}
-                        style={{ cursor: 'pointer' }}
                     >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
-                        <span style={{ flex: 1 }}>Notes</span>
-                    </div>
-                )}
-                <div className="sidebar-item disabled" title="Coming Soon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>
-                    <span style={{ flex: 1 }}>Memories</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
+                        Notes
+                    </button>
                 </div>
-                <div className="sidebar-item disabled" title="Coming Soon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
-                    <span style={{ flex: 1 }}>Tools</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                </div>
-            </nav>
+            </div>
 
-            <div className="sidebar-divider" style={{
-                height: '1px',
-                background: 'rgba(255, 255, 255, 0.08)',
-                margin: '0.4rem 1rem',
-                flexShrink: 0
-            }} />
+            {/* Content Area */}
+            {activeTab === 'notes' && (
+                /* Search at fixed position above list */
+                <div className="sidebar-search-row">
+                    <div className="sidebar-unified-search">
+                        <svg className="sidebar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <input
+                            type="text"
+                            className="sidebar-search-input-transparent"
+                            placeholder="Search notes..."
+                            value={noteSearch}
+                            onChange={(e) => setNoteSearch(e.target.value)}
+                        />
+                        <button className="sidebar-add-btn-unified" onClick={onCreateNote}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <div className="sidebar-history">
-                <div className="history-label" style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: 'var(--text-tertiary)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    marginBottom: '0.4rem',
-                    paddingLeft: '0.6rem',
-                    flexShrink: 0
-                }}>
-                    Your chats
-                </div>
-                <div className="history-list" onScroll={() => setActiveSessionMenuId(null)} style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.15rem',
-                    overflowY: 'auto',
-                    flex: 1,
-                    minHeight: 0
-                }}>
-                    {sessions.map((session) => (
-                        <div
-                            key={session.id}
-                            className={`history-item ${currentSessionId === session.id ? 'active' : ''}`}
-                            onClick={() => onSessionSelect(session.id)}
-                            onContextMenu={(e) => {
-                                // Prevent default context menu on mobile long press
-                                if (window.innerWidth <= 768) {
-                                    e.preventDefault();
-                                }
-                            }}
-                            onTouchStart={(e) => {
-                                // Only for mobile
-                                if (window.innerWidth > 768) return;
-
-                                const touch = e.touches[0];
-                                const currentTarget = e.currentTarget;
-
-                                const timerId = setTimeout(() => {
-                                    if (navigator.vibrate) navigator.vibrate(50);
-
-                                    // Position menu near the touch point or center
-                                    setMenuPosition({
-                                        x: touch.clientX,
-                                        y: touch.clientY
-                                    });
-                                    setActiveSessionMenuId(session.id);
-                                }, 600); // 600ms long press
-
-                                // Store timer ID on the element or a ref map would be better, 
-                                // but for simplicity using a data attribute equivalent or just relying on closure cleanup?
-                                // Closure cleanup via strict touch end handling:
-                                const clearTimer = () => {
-                                    clearTimeout(timerId);
-                                    currentTarget.removeEventListener('touchend', clearTimer);
-                                    currentTarget.removeEventListener('touchmove', clearTimer);
-                                };
-
-                                currentTarget.addEventListener('touchend', clearTimer);
-                                currentTarget.addEventListener('touchmove', clearTimer);
-                            }}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                padding: '0.35rem 0.6rem',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                position: 'relative',
-                                flexShrink: 0
-                            }}
-                        >
-                            {editingSessionId === session.id ? (
-                                <input
-                                    autoFocus
-                                    type="text"
-                                    value={editTitle}
-                                    onChange={(e) => setEditTitle(e.target.value)}
-                                    onBlur={() => setEditingSessionId(null)}
-                                    onKeyDown={async (e) => {
-                                        if (e.key === 'Enter') {
-                                            e.stopPropagation();
-                                            await handleRename(session.id, editTitle);
-                                        } else if (e.key === 'Escape') {
-                                            setEditingSessionId(null);
-                                        }
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="history-item-input"
-                                />
+                {/* LOADING STATE - Check based on tab */}
+                {((activeTab === 'chats' && isLoading) || (activeTab === 'notes' && isLoadingNotes)) ? (
+                    <div className="loading-state" style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        flex: 1,
+                        minHeight: '100px'
+                    }}>
+                        <div className="spinner" style={{
+                            border: '4px solid rgba(0, 0, 0, 0.1)',
+                            borderLeftColor: 'var(--accent-primary)',
+                            borderRadius: '50%',
+                            width: '30px',
+                            height: '30px',
+                            animation: 'spin 1s linear infinite'
+                        }}></div>
+                        <style>{`
+                            @keyframes spin {
+                                0% { transform: rotate(0deg); }
+                                100% { transform: rotate(360deg); }
+                            }
+                        `}</style>
+                    </div>
+                ) : activeTab === 'notes' ? (
+                    /* NOTES LIST */
+                    <>
+                        {/* NOTES LIST CONTENT in sidebar-history */}
+                        <div className="history-list" style={{ flex: 1, overflowY: 'auto' }}>
+                            {notes.length === 0 ? (
+                                <div style={{ padding: '1rem', fontSize: '0.8rem', color: '#52525b', textAlign: 'center' }}>
+                                    No notes yet
+                                </div>
                             ) : (
-                                <>
-                                    <span className="history-item-text" title={session.title || 'New chat'} style={{
-                                        fontSize: '0.85rem',
-                                        fontWeight: 500,
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        flex: 1
-                                    }}>
-                                        {session.title || 'New chat'}
-                                    </span>
-                                    <div className={`session-actions ${activeSessionMenuId === session.id ? 'open' : ''}`} style={{
-                                        display: 'flex',
-                                        gap: '4px',
-                                        transition: 'opacity 0.2s',
-                                        position: 'absolute',
-                                        right: '0',
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        zIndex: 10,
-                                        height: '100%',
-                                        alignItems: 'center',
-                                        paddingLeft: '4px'
-                                    }}>
-                                        <div style={{ position: 'relative' }} ref={activeSessionMenuId === session.id ? sessionMenuRef : null}>
-                                            <button
-                                                className="icon-btn"
-                                                onMouseDown={(e) => e.stopPropagation()}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (activeSessionMenuId === session.id) {
-                                                        setActiveSessionMenuId(null);
-                                                        setMenuPosition(null);
-                                                    } else {
-                                                        const rect = e.currentTarget.getBoundingClientRect();
-                                                        setMenuPosition({ x: rect.right, y: rect.top });
-                                                        setActiveSessionMenuId(session.id);
-                                                    }
-                                                }}
-                                                style={{
-                                                    padding: '2px',
-                                                    color: 'var(--text-secondary)',
-                                                    background: 'transparent'
-                                                }}
-                                            >
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <circle cx="12" cy="12" r="1" />
-                                                    <circle cx="12" cy="5" r="1" />
-                                                    <circle cx="12" cy="19" r="1" />
-                                                </svg>
-                                            </button>
+                                Object.entries(groupItemsByDate(notes.filter(n => n.title.toLowerCase().includes(noteSearch.toLowerCase())))).map(([group, groupNotes]) => (
+                                    groupNotes.length > 0 && (
+                                        <div key={group}>
+                                            <div className="sidebar-group-header">{group}</div>
+                                            {groupNotes.map(note => {
+                                                const noteIdFromUrl = location.pathname.split('/notes/')[1];
+                                                const isActive = noteIdFromUrl === note.id;
+                                                return (
+                                                    <div
+                                                        key={note.id}
+                                                        className={`sidebar-item-styled ${isActive ? 'active' : ''}`}
+                                                        onClick={() => onNoteSelect?.(note.id)}
+                                                    >
+                                                        <div className="item-content">
+                                                            <div className="item-top-row">
+                                                                <div className="item-title">{note.title || 'Untitled'}</div>
+                                                                <div className="item-time">{formatTime(note.updatedAt)}</div>
+                                                            </div>
+                                                            <div className="item-preview">
+                                                                Start writing your note here...
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="note-delete-btn" onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setDeleteNoteId(note.id);
+                                                        }} style={{
+                                                            position: 'absolute',
+                                                            right: '8px',
+                                                            bottom: '8px', // Bottom aligned in new layout? Or stick to right center but subtle?
+                                                            padding: '4px',
+                                                            cursor: 'pointer',
+                                                            color: 'var(--text-tertiary)',
+                                                            opacity: 0
+                                                        }}
+                                                            onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
+                                                        >
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                        </div>
+                                                        <style>{`
+                                                            .sidebar-item-styled:hover .note-delete-btn { opacity: 1 !important; }
+                                                        `}</style>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
-                                    </div>
-                                </>
+                                    )
+                                ))
                             )}
                         </div>
-                    ))}
-                    {sessions.length === 0 && !isLoading && (
-                        <div style={{ padding: '0 0.6rem', fontSize: '0.8rem', color: '#52525b' }}>
-                            No recent chats
+                    </>
+                ) : (
+                    /* CHAT SESSIONS LIST */
+                    <>
+                        <div className="history-list" onScroll={() => setActiveSessionMenuId(null)} style={{ flex: 1, overflowY: 'auto' }}>
+                            {sessions.length === 0 ? (
+                                <div style={{ padding: '0 0.6rem', fontSize: '0.8rem', color: '#52525b', textAlign: 'center', marginTop: '1rem' }}>
+                                    No recent chats
+                                </div>
+                            ) : (
+                                Object.entries(groupItemsByDate(sessions)).map(([group, groupSessions]) => (
+                                    groupSessions.length > 0 && (
+                                        <div key={group}>
+                                            <div className="sidebar-group-header">{group}</div>
+                                            {groupSessions.map(session => (
+                                                <div
+                                                    key={session.id}
+                                                    className={`sidebar-item-styled ${currentSessionId === session.id ? 'active' : ''}`}
+                                                    onClick={() => onSessionSelect(session.id)}
+                                                >
+                                                    <div className="item-content">
+                                                        {editingSessionId === session.id ? (
+                                                            <input
+                                                                autoFocus
+                                                                className="history-item-input"
+                                                                value={editTitle}
+                                                                onChange={(e) => setEditTitle(e.target.value)}
+                                                                onBlur={() => setEditingSessionId(null)}
+                                                                onKeyDown={async (e) => {
+                                                                    if (e.key === 'Enter') {
+                                                                        e.stopPropagation();
+                                                                        await handleRename(session.id, editTitle);
+                                                                    } else if (e.key === 'Escape') {
+                                                                        setEditingSessionId(null);
+                                                                    }
+                                                                }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            />
+                                                        ) : (
+                                                            <div className="item-top-row">
+                                                                <div className="item-title">{session.title || 'New chat'}</div>
+                                                                <div className="item-time">{formatTime(session.updatedAt || session.createdAt)}</div>
+
+                                                                {/* Session Action Menu Trigger */}
+                                                                <div className={`session-actions ${activeSessionMenuId === session.id ? 'open' : ''}`} style={{
+                                                                    marginLeft: 'auto'
+                                                                }}>
+                                                                    <div style={{ position: 'relative' }} ref={activeSessionMenuId === session.id ? sessionMenuRef : null}>
+                                                                        <button
+                                                                            className="icon-btn"
+                                                                            onMouseDown={(e) => e.stopPropagation()}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                if (activeSessionMenuId === session.id) {
+                                                                                    setActiveSessionMenuId(null);
+                                                                                    setMenuPosition(null);
+                                                                                } else {
+                                                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                                                    setMenuPosition({ x: rect.right, y: rect.top });
+                                                                                    setActiveSessionMenuId(session.id);
+                                                                                }
+                                                                            }}
+                                                                            style={{ padding: '2px', color: 'var(--text-secondary)' }}
+                                                                        >
+                                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                                <circle cx="12" cy="12" r="1" />
+                                                                                <circle cx="12" cy="5" r="1" />
+                                                                                <circle cx="12" cy="19" r="1" />
+                                                                            </svg>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        <div className="item-preview">
+                                                            {/* Chat preview text not usually available, placeholder or generic */}
+                                                            Chat conversation...
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )
+                                ))
+                            )}
                         </div>
-                    )}
-                </div>
+                    </>
+                )}
             </div>
 
             <div className="sidebar-footer">
@@ -347,85 +400,118 @@ const AppSidebar = ({
             </div>
 
             {/* Session Action Menu Portal */}
-            {activeSessionMenuId && menuPosition && createPortal(
-                <div
-                    ref={sessionMenuRef}
-                    className="session-menu-dropdown"
-                    style={{
-                        position: 'fixed',
-                        left: menuPosition.x,
-                        top: menuPosition.y,
-                        background: 'var(--bg-tertiary)',
-                        border: '1px solid var(--border-primary)',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                        zIndex: 9999,
-                        minWidth: '120px',
-                        overflow: 'hidden',
-                        marginLeft: '4px' // Little gap from the button
-                    }}
-                >
+            {
+                activeSessionMenuId && menuPosition && createPortal(
                     <div
-                        className="menu-item"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            const session = sessions.find(s => s.id === activeSessionMenuId);
-                            if (session) {
-                                setEditingSessionId(session.id);
-                                setEditTitle(session.title || '');
-                            }
-                            setActiveSessionMenuId(null);
-                        }}
+                        ref={sessionMenuRef}
+                        className="session-menu-dropdown"
                         style={{
-                            padding: '8px 12px',
-                            fontSize: '0.85rem',
-                            color: 'var(--text-secondary)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--bg-hover)';
-                            e.currentTarget.style.color = 'var(--text-primary)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.color = 'var(--text-secondary)';
+                            position: 'fixed',
+                            left: menuPosition.x,
+                            top: menuPosition.y,
+                            background: 'var(--bg-tertiary)',
+                            border: '1px solid var(--border-primary)',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                            zIndex: 9999,
+                            minWidth: '120px',
+                            overflow: 'hidden',
+                            marginLeft: '4px' // Little gap from the button
                         }}
                     >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                        Rename
-                    </div>
-                    <div
-                        className="menu-item danger"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            if (activeSessionMenuId) handleDelete(activeSessionMenuId);
-                            setActiveSessionMenuId(null);
-                        }}
-                        style={{
-                            padding: '8px 12px',
-                            fontSize: '0.85rem',
-                            color: '#ef4444',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                    >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                        Delete
-                    </div>
-                </div>,
-                document.body
-            )}
+                        <div
+                            className="menu-item"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const session = sessions.find(s => s.id === activeSessionMenuId);
+                                if (session) {
+                                    setEditingSessionId(session.id);
+                                    setEditTitle(session.title || '');
+                                }
+                                setActiveSessionMenuId(null);
+                            }}
+                            style={{
+                                padding: '8px 12px',
+                                fontSize: '0.85rem',
+                                color: 'var(--text-secondary)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'var(--bg-hover)';
+                                e.currentTarget.style.color = 'var(--text-primary)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                                e.currentTarget.style.color = 'var(--text-secondary)';
+                            }}
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                            Rename
+                        </div>
+                        <div
+                            className="menu-item danger"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (activeSessionMenuId) handleDelete(activeSessionMenuId);
+                                setActiveSessionMenuId(null);
+                            }}
+                            style={{
+                                padding: '8px 12px',
+                                fontSize: '0.85rem',
+                                color: '#ef4444',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            Delete
+                        </div>
+                    </div>,
+                    document.body
+                )
+            }
 
-            {/* Delete Confirmation Modal */}
+            {/* Note Delete Confirmation Modal */}
+            {
+                deleteNoteId && (
+                    <div className="modal-overlay" onClick={() => setDeleteNoteId(null)}>
+                        <div className="modal-content" onClick={e => e.stopPropagation()}>
+                            <div className="modal-title">Delete Note</div>
+                            <div className="modal-description">
+                                Are you sure you want to delete this note? This action cannot be undone.
+                            </div>
+                            <div className="modal-actions">
+                                <button
+                                    className="btn-modal btn-cancel"
+                                    onClick={() => setDeleteNoteId(null)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="btn-modal btn-delete"
+                                    onClick={() => {
+                                        onDeleteNote?.(deleteNoteId);
+                                        setDeleteNoteId(null);
+                                    }}
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Delete Confirmation Modal (Session) */}
             {
                 deleteConfirmationId && (
                     <div className="modal-overlay" onClick={() => setDeleteConfirmationId(null)}>

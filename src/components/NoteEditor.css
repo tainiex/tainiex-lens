@@ -146,3 +146,361 @@
     border-top: 1px solid var(--border-primary);
     margin: 2rem 0;
 }
+
+/* Loading State */
+.editor-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    gap: 1rem;
+    color: var(--text-secondary);
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border-primary);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Toolbar Spacer */
+.toolbar-spacer {
+    flex: 1;
+}
+
+/* Presence Avatars */
+.presence-avatars {
+    display: flex;
+    align-items: center;
+    gap: -0.5rem;
+}
+
+.presence-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    border: 2px solid var(--bg-secondary);
+    margin-left: -8px;
+    transition: transform 0.2s;
+    cursor: default;
+}
+
+.presence-avatar:first-child {
+    margin-left: 0;
+}
+
+.presence-avatar:hover {
+    transform: scale(1.1);
+    z-index: 1;
+}
+
+.presence-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.presence-avatar.more {
+    background-color: var(--bg-hover);
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+}
+
+/* Sync Indicator */
+.sync-indicator {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+.sync-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border-primary);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Syncing State */
+.editor-content-wrapper.syncing {
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+/* Collaboration Error */
+.collaboration-error {
+    position: absolute;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(231, 76, 60, 0.95);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+}
+
+.collaboration-error button {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.collaboration-error button:hover {
+    opacity: 1;
+}
+
+/* Mobile Menu Button */
+.mobile-menu-btn {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-btn {
+        display: block;
+    }
+}
+
+/* Debug Info (Dev Only) */
+.debug-info {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    font-family: monospace;
+    opacity: 0.6;
+}
+
+/* Bubble Menu (Floating) */
+.bubble-menu {
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-secondary);
+    padding: 0.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border-primary);
+    gap: 0.25rem;
+    animation: fadeIn 0.1s ease-out;
+}
+
+.bubble-menu button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 0.5rem;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.bubble-menu button:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.bubble-menu button.is-active {
+    background-color: var(--bg-active);
+    color: var(--accent-primary);
+}
+
+.bubble-menu-divider {
+    width: 1px;
+    height: 20px;
+    background-color: var(--border-primary);
+    margin: 0 0.25rem;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Position the container for absolute children */
+.note-editor-container {
+    position: relative;
+}
+
+/* Editor Header */
+.editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    height: 52px;
+    border-bottom: 1px solid transparent;
+    /* Transparent border to maintain layout but clean look */
+}
+
+.header-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-tertiary);
+}
+
+.breadcrumb-separator {
+    color: var(--text-quaternary);
+}
+
+.breadcrumb-current {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--accent-success);
+}
+
+.status-indicator.syncing .status-dot {
+    background-color: var(--accent-warning);
+}
+
+.header-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.header-icon-btn:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-secondary);
+}
+
+/* Editor Scroll Container */
+.editor-scroll-container {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Override existing wrapper to fit in scroll container */
+.editor-content-wrapper {
+    flex: 1;
+    overflow-y: visible;
+    /* Let container handle scroll */
+    padding: 0 1.5rem 2rem 5rem;
+    /* Left padding for icon alignment */
+}
+
+/* Title Section */
+.editor-title-section {
+    padding: 2rem 1.5rem 1rem 1.5rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+
+
+.editor-title-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+    padding: 0;
+    resize: none;
+    outline: none;
+    font-family: inherit;
+    min-height: 1.2em;
+}
+
+.editor-title-input::placeholder {
+    color: var(--text-quaternary);
+}
+
+/* Override Toolbar to be cleaner/hidden if needed, or style it better */
+.editor-toolbar {
+    border-bottom: none;
+    padding: 0.5rem 5rem;
+    /* Align with text */
+    background-color: transparent;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    /* backdrop-filter: blur(8px); */
+}

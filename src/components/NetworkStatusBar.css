@@ -1,0 +1,148 @@
+/* NetworkStatusBar.css */
+
+.network-status-bar {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  animation: slideUp 0.3s ease-out;
+  backdrop-filter: blur(8px);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.network-status-bar.success-fade {
+  animation: slideUp 0.3s ease-out, fadeOut 0.5s ease-out 1.5s forwards;
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Status Colors */
+.network-status-bar.connecting {
+  background: linear-gradient(135deg, rgba(69, 183, 209, 0.95), rgba(78, 205, 196, 0.95));
+  color: #fff;
+}
+
+.network-status-bar.connected {
+  background: linear-gradient(135deg, rgba(46, 204, 113, 0.95), rgba(39, 174, 96, 0.95));
+  color: #fff;
+}
+
+.network-status-bar.reconnecting {
+  background: linear-gradient(135deg, rgba(241, 196, 15, 0.95), rgba(243, 156, 18, 0.95));
+  color: #333;
+}
+
+.network-status-bar.disconnected {
+  background: linear-gradient(135deg, rgba(149, 165, 166, 0.95), rgba(127, 140, 141, 0.95));
+  color: #fff;
+}
+
+.network-status-bar.failed {
+  background: linear-gradient(135deg, rgba(231, 76, 60, 0.95), rgba(192, 57, 43, 0.95));
+  color: #fff;
+}
+
+/* Content */
+.status-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.status-icon.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.status-text {
+  white-space: nowrap;
+}
+
+/* Reconnect Button */
+.reconnect-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: inherit;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reconnect-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.reconnect-btn:active {
+  transform: scale(0.98);
+}
+
+/* Dark Mode Adjustments */
+@media (prefers-color-scheme: dark) {
+  .network-status-bar {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+  
+  .network-status-bar.reconnecting {
+    color: #1a1a1a;
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 480px) {
+  .network-status-bar {
+    left: 1rem;
+    right: 1rem;
+    transform: none;
+    bottom: 0.5rem;
+    font-size: 0.8125rem;
+  }
+  
+  .status-icon {
+    width: 16px;
+    height: 16px;
+  }
+}
