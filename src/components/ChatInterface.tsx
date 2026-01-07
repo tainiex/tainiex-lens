@@ -87,7 +87,8 @@ function ChatInterfaceContent({
     wsError,
     handleSend,
     shouldSkipHistoryFetchRef,
-    setCurrentMessage
+    setCurrentMessage,
+    reconnect
   } = useChat({
     currentSessionId,
     setCurrentSessionId,
@@ -144,6 +145,7 @@ function ChatInterfaceContent({
         onMenuClick={onMenuClick}
         isConnected={isConnected}
         wsError={wsError}
+        onReconnect={reconnect}
       />
       <ChatMessages
         user={user}

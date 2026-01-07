@@ -40,7 +40,7 @@ export function useChat({
   const [models, setModels] = useState<(string | { name: string })[]>([]);
 
   // WebSocket hooks
-  const { socket, isConnected, error: wsError } = useChatSocket();
+  const { socket, isConnected, error: wsError, reconnect } = useChatSocket();
   const {
     sendMessage: wsSendMessage,
     isStreaming: wsStreaming,
@@ -177,7 +177,8 @@ export function useChat({
     handleSend,
     shouldSkipHistoryFetchRef,
     currentMessage,
-    setCurrentMessage
+    setCurrentMessage,
+    reconnect
   };
 }
 

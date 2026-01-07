@@ -7,9 +7,10 @@ interface ChatHeaderProps {
   /* removed models prop */
   isConnected: boolean;
   wsError: string | null;
+  onReconnect?: () => void;
 }
 
-const ChatHeader = ({ onMenuClick, isConnected, wsError }: ChatHeaderProps) => {
+const ChatHeader = ({ onMenuClick, isConnected, wsError, onReconnect }: ChatHeaderProps) => {
   const {
     currentSessionId,
     currentSession,
@@ -63,7 +64,12 @@ const ChatHeader = ({ onMenuClick, isConnected, wsError }: ChatHeaderProps) => {
         {sessionTitle}
       </div>
       <div className="header-right">
-        <div className="connection-status" title={isConnected ? 'Connected' : (wsError || 'Connecting...')}>
+        <div
+          className="connection-status"
+          title={isConnected ? 'Connected' : 'Click to reconnect'}
+          onClick={onReconnect}
+          style={{ cursor: 'pointer' }}
+        >
           <div className={`status-dot ${statusClass}`}></div>
         </div>
 

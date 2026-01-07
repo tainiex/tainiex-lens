@@ -62,7 +62,7 @@ const ChatInput = ({ onSend, isConnected, scrollToBottom, models, selectedModel,
           onFocus={() => {
             setTimeout(() => scrollToBottom(), 100);
           }}
-          disabled={isLoading || !isConnected}
+          disabled={isLoading}
           style={{ width: '100%', marginBottom: '8px' }}
         />
         <div className="input-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>

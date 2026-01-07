@@ -25,7 +25,7 @@ export function useChatSocket() {
     const [error, setError] = useState<string | null>(null);
 
     const maxReconnectAttempts = 10;
-    const RECONNECT_DELAY = 3000; // Changed from reconnectDelay = 2000;
+    const RECONNECT_DELAY = 1000; // Reduced for faster auto-reconnect
 
     /**
      * Show connection error notification (Disabled per user request - subtle UI only)
@@ -195,15 +195,19 @@ export function useChatSocket() {
         }
         lastReconnectTimeRef.current = now;
 
+        logger.log('Executing manual hard reconnect...');
+
+        // Hard reset: fully disconnect and clear ref
         if (socketRef.current) {
-            if (socketRef.current.connected) {
-                socketRef.current.disconnect();
-            }
-            updateConnectionState('connecting', 0);
-            socketRef.current.connect();
-        } else {
-            setupSocket();
+            socketRef.current.disconnect();
+            socketRef.current = null;
         }
+
+        // Reset state
+        updateConnectionState('connecting', 0);
+
+        // Re-initialize
+        setupSocket();
     }, [updateConnectionState, setupSocket]);
 
     useEffect(() => {
@@ -227,12 +231,19 @@ export function useChatSocket() {
             }
         };
 
+        const handleOnline = () => {
+            logger.log('Network online detected. Reconnecting...');
+            reconnect();
+        };
+
         document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('focus', handleFocus);
+        window.addEventListener('online', handleOnline);
 
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('focus', handleFocus);
+            window.removeEventListener('online', handleOnline);
             if (socketRef.current) {
                 socketRef.current.disconnect();
                 socketRef.current = null;
