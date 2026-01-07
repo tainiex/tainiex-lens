@@ -67,6 +67,7 @@
 
 **Session Management**: Cookie-based only. Backend sets HTTP-only cookies; frontend **MUST NOT** store tokens in localStorage, sessionStorage, or headers. All API requests must use `credentials: 'include'`.
 - **WebSocket Auth**: Automatically handles authentication errors by triggering token refresh via `apiClient.ensureAuth()` with a retry mechanism and backoff. Errors are logged to the console; UI toast notifications are disabled.
+- **Mobile Optimization**: Socket.IO timeout increased to 30s for mobile networks. All connection errors are captured to Sentry for debugging. Long-sleep reconnect (>60s background) immediately disconnects and reconnects to avoid timeout delays.
 
 
 ### Testing

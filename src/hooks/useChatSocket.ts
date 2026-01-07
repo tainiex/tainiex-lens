@@ -103,7 +103,7 @@ export function useChatSocket() {
             reconnectionDelay: RECONNECT_DELAY, // Use RECONNECT_DELAY
             reconnectionDelayMax: 3000,
             reconnectionAttempts: maxReconnectAttempts,
-            timeout: 20000,
+            timeout: 30000, // Increased from 20s to 30s for mobile networks
             autoConnect: true,
             forceNew: true // Critical for mobile: force a new connection manager
         });
@@ -144,7 +144,7 @@ export function useChatSocket() {
                 logger.warn('WebSocket connection retrying:', err.message);
             }
 
-            // Capture all connection errors to Sentry to analyze mobile issues
+            // Capture all connection errors to Sentry for debugging
             Sentry.captureException(err, {
                 tags: {
                     type: 'websocket_connect_error',
@@ -258,11 +258,20 @@ export function useChatSocket() {
                     level: 'info'
                 });
 
-                // If app was backgrounded for more than 60s, force a hard reconnect
-                // This handles cases where the socket is in a zombie state
+                // If app was backgrounded for more than 60s, force immediate hard reconnect
+                // This avoids waiting for timeout and handles zombie socket state
                 if (sleepDuration > 60000) {
-                    logger.warn('App was backgrounded for > 60s, forcing hard socket reconnect...');
-                    Sentry.captureMessage('Forcing hard reconnect after long sleep', { level: 'warning', tags: { sleepDuration } });
+                    logger.log('App was backgrounded for >60s, forcing immediate hard socket reconnect...');
+                    Sentry.addBreadcrumb({
+                        category: 'socket.reconnect',
+                        message: 'Hard reconnect after long sleep',
+                        data: { sleepDuration },
+                        level: 'info'
+                    });
+                    // Immediately disconnect to avoid waiting for timeout
+                    if (socketRef.current) {
+                        socketRef.current.disconnect();
+                    }
                     reconnect();
                     return;
                 }
