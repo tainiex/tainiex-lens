@@ -279,7 +279,7 @@ const AppSidebar = ({
                         </div>
                     ))}
                     {sessions.length === 0 && !isLoading && (
-                        <div style={{ padding: '0 0.75rem', fontSize: '0.8rem', color: '#52525b' }}>
+                        <div style={{ padding: '0 0.6rem', fontSize: '0.8rem', color: '#52525b' }}>
                             No recent chats
                         </div>
                     )}
