@@ -5,6 +5,7 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import GoogleCallback from './pages/GoogleCallback';
+import AppLayout from './layouts/AppLayout';
 import AppDashboard from './pages/AppDashboard';
 import Notes from './pages/Notes';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -16,10 +17,13 @@ function App() {
       <ThemeProvider>
         <div className="app">
           <Routes>
-            <Route path="/app" element={<AppDashboard />} />
-            <Route path="/app/notes/*" element={<Notes />} />
-            <Route path="/app/:sessionId" element={<AppDashboard />} />
-            <Route path="/notes/*" element={<Notes />} />
+            {/* <Route path="/app" element={<AppDashboard />} /> */}
+            <Route path="/app" element={<AppLayout />}>
+              <Route index element={<AppDashboard />} />
+              <Route path=":sessionId" element={<AppDashboard />} />
+              <Route path="notes" element={<Notes />} />
+              <Route path="notes/*" element={<Notes />} />
+            </Route>
             <Route path="*" element={
               <div className="layout-public">
                 <Background />

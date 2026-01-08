@@ -22,7 +22,7 @@ import CodeBlock from '@tiptap/extension-code-block';
 import Blockquote from '@tiptap/extension-blockquote';
 import Placeholder from '@tiptap/extension-placeholder';
 import Collaboration from '@tiptap/extension-collaboration';
-import { useEffect, useCallback, useState, useRef } from 'react';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
 import * as Y from 'yjs';
 import { useCollaborationSocket } from '../hooks/useCollaborationSocket';
 import { useYjsDocument } from '../hooks/useYjsDocument';
@@ -147,7 +147,7 @@ const TiptapEditor = ({
   useEffect(() => {
     if (!isReadyCalled) {
       const timer = setTimeout(() => {
-        console.log('[DEBUG_TRACE] [UI] Safety Timeout triggered. Showing editor.');
+
         onReady?.();
         setIsReadyCalled(true);
       }, 500);
@@ -155,13 +155,7 @@ const TiptapEditor = ({
     }
   }, [isReadyCalled, onReady]);
 
-  // [DEBUG] Trace Mount/Unmount
-  useEffect(() => {
-    console.log(`[DEBUG_TRACE] [UI] TiptapEditor MOUNTED. Key/Fragment: ${noteId} / ${fragment?.doc ? 'Valid Fragment' : 'Invalid Fragment'}`);
-    return () => {
-      console.log('[DEBUG_TRACE] [UI] TiptapEditor UNMOUNTED.');
-    };
-  }, [noteId, fragment]);
+
 
   // 同步可编辑状态
   useEffect(() => {
@@ -187,7 +181,7 @@ const TiptapEditor = ({
   );
 };
 
-const NoteEditor: React.FC<NoteEditorProps> = ({
+const NoteEditor: React.FC<NoteEditorProps> = React.memo(({
   noteId = null,
   initialContent = '',
   title = '',
@@ -200,7 +194,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   const [collaborationError, setCollaborationError] = useState<string | null>(null);
   const [isLimitReached, setIsLimitReached] = useState(false);
 
-  console.log('[DEBUG_TRACE] [UI] NoteEditor Component Render. NoteId:', noteId);
+
 
   // [FIX] Circular Dependency: Use a Ref to allow accessing sendUpdate from useYjsDocument
   const sendUpdateRef = useRef<((update: string, targetNoteId: string) => void) | null>(null);
@@ -272,7 +266,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   }
 
   // [DEBUG] Trace Render
-  console.log(`[DEBUG_TRACE] [UI] NoteEditor Render. NoteId: ${noteId}, ActiveFragment: ${activeFragmentName}`);
+
 
   // 监听 noteId 变化，重置 socket 状态
   useEffect(() => {
@@ -342,9 +336,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
             <div className={`connection-dot ${connectionStatusClass}`}></div>
           </div>
 
-          <button className="header-icon-btn" title="Export">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-          </button>
+
 
           {/* Removed the second star/favorite icon as requested */}
         </div>
@@ -473,6 +465,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default NoteEditor;

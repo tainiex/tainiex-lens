@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { logger } from '../utils/logger';
 import { IUser } from '@tainiex/tainiex-shared';
 import { ChatProvider, useChatContext } from '../contexts/ChatContext';
@@ -191,4 +191,4 @@ const ChatInterface = ({
   );
 };
 
-export default ChatInterface;
+export default React.memo(ChatInterface);
