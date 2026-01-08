@@ -13,6 +13,8 @@
   --text-primary: #ffffff;
   --text-secondary: #a1a1aa;
   --text-tertiary: #71717a;
+  --text-quaternary: #52525b;
+  /* Placeholder text in dark mode */
 
   --border-primary: rgba(255, 255, 255, 0.08);
   --border-secondary: rgba(255, 255, 255, 0.1);
@@ -42,6 +44,8 @@
   /* Zinc-600 */
   --text-tertiary: #71717a;
   /* Zinc-500 */
+  --text-quaternary: #a1a1aa;
+  /* Zinc-400 - Light gray for placeholders */
 
   --border-primary: rgba(0, 0, 0, 0.08);
   --border-secondary: rgba(0, 0, 0, 0.1);

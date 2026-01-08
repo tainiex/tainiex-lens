@@ -100,7 +100,7 @@ const TiptapEditor = ({
       CodeBlock,
       Blockquote,
       Placeholder.configure({
-        placeholder: '开始编写你的笔记...',
+        placeholder: 'Start writing your note...',
       }),
       Collaboration.configure({
         document: ydoc,
@@ -408,7 +408,7 @@ const NoteEditor = React.memo(({
                 key={`${noteId}-${activeFragmentName}`} // [FIX] Force remount when fragment changes
                 ydoc={ydoc!}
                 fragment={yXmlFragment || ydoc!.getXmlFragment('blocks')} // [FIX] Pass dynamic fragment
-                initialContent={hasData ? '' : initialContent} // [FIX] Prevent Tiptap from merging initialContent if Yjs has data
+                initialContent={hasData ? '' : (initialContent || '')} // [FIX] Prevent Tiptap from merging initialContent if Yjs has data
                 editable={editable}
                 isLimitReached={isLimitReached}
                 onChange={onChange}

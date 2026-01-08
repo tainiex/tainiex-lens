@@ -219,11 +219,16 @@ const AppLayout = () => {
     const handleCreateNote = useCallback(async () => {
         try {
             const res = await apiClient.post('/api/notes', {
-                title: 'Untitled Note',
+                title: '',
                 isPublic: false
             });
             if (res.ok) {
                 const newNote = await res.json();
+                // [FIX] Backend may return "Untitled" or "Untitled Note" as default
+                // Normalize it to empty string so placeholder shows
+                if (newNote.title === 'Untitled' || newNote.title === 'Untitled Note') {
+                    newNote.title = '';
+                }
                 setNotes(prev => [newNote, ...prev]);
                 navigate(`/app/notes/${newNote.id}`, { state: { sidebarOpen: false } });
                 setIsSidebarOpen(false);
