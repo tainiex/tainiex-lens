@@ -276,6 +276,16 @@ const NoteEditor = React.memo(({
     sendUpdateRef.current = sendUpdate;
   }, [sendUpdate]);
 
+  // Auto-resize title textarea to fit content
+  useEffect(() => {
+    if (titleRef.current) {
+      // Reset height to get accurate scrollHeight
+      titleRef.current.style.height = 'auto';
+      // Set height to match content
+      titleRef.current.style.height = titleRef.current.scrollHeight + 'px';
+    }
+  }, [title]);
+
   // 确定网络状态指示灯的状态
   let networkStatusClass = 'connected';
   const { status } = connectionState;

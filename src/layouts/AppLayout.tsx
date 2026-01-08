@@ -40,7 +40,15 @@ const AppLayout = () => {
 
     // --- Sidebar State ---
     const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-        // Restore sidebar state from navigation if available
+        // Check if mobile viewport (matching CSS breakpoint)
+        const isMobile = window.innerWidth <= 768;
+
+        // On mobile, always start closed
+        if (isMobile) {
+            return false;
+        }
+
+        // On desktop, restore from navigation state
         return (location.state as any)?.sidebarOpen || false;
     });
 
