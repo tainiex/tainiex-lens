@@ -162,9 +162,9 @@ const AppLayout = () => {
         // Use ref for sidebar state to avoid recreating this function when sidebar toggles
         const sidebarOpen = isSidebarOpenRef.current;
         if (id) {
-            navigate(`/app/${id}`, { state: { sidebarOpen } });
+            navigate(`/app/chats/${id}`, { state: { sidebarOpen } });
         } else {
-            navigate('/app', { state: { sidebarOpen } });
+            navigate('/app/chats', { state: { sidebarOpen } });
         }
         if (id) setIsSidebarOpen(false); // Close on selection on mobile
     }, [navigate, setIsSidebarOpen]);
@@ -184,16 +184,9 @@ const AppLayout = () => {
             const res = await apiClient.delete(`/api/chat/sessions/${id}`);
             if (res.ok) {
                 setSessions(prev => prev.filter(s => s.id !== id));
-                // We can't access `currentActiveId` here easily without dep.
-                // But we can check location or just ignore for now.
-                // Re-creating this function when URL changes is fine?
-                // `currentActiveId` changes often? Yes.
-                // If we want this STABLE, we shouldn't rely on `currentActiveId`.
-                // Let's assume the caller handles navigation if needed?
-                // The original code navigated.
-                // Let's rely on finding it from location inside here?
+                // If we delete the current chat, go back to main chats list
                 if (window.location.pathname.includes(id)) {
-                    navigate('/app', { state: { sidebarOpen: isSidebarOpenRef.current } });
+                    navigate('/app/chats', { state: { sidebarOpen: isSidebarOpenRef.current } });
                 }
             }
         } catch (error) {

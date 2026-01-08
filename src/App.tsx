@@ -17,10 +17,10 @@ function App() {
       <ThemeProvider>
         <div className="app">
           <Routes>
-            {/* <Route path="/app" element={<AppDashboard />} /> */}
             <Route path="/app" element={<AppLayout />}>
-              <Route index element={<AppDashboard />} />
-              <Route path=":sessionId" element={<AppDashboard />} />
+              <Route index element={<Navigate to="/app/chats" replace />} />
+              <Route path="chats" element={<AppDashboard />} />
+              <Route path="chats/:sessionId" element={<AppDashboard />} />
               <Route path="notes" element={<Notes />} />
               <Route path="notes/*" element={<Notes />} />
             </Route>

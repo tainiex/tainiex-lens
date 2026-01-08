@@ -16,7 +16,7 @@ const GoogleCallback = () => {
                 try {
                     const res = await apiClient.post('/api/auth/google', { code });
                     if (res.ok) {
-                        navigate('/app');
+                        navigate('/app/chats');
                     } else {
                         navigate('/login');
                     }
