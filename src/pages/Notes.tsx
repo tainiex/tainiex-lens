@@ -1,26 +1,21 @@
-import { useNavigate, useParams, useOutletContext } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useOutletContext } from 'react-router-dom';
 import NoteEditor from '../components/NoteEditor';
 import { AppLayoutContextType } from '../layouts/AppLayout';
-import { apiClient } from '../utils/apiClient';
-import { logger } from '../utils/logger';
 import './AppDashboard.css';
 
 const Notes = () => {
-    const navigate = useNavigate();
+
     const params = useParams();
     const noteId = params["*"] || params.noteId;
 
     // Consume data from Layout
     const {
-        isSidebarOpen,
         setIsSidebarOpen,
         notes,
         // notes are already sorted in layout?
-        handleNoteSelect,
-        handleCreateNote,
-        handleDeleteNote,
-        refreshNotes,
-        refreshSessions // might need if we delete a session from sidebar while in notes... wait, sidebar handles that.
+        handleUpdateNoteTitle, // Consuming the new handler
+        user,
     } = useOutletContext<AppLayoutContextType>();
 
     // Notes state is now managed in Layout.
@@ -58,28 +53,44 @@ const Notes = () => {
 
     const activeNote = notes.find(n => n.id === noteId);
 
-    const handleTitleChange = async (newTitle: string) => {
+    // Local state for title to support smooth typing and debounced updates
+    const [localTitle, setLocalTitle] = useState<string>('');
+    const titleUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Sync local title when active note changes or loads
+    useEffect(() => {
+        if (activeNote) {
+            setLocalTitle(activeNote.title);
+        }
+    }, [activeNote?.id, activeNote?.title]); // Update if ID changes or remote title updates
+
+
+
+
+    const handleTitleChange = (newTitle: string) => {
         if (!noteId) return;
 
-        // Optimistic update? 
-        // We can't easily update `notes` state in Layout from here without a setter.
-        // `refreshNotes` would work but it's slow.
-        // I should probably add `updateNoteTitle` to context.
-        // OR just rely on the API call and eventually background refresh?
-        // Layout fetches notes on mount.
+        // 1. Update local UI immediately
+        setLocalTitle(newTitle);
 
-        try {
-            await apiClient.request(`/api/notes/${noteId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: newTitle })
-            });
-            // Trigger refresh
-            refreshNotes();
-        } catch (error) {
-            logger.error('Failed to update note title', error);
+        // 2. Debounce the API call / Context update
+        if (titleUpdateTimeoutRef.current) {
+            clearTimeout(titleUpdateTimeoutRef.current);
         }
+
+        titleUpdateTimeoutRef.current = setTimeout(() => {
+            handleUpdateNoteTitle(noteId, newTitle);
+        }, 500); // 500ms delay
     };
+
+    // Cleanup timeout
+    useEffect(() => {
+        return () => {
+            if (titleUpdateTimeoutRef.current) {
+                clearTimeout(titleUpdateTimeoutRef.current);
+            }
+        };
+    }, []);
 
     return (
         <div className="notes-view-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
@@ -124,10 +135,11 @@ const Notes = () => {
                     <NoteEditor
                         key={noteId}
                         noteId={noteId}
-                        title={activeNote?.title}
+                        title={localTitle}
                         onTitleChange={handleTitleChange}
                         onMobileMenuClick={() => setIsSidebarOpen(true)}
                         isLoading={!activeNote} // Infer loading if noteId exists but note not found yet
+                        user={user}
                     />
                 ) : (
                     <div style={{

@@ -34,6 +34,7 @@ interface UseCollaborationSocketOptions {
   onPresenceChange?: (users: PresenceUser[]) => void;
   onLimit?: (payload: CollaborationLimitPayload) => void;
   onError?: (payload: CollaborationErrorPayload) => void;
+  user?: { id: string; username?: string; email: string; } | null;
 }
 
 interface UseCollaborationSocketReturn {
@@ -614,32 +615,22 @@ export function useCollaborationSocket(
   }, [noteId, joinNote, leaveNote]);
 
   // 设置用户信息（用于光标）
+  // 设置用户信息（用于光标）
   useEffect(() => {
-    // 从 API 获取当前用户信息
-    const fetchUserInfo = async () => {
-      try {
-        const res = await apiClient.get('/api/profile');
-        if (res.ok) {
-          const data = await res.json();
-          // 生成随机颜色
-          const colors = [
-            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
-            '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
-          ];
-          const color = colors[Math.floor(Math.random() * colors.length)];
-          userInfoRef.current = {
-            userId: data.id,
-            userName: data.name || data.email,
-            color,
-          };
-        }
-      } catch (err) {
-        logger.error('[CollabSocket] Failed to fetch user info:', err);
-      }
-    };
-
-    fetchUserInfo();
-  }, []);
+    if (options.user) {
+      // 生成随机颜色
+      const colors = [
+        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+        '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
+      ];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      userInfoRef.current = {
+        userId: options.user.id,
+        userName: options.user.username || options.user.email,
+        color,
+      };
+    }
+  }, [options.user?.id]);
 
   return {
     socket: socketRef.current,

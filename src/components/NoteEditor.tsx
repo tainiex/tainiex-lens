@@ -37,12 +37,15 @@ import type {
 } from '../types/collaboration';
 import './NoteEditor.css';
 
+import { IUser } from '@tainiex/tainiex-shared';
+
 interface NoteEditorProps {
-  noteId?: string | null;
-  initialContent?: string;
+  noteId: string | null;
   title?: string;
+  initialContent?: string;
   onChange?: (content: string) => void;
   onTitleChange?: (title: string) => void;
+  user: IUser | null;
   editable?: boolean;
   onMobileMenuClick?: () => void;
   isLoading?: boolean;
@@ -111,8 +114,11 @@ const TiptapEditor = ({
       // 1. If hasData is false (New Note), show immediately.
       // 2. If hasData is true (Existing Note), wait for content to render.
       if (!hasData || !editor.isEmpty) {
-        onReady?.();
-        setIsReadyCalled(true);
+        // Defer to avoid "Cannot update component while rendering"
+        setTimeout(() => {
+          onReady?.();
+          setIsReadyCalled(true);
+        }, 0);
       }
     },
     onUpdate: ({ editor }) => {
@@ -120,8 +126,10 @@ const TiptapEditor = ({
 
       // If we were waiting for data, and now we have it (or editor updated), show it.
       if (!isReadyCalled) {
-        onReady?.();
-        setIsReadyCalled(true);
+        setTimeout(() => {
+          onReady?.();
+          setIsReadyCalled(true);
+        }, 0);
       }
     },
     onSelectionUpdate: ({ editor }) => {
@@ -181,16 +189,17 @@ const TiptapEditor = ({
   );
 };
 
-const NoteEditor: React.FC<NoteEditorProps> = React.memo(({
-  noteId = null,
-  initialContent = '',
+const NoteEditor = React.memo(({
+  noteId,
   title = '',
+  initialContent,
   onChange,
   onTitleChange,
+  user,
   editable = true,
   onMobileMenuClick,
   isLoading,
-}) => {
+}: NoteEditorProps) => {
   const [collaborationError, setCollaborationError] = useState<string | null>(null);
   const [isLimitReached, setIsLimitReached] = useState(false);
 
@@ -229,6 +238,7 @@ const NoteEditor: React.FC<NoteEditorProps> = React.memo(({
     isSynced: isSocketSynced, // Rename to avoid conflict if needed
   } = useCollaborationSocket({
     noteId,
+    user, // Pass user here
     onSync: useCallback((payload: YjsSyncPayload) => {
       applyInitialSync(payload);
     }, [applyInitialSync]),

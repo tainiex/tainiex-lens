@@ -24,6 +24,7 @@ export interface AppLayoutContextType {
     handleRenameSession: (id: string, newTitle: string) => void;
     handleCreateNote: () => void;
     handleDeleteNote: (id: string) => void;
+    handleUpdateNoteTitle: (id: string, title: string) => void;
     refreshSessions: () => void;
     refreshNotes: () => void;
 }
@@ -125,6 +126,7 @@ const AppLayout = () => {
     }, []);
 
     // --- Auth Check ---
+    // --- Auth Check ---
     useEffect(() => {
         let isMounted = true;
         const checkAuth = async () => {
@@ -140,11 +142,12 @@ const AppLayout = () => {
                     fetchNotes();
                 } else {
                     setTimeout(() => {
-                        if (isMounted) navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`);
+                        // Use window.location.pathname to get current path for redirect
+                        if (isMounted) navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
                     }, 500);
                 }
             } catch (err) {
-                if (isMounted) navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`);
+                if (isMounted) navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
             } finally {
                 if (isMounted) setIsLoadingAuth(false);
             }
@@ -152,7 +155,7 @@ const AppLayout = () => {
 
         checkAuth();
         return () => { isMounted = false; };
-    }, [navigate, fetchSessions, fetchNotes, location.pathname]); // Run once on mount (deps stable)
+    }, []); // Run ONLY once on mount (empty deps is sufficient)
 
     // --- Handlers ---
     const handleSessionSelect = useCallback((id: string | null) => {
@@ -244,6 +247,29 @@ const AppLayout = () => {
         }
     }, [navigate, setNotes]);
 
+    const handleUpdateNoteTitle = useCallback(async (id: string, title: string) => {
+        // 1. Optimistic Update
+        setNotes(prev => {
+            const newNotes = prev.map(n => n.id === id ? { ...n, title, updatedAt: new Date().toISOString() } : n);
+            setCachedNotes(newNotes);
+            return newNotes;
+        });
+
+        // 2. API Call (Debouncing is handled by caller)
+        try {
+            await apiClient.request(`/api/notes/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title })
+            });
+            // No need to refreshNotes() as we already updated local state
+        } catch (error) {
+            logger.error('Failed to update note title', error);
+            // Revert on error? For now, let's keep it simple. User will see error on refresh.
+            fetchNotes(); // unexpected error, sync with server
+        }
+    }, [setNotes, fetchNotes]); // fetchNotes as fail-safe ref
+
     // Context value to share with child routes
     const contextValue = useMemo<AppLayoutContextType>(() => ({
         user,
@@ -258,24 +284,26 @@ const AppLayout = () => {
         handleRenameSession,
         handleCreateNote,
         handleDeleteNote,
+        handleUpdateNoteTitle, // Export new handler
         refreshSessions: fetchSessions,
         refreshNotes: fetchNotes,
     }), [
         user,
         isNotesPath,
         currentActiveId,
-        isSidebarOpen, // This changes often
-        setIsSidebarOpen, // Stable setter
+        isSidebarOpen,
+        setIsSidebarOpen,
         sessions,
         notes,
-        handleSessionSelect, // Stable
-        handleNoteSelect, // Stable
-        handleDeleteSession, // Stable
-        handleRenameSession, // Stable
-        handleCreateNote, // Stable
-        handleDeleteNote, // Stable
-        fetchSessions, // Stable
-        fetchNotes // Stable
+        handleSessionSelect,
+        handleNoteSelect,
+        handleDeleteSession,
+        handleRenameSession,
+        handleCreateNote,
+        handleDeleteNote,
+        handleUpdateNoteTitle, // Add to dep array
+        fetchSessions,
+        fetchNotes
     ]);
 
     return (
