@@ -26,6 +26,15 @@ export default defineConfig({
         target: 'http://localhost:2020',
         changeOrigin: true,
         ws: true,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            if (err.message.includes('ECONNRESET') || err.message.includes('EPIPE')) {
+              // Ignore these common socket errors during hot reload/reconnect
+              return;
+            }
+            console.error('Proxy error:', err);
+          });
+        },
       },
     },
   },

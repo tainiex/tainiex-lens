@@ -6,6 +6,8 @@
  */
 
 import { useEditor, EditorContent } from '@tiptap/react';
+import UniqueID from '@tiptap/extension-unique-id';
+
 import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
@@ -20,11 +22,11 @@ import CodeBlock from '@tiptap/extension-code-block';
 import Blockquote from '@tiptap/extension-blockquote';
 import Placeholder from '@tiptap/extension-placeholder';
 import Collaboration from '@tiptap/extension-collaboration';
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import * as Y from 'yjs';
 import { useCollaborationSocket } from '../hooks/useCollaborationSocket';
 import { useYjsDocument } from '../hooks/useYjsDocument';
-import NetworkStatusBar from './NetworkStatusBar';
+// import NetworkStatusBar from './NetworkStatusBar';
 import { logger } from '../utils/logger';
 import type {
   YjsSyncPayload,
@@ -48,16 +50,18 @@ interface NoteEditorProps {
 // 内部 Tiptap 编辑器组件
 const TiptapEditor = ({
   ydoc,
+  fragment,
   initialContent,
   editable,
   isLimitReached,
   onChange,
   sendCursorUpdate,
-  presenceUsers,
+  // presenceUsers,
   isSyncing,
   noteId,
 }: {
   ydoc: Y.Doc;
+  fragment: Y.XmlFragment;
   initialContent: string;
   editable: boolean;
   isLimitReached: boolean;
@@ -69,6 +73,9 @@ const TiptapEditor = ({
 }) => {
   const editor = useEditor({
     extensions: [
+      UniqueID.configure({
+        types: ['heading', 'paragraph', 'bulletList', 'orderedList', 'listItem', 'blockquote', 'codeBlock'],
+      }),
       Document,
       Paragraph,
       Text,
@@ -86,6 +93,7 @@ const TiptapEditor = ({
       }),
       Collaboration.configure({
         document: ydoc,
+        fragment: fragment, // [FIX] Use dynamic fragment passed from hook
       }),
     ],
     content: initialContent,
@@ -113,6 +121,14 @@ const TiptapEditor = ({
       },
     },
   });
+
+  // [DEBUG] Trace Mount/Unmount
+  useEffect(() => {
+    console.log(`[DEBUG_TRACE] [UI] TiptapEditor MOUNTED. Key/Fragment: ${noteId} / ${fragment?.doc ? 'Valid Fragment' : 'Invalid Fragment'}`);
+    return () => {
+      console.log('[DEBUG_TRACE] [UI] TiptapEditor UNMOUNTED.');
+    };
+  }, [noteId, fragment]);
 
   // 同步可编辑状态
   useEffect(() => {
@@ -150,9 +166,14 @@ const NoteEditor = ({
   const [collaborationError, setCollaborationError] = useState<string | null>(null);
   const [isLimitReached, setIsLimitReached] = useState(false);
 
+  // [FIX] Circular Dependency: Use a Ref to allow accessing sendUpdate from useYjsDocument
+  const sendUpdateRef = useRef<((update: string, targetNoteId: string) => void) | null>(null);
+
   // Y.js 文档管理
   const {
     ydoc,
+    yXmlFragment,
+    activeFragmentName, // [FIX] Get fragment name for key
     isInitialized: isYjsInitialized,
     isSyncing,
     applyRemoteUpdate,
@@ -161,7 +182,9 @@ const NoteEditor = ({
     noteId,
     onLocalUpdate: (update) => {
       logger.debug('[NoteEditor] Sending local update, size:', update.length);
-      sendUpdate(update);
+      if (noteId && sendUpdateRef.current) {
+        sendUpdateRef.current(update, noteId);
+      }
     },
   });
 
@@ -188,12 +211,38 @@ const NoteEditor = ({
     }, []),
     onLimit: useCallback((payload: CollaborationLimitPayload) => {
       setIsLimitReached(true);
-      setCollaborationError(payload.message);
+      setCollaborationError(payload.error);
     }, []),
     onError: useCallback((payload: { error: string }) => {
       setCollaborationError(payload.error);
     }, []),
   });
+
+  // [FIX] Keep Ref updated with the latest sendUpdate function
+  useEffect(() => {
+    sendUpdateRef.current = sendUpdate;
+  }, [sendUpdate]);
+
+  // Determine Connection traffic light status
+  let connectionStatusClass = 'connected';
+  const { status, error: wsError } = connectionState;
+
+  if (status === 'connecting' || status === 'reconnecting') {
+    connectionStatusClass = 'connecting';
+  } else if (status === 'disconnected' || wsError) {
+    connectionStatusClass = 'failed';
+  }
+
+  // [DEBUG] Trace Render
+  console.log(`[DEBUG_TRACE] [UI] NoteEditor Render. NoteId: ${noteId}, ActiveFragment: ${activeFragmentName}`);
+
+  // 监听 noteId 变化，重置 socket 状态
+  useEffect(() => {
+    if (noteId) {
+      setCollaborationError(null);
+      setIsLimitReached(false);
+    }
+  }, [noteId]);
 
   // 清除错误
   const handleDismissError = useCallback(() => {
@@ -235,14 +284,23 @@ const NoteEditor = ({
         <div className="header-actions">
           <div className={`status-indicator ${isSyncing ? 'syncing' : 'saved'}`}>
             <div className="status-dot"></div>
-            <span>{isSyncing ? 'Saving' : 'Saved'}</span>
+            <span>{isSyncing ? 'Saving...' : 'Saved'}</span>
           </div>
-          <button className="header-icon-btn">
+
+          {/* Traffic Light Connection Status */}
+          <div
+            className="connection-status-light"
+            title={status === 'connected' ? 'Connected' : 'Click to reconnect'}
+            onClick={() => status !== 'connected' && reconnect()}
+          >
+            <div className={`connection-dot ${connectionStatusClass}`}></div>
+          </div>
+
+          <button className="header-icon-btn" title="Export">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
           </button>
-          <button className="header-icon-btn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
-          </button>
+
+          {/* Removed the second star/favorite icon as requested */}
         </div>
       </div>
 
@@ -262,7 +320,9 @@ const NoteEditor = ({
         {/* 只有当 Y.js 文档初始化完成后，才渲染编辑器 */}
         {isYjsInitialized && ydoc ? (
           <TiptapEditor
+            key={`${noteId}-${activeFragmentName}`} // [FIX] Force remount when fragment changes
             ydoc={ydoc}
+            fragment={yXmlFragment || ydoc.getXmlFragment('blocks')} // [FIX] Pass dynamic fragment (blocks or default)
             initialContent={initialContent}
             editable={editable}
             isLimitReached={isLimitReached}
@@ -279,13 +339,18 @@ const NoteEditor = ({
           </div>
         )}
 
-        {/* 同步状态指示器 */}
-        {isSyncing && (
+        {/* 同步状态指示器 - Optional to keep, header already has status */}
+        {/* {isSyncing && (
           <div className="sync-indicator">
             <div className="sync-spinner" />
             <span>同步中...</span>
           </div>
-        )}
+        )} */}
+        {/* User asked to remove prompt/toasts, but this is a subtle indicator at bottom right. 
+            The requirement said "Remove connection tips, use green/yellow light". 
+            I'll interpret that as removing the NetworkStatusBar mostly. 
+            I'll comment out the bottom sync indicator too since we have it in the header now. 
+        */}
 
         {/* 协作限制提示 */}
         {collaborationError && (
@@ -295,13 +360,7 @@ const NoteEditor = ({
           </div>
         )}
 
-        {/* 网络状态栏 */}
-        {noteId && (
-          <NetworkStatusBar
-            connectionState={connectionState}
-            onReconnect={reconnect}
-          />
-        )}
+        {/* Removed NetworkStatusBar as requested */}
 
         {/* Y.js 初始化状态调试（仅开发环境） */}
         {import.meta.env.DEV && noteId && (

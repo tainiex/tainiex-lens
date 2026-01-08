@@ -5,62 +5,58 @@
  * 基于后端 @tainiex/shared 接口和 Y.js 协议
  */
 
-import { Socket as SocketIOSocket } from 'socket.io-client';
+/**
+ * 协同编辑类型定义
+ * Collaboration Types Definition
+ * 
+ * 基于后端 @tainiex/shared 接口和 Y.js 协议
+ */
 
-// ===== Block Types (来自 BlockType 枚举) =====
-export enum BlockType {
-  TEXT = 'TEXT',
-  HEADING1 = 'HEADING1',
-  HEADING2 = 'HEADING2',
-  HEADING3 = 'HEADING3',
-  BULLET_LIST = 'BULLET_LIST',
-  NUMBERED_LIST = 'NUMBERED_LIST',
-  TODO = 'TODO',
-  QUOTE = 'QUOTE',
-  CODE = 'CODE',
-  IMAGE = 'IMAGE',
-  VIDEO = 'VIDEO',
-  FILE = 'FILE',
-  TABLE = 'TABLE',
-  DIVIDER = 'DIVIDER',
-  CALLOUT = 'CALLOUT',
-  TOGGLE = 'TOGGLE',
-}
+import { Socket as SocketIOSocket } from 'socket.io-client';
+import {
+  BlockType,
+  IBlock as SharedIBlock,
+  INote as SharedINote,
+  // IUser, // Unused
+  NoteJoinPayload,
+  NoteLeavePayload,
+  YjsUpdatePayload,
+  YjsSyncPayload,
+  // CursorUpdatePayload, // Shared version exists but might differ in cursor structure
+  PresenceLeavePayload,
+  // PresenceUser as SharedPresenceUser, // Removed: Not exported from shared
+  CollaborationLimitPayload,
+  // CollaborationErrorPayload // Shared likely doesn't have this generic specific error
+  ClientToServerEvents,
+  ServerToClientEvents,
+} from '@tainiex/tainiex-shared';
+
+// Re-export BlockType
+export { BlockType };
 
 // ===== Block Interface =====
-export interface IBlock {
-  id: string;
-  noteId: string;
-  type: BlockType;
-  content: string; // JSON 或 HTML 内容
-  order: number;
-  parentBlockId?: string | null;
-  children?: IBlock[]; // 树状结构时由后端构建
-  createdAt: string;
-  updatedAt: string;
+// Extend SharedIBlock to include frontend-specific properties like 'children' for tree rendering
+export interface IBlock extends SharedIBlock {
+  children?: IBlock[];
+  // Shared has 'position', Local had 'order'. We will use 'position'.
 }
 
 // ===== Note Interface =====
-export interface INote {
-  id: string;
-  title: string;
-  ownerId: string;
-  workspaceId?: string | null;
-  icon?: string | null;
-  coverImage?: string | null;
-  isPublic: boolean;
-  blocks?: IBlock[]; // 获取笔记详情时包含
-  createdAt: string;
-  updatedAt: string;
+// Shared INote uses 'userId' instead of 'ownerId'.
+// Shared INote doesn't have 'blocks' by default, but existing code expects it?
+export interface INote extends SharedINote {
+  blocks?: IBlock[];
+  // Map old 'ownerId' access to 'userId' via code changes
 }
 
 // ===== Collaborator (Presence) Interface =====
+// Frontend specific representation of a connected user
 export interface ICollaborator {
-  id: string;
-  name: string;
+  id: string;        // Mapped from userId
+  name: string;      // Mapped from username
   email?: string;
   avatar?: string;
-  color: string; // 协作者高亮颜色
+  color: string;
   cursor?: {
     position: number;
     selectionStart?: number;
@@ -69,18 +65,20 @@ export interface ICollaborator {
 }
 
 // ===== Y.js Payloads =====
-export interface YjsUpdatePayload {
-  noteId: string;
-  update: string; // Base64 encoded Uint8Array
-  clientId?: string;
-}
+// Re-export shared payloads where exact match
+export type { NoteJoinPayload, NoteLeavePayload, YjsUpdatePayload, PresenceLeavePayload, CollaborationLimitPayload };
 
-export interface YjsSyncPayload {
-  noteId: string;
-  state: string; // Base64 encoded initial state
-}
+// Custom/Augmented Payloads
 
-// ===== Cursor Update Payload =====
+// Shared CursorUpdatePayload might differ. Shared: { position?: { blockId, offset }, selection?: ... }
+// Local: { cursor: { position, selectionStart... } }
+// Keeping Local for now to avoid breaking Editor logic heavily, or adapt later.
+// Actually, guide said "Delete NoteJoinPayload (and related DTOs)".
+// But if Editor logic relies on specific cursor shape, blindly switching breaks it.
+// Let's keep local definition for Cursor if it differs significantly, or check Shared first.
+// Shared CursorUpdatePayload: position: { blockId, offset }, selection: { ... }
+// Local code uses simple number index.
+// DECISION: Keep local CursorUpdatePayload for now to minimize breakage in Tiptap binding.
 export interface CursorUpdatePayload {
   noteId: string;
   userId: string;
@@ -90,7 +88,7 @@ export interface CursorUpdatePayload {
     position: number;
     selectionStart?: number;
     selectionEnd?: number;
-  } | null; // null 表示光标不可见/失焦
+  } | null;
 }
 
 // ===== Presence Payloads =====
@@ -99,29 +97,18 @@ export interface PresenceUser {
   userName: string;
   avatar?: string;
   color: string;
-  joinedAt: string;
+  joinedAt?: string; // Optional in shared?
 }
 
+// Adapter for PresenceJoin
 export interface PresenceJoinPayload {
   noteId: string;
   user: PresenceUser;
 }
 
-export interface PresenceLeavePayload {
-  noteId: string;
-  userId: string;
-}
-
 export interface PresenceListPayload {
   noteId: string;
   users: PresenceUser[];
-}
-
-// ===== Collaboration Error Payloads =====
-export interface CollaborationLimitPayload {
-  noteId: string;
-  maxUsers: number;
-  message: string;
 }
 
 export interface CollaborationErrorPayload {
@@ -132,79 +119,34 @@ export interface CollaborationErrorPayload {
 
 // ===== Socket.IO Event Types for Collaboration =====
 
-// Client to Server Events
-export interface CollaborationClientToServerEvents {
-  // 加入笔记协同房间
-  'note:join': (data: { noteId: string }) => void;
-  // 离开笔记协同房间
-  'note:leave': (data: { noteId: string }) => void;
-  // 发送 Y.js 增量更新
-  'yjs:update': (payload: YjsUpdatePayload) => void;
-  // 更新光标位置
-  'cursor:update': (payload: CursorUpdatePayload) => void;
-}
+// ===== Socket.IO Definitions =====
 
-// Server to Client Events
-export interface CollaborationServerToClientEvents {
-  // 接收初始 Y.js 状态
-  'yjs:sync': (payload: YjsSyncPayload) => void;
-  // 接收他人的 Y.js 更新
-  'yjs:update': (payload: YjsUpdatePayload) => void;
-  // 用户加入协同
-  'presence:join': (payload: PresenceJoinPayload) => void;
-  // 用户离开协同
-  'presence:leave': (payload: PresenceLeavePayload) => void;
-  // 当前在线用户列表
-  'presence:list': (payload: PresenceListPayload) => void;
-  // 他人光标更新
-  'cursor:update': (payload: CursorUpdatePayload) => void;
-  // 协同人数已满
-  'collaboration:limit': (payload: CollaborationLimitPayload) => void;
-  // 协同错误
-  'collaboration:error': (payload: CollaborationErrorPayload) => void;
-}
+// Re-export BlockType
+export type { YjsSyncPayload };
+
+// ... (keep intermediate interfaces) ...
+
+// ===== Socket.IO Definitions =====
 
 // Combined Socket Type
 export type CollaborationSocket = SocketIOSocket<
-  CollaborationServerToClientEvents,
-  CollaborationClientToServerEvents
+  ServerToClientEvents,
+  ClientToServerEvents
 >;
 
 // ===== API Request/Response Types =====
+// Shared defines CreateNoteDto, etc. We should prefer those.
+import { CreateNoteDto, UpdateNoteDto, CreateBlockDto, UpdateBlockDto } from '@tainiex/tainiex-shared';
 
-// 创建笔记请求
-export interface CreateNoteRequest {
-  title: string;
-  workspaceId?: string;
-  icon?: string;
-  isPublic?: boolean;
-}
+export type CreateNoteRequest = CreateNoteDto;
+export type UpdateNoteRequest = UpdateNoteDto;
 
-// 更新笔记请求
-export interface UpdateNoteRequest {
-  title?: string;
-  icon?: string;
-  coverImage?: string;
-  isPublic?: boolean;
-}
+// Shared CreateBlockDto has 'type: BlockType', 'content: string', 'position'.
+// Local had 'order'.
+export type CreateBlockRequest = CreateBlockDto;
+export type UpdateBlockRequest = UpdateBlockDto;
 
-// 创建块请求
-export interface CreateBlockRequest {
-  type: BlockType;
-  content: string;
-  order?: number;
-  parentBlockId?: string;
-}
-
-// 更新块请求
-export interface UpdateBlockRequest {
-  type?: BlockType;
-  content?: string;
-  order?: number;
-  parentBlockId?: string;
-}
-
-// 版本信息
+// Version/Snapshot/Search - Keep local if not in shared
 export interface IBlockVersion {
   id: string;
   blockId: string;
@@ -215,7 +157,6 @@ export interface IBlockVersion {
   userName?: string;
 }
 
-// 笔记快照
 export interface INoteSnapshot {
   id: string;
   noteId: string;
@@ -226,7 +167,6 @@ export interface INoteSnapshot {
   userName?: string;
 }
 
-// 搜索结果
 export interface ISearchResult {
   type: 'note' | 'block';
   noteId: string;
@@ -234,19 +174,17 @@ export interface ISearchResult {
   blockId?: string;
   blockType?: BlockType;
   content: string;
-  highlight: string; // 高亮匹配的片段
+  highlight: string;
   score: number;
 }
 
-// 上传响应
 export interface IUploadResponse {
-  url: string; // GCS 签名 URL
+  url: string;
   filename: string;
   contentType: string;
   size: number;
 }
 
-// ===== Connection State =====
 export interface CollaborationConnectionState {
   status: 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
   noteId: string | null;

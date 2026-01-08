@@ -8,7 +8,7 @@
 
 const isDev = import.meta.env.DEV;
 
-type LogLevel = 'debug' | 'log' | 'warn' | 'error';
+// type LogLevel = 'debug' | 'log' | 'warn' | 'error';
 
 class Logger {
     debug(...args: any[]) {
