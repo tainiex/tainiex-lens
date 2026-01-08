@@ -21,6 +21,7 @@ interface UseYjsDocumentReturn {
   activeFragmentName: 'blocks' | 'default';
   isInitialized: boolean;
   isSyncing: boolean;
+  hasData: boolean;
   applyRemoteUpdate: (payload: YjsUpdatePayload) => void;
   applyInitialSync: (payload: YjsSyncPayload) => void;
   getStateAsBase64: () => string;
@@ -112,43 +113,27 @@ export function useYjsDocument(options: UseYjsDocumentOptions): UseYjsDocumentRe
       return;
     }
 
-    logger.debug('[YjsDoc] Creating new Y.Doc for note:', noteId);
-    const ydoc = new Y.Doc();
+    // [FIX] Wrap init in try-catch to prevent crash loops
+    try {
+      const ydoc = new Y.Doc();
+      const yXmlFragment = ydoc.getXmlFragment('blocks');
 
-    // 创建 XmlFragment 用于富文本编辑器
-    // Tiptap 使用 XmlFragment 作为文档结构
-    // [FIX] Use 'blocks' to match backend expectation
-    const yXmlFragment = ydoc.getXmlFragment('blocks');
-    console.log('[DEBUG_TRACE] [INIT] Y.Doc initialized. Fragment "blocks" created.');
+      // 监听本地更新
+      ydoc.on('update', (update: Uint8Array, origin: unknown) => {
+        if (origin === 'remote' || isLocalUpdateRef.current) return;
 
-    // 监听本地更新
-    ydoc.on('update', (update: Uint8Array, origin: unknown) => {
-      // 只发送本地更新，忽略远程更新
-      if (origin === 'remote') {
-        logger.debug('[YjsDoc] Ignoring remote update echo');
-        return;
-      }
+        const base64Update = base64Utils.encode(update);
+        onLocalUpdateRef.current?.(base64Update);
+      });
 
-      if (isLocalUpdateRef.current) {
-        logger.debug('[YjsDoc] Ignoring local update during apply');
-        return;
-      }
+      ydocRef.current = ydoc;
+      yXmlFragmentRef.current = yXmlFragment;
+      setIsInitialized(true);
 
-      logger.debug('[YjsDoc] Local update detected, size:', update.byteLength);
-      console.log('[DEBUG_TRACE] [WRITE] Local (Editor) Change Detected:', update.byteLength, 'bytes');
-
-      // [DEBUG] Dump the entire doc structure to see where data is
-      console.log('[DEBUG_TRACE] Y.Doc Structure:', JSON.stringify(ydoc.toJSON(), null, 2));
-
-      const base64Update = base64Utils.encode(update);
-      onLocalUpdateRef.current?.(base64Update);
-    });
-
-    ydocRef.current = ydoc;
-    yXmlFragmentRef.current = yXmlFragment;
-    setIsInitialized(true);
-
-    logger.debug('[YjsDoc] Y.Doc initialized');
+      logger.debug('[YjsDoc] Initialized');
+    } catch (error) {
+      logger.error('[YjsDoc] Init Error:', error);
+    }
   }, [noteId]);
 
   /**
@@ -342,13 +327,16 @@ export function useYjsDocument(options: UseYjsDocumentOptions): UseYjsDocumentRe
     return base64Utils.encode(state);
   }, []);
 
+  // [FIX] Detect if we have data to render (to prevent placeholder flash)
+  const hasData = yXmlFragmentRef.current && yXmlFragmentRef.current.length > 0;
+
   // 当 noteId 变化时重新初始化
   useEffect(() => {
     initializeYDoc();
 
     return () => {
       if (ydocRef.current) {
-        logger.debug('[YjsDoc] Cleanup: destroying Y.Doc');
+        // Silent cleanup
         ydocRef.current.destroy();
         ydocRef.current = null;
         yXmlFragmentRef.current = null;
@@ -363,6 +351,7 @@ export function useYjsDocument(options: UseYjsDocumentOptions): UseYjsDocumentRe
     activeFragmentName,
     isInitialized,
     isSyncing,
+    hasData: !!hasData,
     applyRemoteUpdate,
     applyInitialSync,
     getStateAsBase64,

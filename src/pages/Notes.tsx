@@ -277,8 +277,10 @@ const Notes = () => {
                         )}
 
                         <div style={{ flex: 1, padding: 0, overflowY: 'hidden' }}>
+                            {/* [FIX] Reverted blocking check to prevents sidebar flicker. Title flash handled in NoteEditor */}
                             {noteId ? (
                                 <NoteEditor
+                                    key={noteId} // [FIX] Force remount on note switch to reset Tiptap
                                     noteId={noteId}
                                     title={activeNote?.title}
                                     onTitleChange={handleTitleChange}

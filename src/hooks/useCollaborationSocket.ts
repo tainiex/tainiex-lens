@@ -114,6 +114,24 @@ export function useCollaborationSocket(
   // 获取当前用户信息用于光标
   const userInfoRef = useRef<{ userId: string; userName: string; color: string } | null>(null);
 
+  // [FIX] Use Refs for callbacks so listeners always access latest version
+  const onSyncRef = useRef(onSync);
+  const onUpdateRef = useRef(onUpdate);
+  const onCursorUpdateRef = useRef(onCursorUpdate);
+  const onPresenceChangeRef = useRef(onPresenceChange);
+  const onLimitRef = useRef(onLimit);
+  const onErrorRef = useRef(onError);
+
+  // Keep Refs updated
+  useEffect(() => {
+    onSyncRef.current = onSync;
+    onUpdateRef.current = onUpdate;
+    onCursorUpdateRef.current = onCursorUpdate;
+    onPresenceChangeRef.current = onPresenceChange;
+    onLimitRef.current = onLimit;
+    onErrorRef.current = onError;
+  }, [onSync, onUpdate, onCursorUpdate, onPresenceChange, onLimit, onError]);
+
   /**
    * 更新连接状态
    */
@@ -305,12 +323,12 @@ export function useCollaborationSocket(
       }
 
       logger.debug('[CollabSocket] Received yjs:sync for note:', payload.noteId);
-      onSync?.(payload);
+      onSyncRef.current?.(payload);
     });
 
     socket.on('yjs:update', (payload: YjsUpdatePayload) => {
       logger.debug('[CollabSocket] Received yjs:update');
-      onUpdate?.(payload);
+      onUpdateRef.current?.(payload);
     });
 
     // ===== Presence 事件 =====
@@ -325,7 +343,7 @@ export function useCollaborationSocket(
       // We might need a map if Shared uses 'username' and Local uses 'userName'.
       // For now passing as is, if TS fails we fix mapping.
       setPresenceUsers(users as any);
-      onPresenceChange?.(users as any);
+      onPresenceChangeRef.current?.(users as any);
     });
 
     socket.on('presence:join', (payload) => {
@@ -342,7 +360,7 @@ export function useCollaborationSocket(
         const exists = prev.some((u) => u.userId === user.userId);
         if (exists) return prev;
         const newUsers = [...prev, user];
-        onPresenceChange?.(newUsers);
+        onPresenceChangeRef.current?.(newUsers);
         return newUsers;
       });
     });
@@ -351,7 +369,7 @@ export function useCollaborationSocket(
       logger.debug('[CollabSocket] User left:', payload.userId);
       setPresenceUsers((prev) => {
         const newUsers = prev.filter((u) => u.userId !== payload.userId);
-        onPresenceChange?.(newUsers);
+        onPresenceChangeRef.current?.(newUsers);
         return newUsers;
       });
     });
@@ -368,19 +386,19 @@ export function useCollaborationSocket(
       // Assuming backend sends Shared structure. Front needs to adapt.
       // But Tiptap relies on Y.js awareness mostly? This event might be supplementary.
       // Let's safe-guard usage.
-      if (!onCursorUpdate) return;
+      if (!onCursorUpdateRef.current) return;
 
       // Temporary Adapter:
       // If payload has 'cursor' (Legacy), pass it.
       // If payload has 'position' (Shared), map it? No, blockId mapping is hard without doc context.
       // We silence the cast for now to pass build, but mark Todo.
-      onCursorUpdate(payload as any);
+      onCursorUpdateRef.current(payload as any);
     });
 
     // ===== 错误事件 =====
     socket.on('collaboration:limit', (payload: CollaborationLimitPayload) => {
       logger.warn('[CollabSocket] Collaboration limit reached:', payload.error);
-      onLimit?.(payload);
+      onLimitRef.current?.(payload);
     });
 
     // collaboration:error not in Shared ServerToClientEvents
@@ -391,12 +409,7 @@ export function useCollaborationSocket(
   }, [
     updateConnectionState,
     refreshAccessToken,
-    onSync,
-    onUpdate,
-    onCursorUpdate,
-    onPresenceChange,
-    onLimit,
-    onError,
+    // [FIX] Removed volatile deps to prevent recreate loop. Refs are used instead.
   ]);
 
   /**
@@ -409,6 +422,8 @@ export function useCollaborationSocket(
     // [FIX] Reset sync state so we don't send updates until we get data
     syncedNoteIdRef.current = null;
     currentNoteIdRef.current = noteIdToJoin;
+    // [FIX] Clear pending updates from previous note
+    pendingUpdatesQueueRef.current = [];
 
     if (socketRef.current?.connected) {
       console.log('[DEBUG_TRACE] [SOCKET] Socket is open. Emitting note:join immediately.');

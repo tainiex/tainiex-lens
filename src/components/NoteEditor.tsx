@@ -59,6 +59,8 @@ const TiptapEditor = ({
   // presenceUsers,
   isSyncing,
   noteId,
+  onReady,
+  hasData,
 }: {
   ydoc: Y.Doc;
   fragment: Y.XmlFragment;
@@ -70,7 +72,11 @@ const TiptapEditor = ({
   presenceUsers: PresenceUser[];
   isSyncing: boolean;
   noteId: string | null;
+  onReady?: () => void;
+  hasData: boolean;
 }) => {
+  const [isReadyCalled, setIsReadyCalled] = useState(false);
+
   const editor = useEditor({
     extensions: [
       UniqueID.configure({
@@ -98,10 +104,23 @@ const TiptapEditor = ({
     ],
     content: initialContent,
     editable: editable && !isLimitReached,
+    onCreate: ({ editor }) => {
+      // [FIX] Smart Loading Strategy:
+      // 1. If hasData is false (New Note), show immediately.
+      // 2. If hasData is true (Existing Note), wait for content to render.
+      if (!hasData || !editor.isEmpty) {
+        onReady?.();
+        setIsReadyCalled(true);
+      }
+    },
     onUpdate: ({ editor }) => {
       onChange?.(editor.getHTML());
-      // Debug log to verify Tiptap update
-      logger.debug('[Tiptap] Content updated');
+
+      // If we were waiting for data, and now we have it (or editor updated), show it.
+      if (!isReadyCalled) {
+        onReady?.();
+        setIsReadyCalled(true);
+      }
     },
     onSelectionUpdate: ({ editor }) => {
       if (!noteId) return;
@@ -121,6 +140,18 @@ const TiptapEditor = ({
       },
     },
   });
+
+  // [FIX] Safety Timeout: If for some reason Tiptap doesn't update (e.g. data is just whitespace), force show after 500ms
+  useEffect(() => {
+    if (!isReadyCalled) {
+      const timer = setTimeout(() => {
+        console.log('[DEBUG_TRACE] [UI] Safety Timeout triggered. Showing editor.');
+        onReady?.();
+        setIsReadyCalled(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isReadyCalled, onReady]);
 
   // [DEBUG] Trace Mount/Unmount
   useEffect(() => {
@@ -166,6 +197,8 @@ const NoteEditor = ({
   const [collaborationError, setCollaborationError] = useState<string | null>(null);
   const [isLimitReached, setIsLimitReached] = useState(false);
 
+  console.log('[DEBUG_TRACE] [UI] NoteEditor Component Render. NoteId:', noteId);
+
   // [FIX] Circular Dependency: Use a Ref to allow accessing sendUpdate from useYjsDocument
   const sendUpdateRef = useRef<((update: string, targetNoteId: string) => void) | null>(null);
 
@@ -176,6 +209,7 @@ const NoteEditor = ({
     activeFragmentName, // [FIX] Get fragment name for key
     isInitialized: isYjsInitialized,
     isSyncing,
+    hasData,
     applyRemoteUpdate,
     applyInitialSync,
   } = useYjsDocument({
@@ -225,12 +259,12 @@ const NoteEditor = ({
 
   // Determine Connection traffic light status
   let connectionStatusClass = 'connected';
-  const { status, error: wsError } = connectionState;
+  const { status } = connectionState;
 
   if (status === 'connecting' || status === 'reconnecting') {
     connectionStatusClass = 'connecting';
-  } else if (status === 'disconnected' || wsError) {
-    connectionStatusClass = 'failed';
+  } else if (status === 'disconnected') {
+    connectionStatusClass = 'disconnected';
   }
 
   // [DEBUG] Trace Render
@@ -249,6 +283,14 @@ const NoteEditor = ({
     setCollaborationError(null);
     setIsLimitReached(false);
   }, []);
+
+  // [FIX] Editor ready state to prevent placeholder flash
+  const [isEditorReady, setIsEditorReady] = useState(false);
+
+  // [FIX] Reset ready state when note changes
+  useEffect(() => {
+    setIsEditorReady(false);
+  }, [noteId]);
 
   return (
     <div className="note-editor-container">
@@ -307,35 +349,66 @@ const NoteEditor = ({
       <div className="editor-scroll-container">
         <div className="editor-title-section">
 
-          <textarea
-            className="editor-title-input"
-            placeholder="Untitled"
-            value={title}
-            onChange={(e) => onTitleChange?.(e.target.value)}
-            rows={1}
-            spellCheck={false}
-          />
+          {title === undefined || title === null ? (
+            <div className="editor-title-skeleton" style={{
+              height: '38px',
+              width: '50%',
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: '4px',
+              animation: 'pulse 1.5s infinite'
+            }} />
+          ) : (
+            <textarea
+              className="editor-title-input"
+              placeholder="Untitled"
+              value={title}
+              onChange={(e) => onTitleChange?.(e.target.value)}
+              rows={1}
+              spellCheck={false}
+            />
+          )}
         </div>
 
         {/* 只有当 Y.js 文档初始化完成后，才渲染编辑器 */}
-        {isYjsInitialized && ydoc ? (
-          <TiptapEditor
-            key={`${noteId}-${activeFragmentName}`} // [FIX] Force remount when fragment changes
-            ydoc={ydoc}
-            fragment={yXmlFragment || ydoc.getXmlFragment('blocks')} // [FIX] Pass dynamic fragment (blocks or default)
-            initialContent={initialContent}
-            editable={editable}
-            isLimitReached={isLimitReached}
-            onChange={onChange}
-            sendCursorUpdate={sendCursorUpdate}
-            presenceUsers={presenceUsers}
-            isSyncing={isSyncing}
-            noteId={noteId}
-          />
+        {(() => {
+          console.log(`[DEBUG_TRACE] [UI] NoteEditor Render Check. Init: ${isYjsInitialized}, Doc: ${!!ydoc}`);
+          return isYjsInitialized && ydoc;
+        })() ? (
+          <>
+            {!isEditorReady && (
+              <div className="editor-content-skeleton" style={{ padding: '0 2rem' }}>
+                <div style={{ height: '24px', width: '80%', backgroundColor: 'var(--bg-secondary)', marginBottom: '1rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
+                <div style={{ height: '24px', width: '90%', backgroundColor: 'var(--bg-secondary)', marginBottom: '1rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
+                <div style={{ height: '24px', width: '70%', backgroundColor: 'var(--bg-secondary)', marginBottom: '1rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
+              </div>
+            )}
+            <div style={{ display: isEditorReady ? 'block' : 'none' }}>
+              <TiptapEditor
+                key={`${noteId}-${activeFragmentName}`} // [FIX] Force remount when fragment changes
+                ydoc={ydoc!}
+                fragment={yXmlFragment || ydoc!.getXmlFragment('blocks')} // [FIX] Pass dynamic fragment (blocks or default)
+                initialContent={initialContent}
+                editable={editable}
+                isLimitReached={isLimitReached}
+                onChange={onChange}
+                sendCursorUpdate={sendCursorUpdate}
+                presenceUsers={presenceUsers}
+                isSyncing={isSyncing}
+                noteId={noteId}
+                onReady={() => { console.log('[DEBUG_TRACE] [UI] Tiptap Reported Ready'); setIsEditorReady(true); }}
+                hasData={hasData}
+              />
+            </div>
+          </>
         ) : (
           <div className="editor-loading">
             <div className="loading-spinner" />
-            <span>初始化协同环境...</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+              <span>初始化协同环境...</span>
+              <span style={{ fontSize: '0.8rem', opacity: 0.7, fontFamily: 'monospace' }}>
+                ID: {noteId || 'null'} | Init: {String(isYjsInitialized)} | Doc: {ydoc ? 'Yes' : 'No'}
+              </span>
+            </div>
           </div>
         )}
 
