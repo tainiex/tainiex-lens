@@ -12,6 +12,8 @@ import { logger } from '../utils/logger';
 
 import { useLoadingAnimation } from '../hooks/useLoadingAnimation';
 
+import { getCachedNotes, setCachedNotes } from '../utils/noteCache';
+
 const Notes = () => {
     const [user, setUser] = useState<IUser | null>(null);
     const [isLoadingAuth, setIsLoadingAuth] = useState(true);
@@ -24,12 +26,16 @@ const Notes = () => {
     const [sessions, setSessions] = useState<any[]>([]);
     const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
-    // Notes state (Added)
-    const [notes, setNotes] = useState<INote[]>([]);
-    const [isLoadingNotes, setIsLoadingNotes] = useState(false);
+    // Notes state: Initialize from Cache if available
+    const [notes, setNotes] = useState<INote[]>(() => getCachedNotes() || []);
+    // If we have cached notes, we are not "loading" in the blocking sense.
+    // We still fetch in background, but UI is ready.
+    const [isLoadingNotes, setIsLoadingNotes] = useState(() => !getCachedNotes());
 
     const navigate = useNavigate();
-    const { noteId } = useParams<{ noteId: string }>();
+    const params = useParams();
+    // [FIX] Handle wildcard route: /app/notes/123 -> params["*"] = "123"
+    const noteId = params["*"] || params.noteId; // Fallback to noteId if explicit param used elsewhere
 
     const fetchSessions = async () => {
         setIsLoadingSessions(true);
@@ -47,7 +53,12 @@ const Notes = () => {
     };
 
     const fetchNotes = async () => {
-        setIsLoadingNotes(true);
+        // [FIX] Background Refresh Strategy
+        // Only set blocking loading state if we have NO data.
+        // If we have data, we silently update.
+        if (notes.length === 0) {
+            setIsLoadingNotes(true);
+        }
         try {
             const res = await apiClient.get('/api/notes');
             if (res.ok) {
@@ -64,7 +75,9 @@ const Notes = () => {
                     logger.warn('Unexpected notes API response format:', data);
                 }
 
-                setNotes(notesArray.sort((a: INote, b: INote) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+                const sortedNotes = notesArray.sort((a: INote, b: INote) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+                setNotes(sortedNotes);
+                setCachedNotes(sortedNotes); // Update cache
             }
         } catch (error) {
             logger.error('Failed to fetch notes:', error);
@@ -74,6 +87,7 @@ const Notes = () => {
     };
 
     useEffect(() => {
+        console.log('[DEBUG_TRACE] [Notes Page] MOUNTED. NoteId:', noteId);
         let isMounted = true;
         const checkAuth = async () => {
             try {
@@ -99,8 +113,11 @@ const Notes = () => {
         };
 
         checkAuth();
-        return () => { isMounted = false; };
-    }, [navigate]);
+        return () => {
+            console.log('[DEBUG_TRACE] [Notes Page] UNMOUNTED. NoteId:', noteId);
+            isMounted = false;
+        };
+    }, [navigate]); // navigate is stable, so this only runs on mount/unmount
 
     const handleSessionSelect = (id: string | null) => {
         if (id) {
@@ -285,6 +302,7 @@ const Notes = () => {
                                     title={activeNote?.title}
                                     onTitleChange={handleTitleChange}
                                     onMobileMenuClick={() => setIsSidebarOpen(true)}
+                                    isLoading={isLoadingNotes} // [FIX] Pass loading state to show title skeleton
                                 />
                             ) : (
                                 <div style={{

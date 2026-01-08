@@ -45,6 +45,7 @@ interface UseCollaborationSocketReturn {
   joinNote: (noteId: string) => void;
   leaveNote: () => void;
   reconnect: () => void;
+  isSynced: boolean;
 }
 
 // Copied base64Utils to avoid cross-hook dependency issues during refactor
@@ -162,6 +163,14 @@ export function useCollaborationSocket(
       return false;
     }
   }, []);
+
+  // State to track if synchronization is complete for current note
+  const [isSynced, setIsSynced] = useState(false);
+
+  // Reset sync state when noteId changes
+  useEffect(() => {
+    setIsSynced(false);
+  }, [noteId]);
 
   /**
    * 设置 Socket 连接
@@ -324,6 +333,7 @@ export function useCollaborationSocket(
 
       logger.debug('[CollabSocket] Received yjs:sync for note:', payload.noteId);
       onSyncRef.current?.(payload);
+      setIsSynced(true);
     });
 
     socket.on('yjs:update', (payload: YjsUpdatePayload) => {
@@ -640,5 +650,6 @@ export function useCollaborationSocket(
     joinNote,
     leaveNote,
     reconnect,
+    isSynced,
   };
 }

@@ -17,11 +17,9 @@ function App() {
         <div className="app">
           <Routes>
             <Route path="/app" element={<AppDashboard />} />
-            <Route path="/app/notes" element={<Notes />} />
-            <Route path="/app/notes/:noteId" element={<Notes />} />
+            <Route path="/app/notes/*" element={<Notes />} />
             <Route path="/app/:sessionId" element={<AppDashboard />} />
-            <Route path="/notes" element={<Notes />} />
-            <Route path="/notes/:noteId" element={<Notes />} />
+            <Route path="/notes/*" element={<Notes />} />
             <Route path="*" element={
               <div className="layout-public">
                 <Background />

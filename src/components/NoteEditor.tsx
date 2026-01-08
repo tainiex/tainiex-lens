@@ -45,6 +45,7 @@ interface NoteEditorProps {
   onTitleChange?: (title: string) => void;
   editable?: boolean;
   onMobileMenuClick?: () => void;
+  isLoading?: boolean;
 }
 
 // 内部 Tiptap 编辑器组件
@@ -74,6 +75,7 @@ const TiptapEditor = ({
   noteId: string | null;
   onReady?: () => void;
   hasData: boolean;
+  isLoading?: boolean;
 }) => {
   const [isReadyCalled, setIsReadyCalled] = useState(false);
 
@@ -185,7 +187,7 @@ const TiptapEditor = ({
   );
 };
 
-const NoteEditor = ({
+const NoteEditor: React.FC<NoteEditorProps> = ({
   noteId = null,
   initialContent = '',
   title = '',
@@ -193,7 +195,8 @@ const NoteEditor = ({
   onTitleChange,
   editable = true,
   onMobileMenuClick,
-}: NoteEditorProps) => {
+  isLoading,
+}) => {
   const [collaborationError, setCollaborationError] = useState<string | null>(null);
   const [isLimitReached, setIsLimitReached] = useState(false);
 
@@ -229,6 +232,7 @@ const NoteEditor = ({
     sendUpdate,
     sendCursorUpdate,
     reconnect,
+    isSynced: isSocketSynced, // Rename to avoid conflict if needed
   } = useCollaborationSocket({
     noteId,
     onSync: useCallback((payload: YjsSyncPayload) => {
@@ -349,11 +353,11 @@ const NoteEditor = ({
       <div className="editor-scroll-container">
         <div className="editor-title-section">
 
-          {title === undefined || title === null ? (
+          {(isLoading || title === undefined || title === null) ? (
             <div className="editor-title-skeleton" style={{
               height: '38px',
               width: '50%',
-              backgroundColor: 'var(--bg-secondary)',
+              backgroundColor: 'rgba(0,0,0,0.03)', // [FIX] Lighter skeleton
               borderRadius: '4px',
               animation: 'pulse 1.5s infinite'
             }} />
@@ -369,25 +373,40 @@ const NoteEditor = ({
           )}
         </div>
 
-        {/* 只有当 Y.js 文档初始化完成后，才渲染编辑器 */}
+        {/* 只有当 Y.js 文档初始化完成 且 (有数据 或 已完成同步确认是空文档) 时，才渲染编辑器 */}
         {(() => {
-          console.log(`[DEBUG_TRACE] [UI] NoteEditor Render Check. Init: ${isYjsInitialized}, Doc: ${!!ydoc}`);
-          return isYjsInitialized && ydoc;
+          // [FIX] Strict Loading Strategy:
+          // Show Editor ONLY if:
+          // 1. We have local data (hasData == true)
+          // 2. OR we have finished syncing and verified it is empty (isSocketSynced == true)
+          // This prevents the "Flash of Default Content" on existing notes.
+          const readyToMount = isYjsInitialized && ydoc && (hasData || isSocketSynced);
+          return readyToMount;
         })() ? (
           <>
             {!isEditorReady && (
-              <div className="editor-content-skeleton" style={{ padding: '0 2rem' }}>
-                <div style={{ height: '24px', width: '80%', backgroundColor: 'var(--bg-secondary)', marginBottom: '1rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
-                <div style={{ height: '24px', width: '90%', backgroundColor: 'var(--bg-secondary)', marginBottom: '1rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
-                <div style={{ height: '24px', width: '70%', backgroundColor: 'var(--bg-secondary)', marginBottom: '1rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
+              <div className="editor-content-shell" style={{
+                width: '100%',
+                maxWidth: '850px',
+                margin: '0 auto',
+                padding: '0 3rem',
+                paddingTop: '3rem', // Match editor-title-section vertical alignment
+                display: 'flex',
+                flexDirection: 'column',
+              }}>
+                {/* [FIX] Unify skeleton style with initial load state */}
+                <div style={{ height: '20px', width: '100%', backgroundColor: 'rgba(0,0,0,0.03)', marginBottom: '0.8rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
+                <div style={{ height: '20px', width: '92%', backgroundColor: 'rgba(0,0,0,0.03)', marginBottom: '0.8rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
+                <div style={{ height: '20px', width: '96%', backgroundColor: 'rgba(0,0,0,0.03)', marginBottom: '0.8rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
+                <div style={{ height: '20px', width: '80%', backgroundColor: 'rgba(0,0,0,0.03)', marginBottom: '0.8rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
               </div>
             )}
             <div style={{ display: isEditorReady ? 'block' : 'none' }}>
               <TiptapEditor
                 key={`${noteId}-${activeFragmentName}`} // [FIX] Force remount when fragment changes
                 ydoc={ydoc!}
-                fragment={yXmlFragment || ydoc!.getXmlFragment('blocks')} // [FIX] Pass dynamic fragment (blocks or default)
-                initialContent={initialContent}
+                fragment={yXmlFragment || ydoc!.getXmlFragment('blocks')} // [FIX] Pass dynamic fragment
+                initialContent={hasData ? '' : initialContent} // [FIX] Prevent Tiptap from merging initialContent if Yjs has data
                 editable={editable}
                 isLimitReached={isLimitReached}
                 onChange={onChange}
@@ -395,20 +414,28 @@ const NoteEditor = ({
                 presenceUsers={presenceUsers}
                 isSyncing={isSyncing}
                 noteId={noteId}
-                onReady={() => { console.log('[DEBUG_TRACE] [UI] Tiptap Reported Ready'); setIsEditorReady(true); }}
-                hasData={hasData}
+                onReady={() => setIsEditorReady(true)}
+                hasData={hasData} // Tiptap will use this to decide if it needs to wait for render
               />
             </div>
           </>
         ) : (
-          <div className="editor-loading">
-            <div className="loading-spinner" />
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', marginTop: '1rem' }}>
-              <span>初始化协同环境...</span>
-              <span style={{ fontSize: '0.8rem', opacity: 0.7, fontFamily: 'monospace' }}>
-                ID: {noteId || 'null'} | Init: {String(isYjsInitialized)} | Doc: {ydoc ? 'Yes' : 'No'}
-              </span>
-            </div>
+          // [FIX] Show Skeleton during initial Sync/Load instead of Spinner or "Initializing..." text
+          // This fixes the "Gray Bar" glitch by making the loading state look like the editor
+          <div className="editor-content-shell" style={{
+            width: '100%',
+            maxWidth: '850px',
+            margin: '0 auto',
+            padding: '0 3rem',
+            paddingTop: '3rem', // Match editor-title-section vertical alignment
+            display: 'flex',
+            flexDirection: 'column',
+          }}>
+            {/* [FIX] Removed duplicate title block to prevent layout shift */}
+            <div style={{ height: '20px', width: '100%', backgroundColor: 'rgba(0,0,0,0.03)', marginBottom: '0.8rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
+            <div style={{ height: '20px', width: '92%', backgroundColor: 'rgba(0,0,0,0.03)', marginBottom: '0.8rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
+            <div style={{ height: '20px', width: '96%', backgroundColor: 'rgba(0,0,0,0.03)', marginBottom: '0.8rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
+            <div style={{ height: '20px', width: '80%', backgroundColor: 'rgba(0,0,0,0.03)', marginBottom: '0.8rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
           </div>
         )}
 
