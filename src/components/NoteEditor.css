@@ -408,10 +408,15 @@
 /* Hide breadcrumb prefix on very small screens if needed */
 @media (max-width: 480px) {
     .breadcrumb-text {
-        display: none;
+        display: block;
+        /* Show Private */
     }
 
     .breadcrumb-separator {
+        display: none;
+    }
+
+    .breadcrumb-current {
         display: none;
     }
 }
