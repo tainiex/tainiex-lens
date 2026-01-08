@@ -6,12 +6,10 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import io from 'socket.io-client';
 import * as Sentry from '@sentry/react';
-import { API_BASE_URL } from '../config';
-import { apiClient } from '../utils/apiClient';
 import * as Y from 'yjs'; // Added for encodeStateVector
 import { logger } from '../utils/logger';
+import { getNamespaceSocket, refreshAndReconnect } from '../utils/socketManager';
 // import { base64Utils } from '../utils/base64Utils'; // Removed: using local def
 import type {
   // NoteJoinPayload, // Unused in this file directly
@@ -96,8 +94,6 @@ export function useCollaborationSocket(
 
   const socketRef = useRef<CollaborationSocket | null>(null);
   const currentNoteIdRef = useRef<string | null>(null);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const authRetryCountRef = useRef(0);
   const messageQueueRef = useRef<Array<{ type: string; payload: any }>>([]);
   // [FIX] Buffer updates while waiting for sync to prevent data loss
   const pendingUpdatesQueueRef = useRef<Array<{ update: Uint8Array; targetNoteId: string }>>([]);
@@ -148,22 +144,7 @@ export function useCollaborationSocket(
     []
   );
 
-  /**
-   * 刷新认证 Token
-   */
-  const refreshAccessToken = useCallback(async (): Promise<boolean> => {
-    try {
-      const refreshed = await apiClient.ensureAuth();
-      if (!refreshed) {
-        logger.error('[CollabSocket] Failed to refresh access token');
-        return false;
-      }
-      return true;
-    } catch (err) {
-      logger.error('[CollabSocket] Error refreshing access token:', err);
-      return false;
-    }
-  }, []);
+
 
   // State to track if synchronization is complete for current note
   const [isSynced, setIsSynced] = useState(false);
@@ -174,49 +155,33 @@ export function useCollaborationSocket(
   }, [noteId]);
 
   /**
-   * 设置 Socket 连接
+   * 设置 Socket 连接使用共享 Manager
    */
   const setupSocket = useCallback(() => {
     // 清理现有连接
     if (socketRef.current) {
       logger.debug('[CollabSocket] Cleaning up existing socket');
       socketRef.current.removeAllListeners();
-      socketRef.current.disconnect();
       socketRef.current = null;
     }
 
-    // 构建 WebSocket URL - 连接到 /api/collaboration 命名空间
-    let wsUrl: string;
-    if (import.meta.env.DEV) {
-      wsUrl = '/api/collaboration';
+    logger.debug('[CollabSocket] Getting namespace socket from Manager');
+
+    // Get namespace socket from shared Manager
+    const socket = getNamespaceSocket('/api/collaboration') as CollaborationSocket;
+
+    // [FIX] 检查 socket 是否已经连接
+    if (socket.connected) {
+      logger.debug('[CollabSocket] Socket already connected, socket ID:', socket.id);
+      updateConnectionState('connected', currentNoteIdRef.current);
     } else {
-      const baseUrl = API_BASE_URL || window.location.origin;
-      wsUrl = baseUrl.startsWith('http')
-        ? `${baseUrl}/api/collaboration`
-        : `${window.location.origin}${baseUrl}/api/collaboration`;
+      updateConnectionState('connecting');
     }
-
-    logger.debug('[CollabSocket] Connecting to:', wsUrl);
-    updateConnectionState('connecting');
-
-    const socket = io(wsUrl, {
-      path: '/socket.io', // [FIX] Add explicit path
-      transports: ['websocket'],
-      withCredentials: true,
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: Infinity,
-      timeout: 30000,
-      autoConnect: true,
-      forceNew: true,
-    }) as CollaborationSocket;
 
     // ===== 连接事件 =====
     socket.on('connect', () => {
       logger.debug('[CollabSocket] Connected, socket ID:', socket.id);
       updateConnectionState('connected', currentNoteIdRef.current);
-      authRetryCountRef.current = 0;
 
       if (currentNoteIdRef.current) {
         logger.debug('[CollabSocket] Auto-joining note:', currentNoteIdRef.current);
@@ -253,10 +218,9 @@ export function useCollaborationSocket(
       if (reason === 'io server disconnect') {
         updateConnectionState('disconnected', currentNoteIdRef.current);
         // 服务器主动断开，尝试刷新认证
-        refreshAccessToken().then((success) => {
+        refreshAndReconnect().then((success) => {
           if (success) {
-            logger.log('[CollabSocket] Auth restored, reconnecting...');
-            socket.connect();
+            logger.log('[CollabSocket] Auth restored, socket will auto-reconnect');
           }
         });
       } else if (reason === 'io client disconnect') {
@@ -279,22 +243,8 @@ export function useCollaborationSocket(
         err.message.includes('401');
 
       if (isAuthError) {
-        authRetryCountRef.current++;
-        const delay = Math.min(authRetryCountRef.current * 1000, 10000);
-        logger.warn(
-          `[CollabSocket] Auth error (attempt ${authRetryCountRef.current}), retrying in ${delay}ms`
-        );
-
-        if (reconnectTimeoutRef.current) {
-          clearTimeout(reconnectTimeoutRef.current);
-        }
-
-        reconnectTimeoutRef.current = setTimeout(async () => {
-          const refreshed = await refreshAccessToken();
-          if (refreshed) {
-            socket.connect();
-          }
-        }, delay);
+        logger.warn('[CollabSocket] Auth error detected, delegating to Manager...');
+        refreshAndReconnect();
         return;
       }
 
@@ -419,7 +369,6 @@ export function useCollaborationSocket(
     return socket;
   }, [
     updateConnectionState,
-    refreshAccessToken,
     // [FIX] Removed volatile deps to prevent recreate loop. Refs are used instead.
   ]);
 
@@ -558,44 +507,16 @@ export function useCollaborationSocket(
   // Initial setup
   useEffect(() => {
     setupSocket();
-  }, [setupSocket]);
-
-  // 初始化 Socket
-  useEffect(() => {
-    // 页面可见性变化处理
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        if (!socketRef.current?.connected) {
-          logger.log('[CollabSocket] Page visible, reconnecting...');
-          reconnect();
-        }
-      }
-    };
-
-    // 网络在线处理
-    const handleOnline = () => {
-      logger.log('[CollabSocket] Network online, reconnecting...');
-      reconnect();
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('online', handleOnline);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('online', handleOnline);
-
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-
+      // Clean up listeners when component unmounts
       if (socketRef.current) {
-        leaveNote();
-        socketRef.current.disconnect();
+        socketRef.current.removeAllListeners();
+        // Don't disconnect here - let Manager handle it
         socketRef.current = null;
       }
     };
-  }, [setupSocket, reconnect, leaveNote]);
+  }, [setupSocket]);
 
   // 当 noteId 变化时，自动加入/离开房间
   useEffect(() => {

@@ -19,21 +19,21 @@ const ChatHeader = ({ onMenuClick, isConnected, wsError, onReconnect }: ChatHead
 
   const sessionTitle = currentSession?.title || (currentSessionId ? 'Chat' : 'New Chat');
 
-  // Determine status class
-  let statusClass = 'connected';
+  // 确定网络状态指示灯的状态类别
+  let networkStatusClass = 'connected';
   if (wsError || !isConnected) {
     if (wsError && (wsError.includes('Reconnecting') || !wsError.includes('Failed'))) {
-      statusClass = 'reconnecting';
+      networkStatusClass = 'reconnecting';
     } else if (!isConnected) {
-      statusClass = 'connecting';
+      networkStatusClass = 'connecting';
     }
 
     if (wsError && wsError.toLowerCase().includes('fail')) {
-      statusClass = 'failed';
+      networkStatusClass = 'failed';
     }
   }
 
-  if (isConnected) statusClass = 'connected';
+  if (isConnected) networkStatusClass = 'connected';
 
   return (
     <div className="chat-interface-header" style={{ position: 'relative' }}>
@@ -64,13 +64,14 @@ const ChatHeader = ({ onMenuClick, isConnected, wsError, onReconnect }: ChatHead
         {sessionTitle}
       </div>
       <div className="header-right">
+        {/* 网络状态指示灯 */}
         <div
-          className="connection-status"
+          className="network-status-indicator"
           title={isConnected ? 'Connected' : 'Click to reconnect'}
           onClick={onReconnect}
           style={{ cursor: 'pointer' }}
         >
-          <div className={`status-dot ${statusClass}`}></div>
+          <div className={`status-dot ${networkStatusClass}`}></div>
         </div>
 
         <button

@@ -37,6 +37,7 @@
 - ESLint code standards
 - No CSS-in-JS
 - **Improved Reliability**: WebSocket auto-reconnect with auth-refresh logic.
+- **WebSocket Multiplexing**: Uses a single physical connection via a shared Socket.IO Manager for both Chat (`/api/chat`) and Collaboration (`/api/collaboration`) features.
 - **Rich Content Rendering**: Support for Markdown (GFM), LaTeX (KaTeX), and Mermaid diagrams.
 - Tests not yet added
 
@@ -61,13 +62,17 @@
 │  ├─ Profile: GET /api/profile               │
 │  ├─ Auth: POST /api/auth/google/signup      │
 │  ├─ Sessions: GET /api/chat/sessions        │
-│  └─ WebSocket: /api/chat (Socket.IO)        │
+│  └─ WebSocket: Shared Connection (Socket.IO)│
+│     ├─ /api/chat                            │
+│     └─ /api/collaboration                   │
 └─────────────────────────────────────────────┘
 ```
 
-**Session Management**: Cookie-based only. Backend sets HTTP-only cookies; frontend **MUST NOT** store tokens in localStorage, sessionStorage, or headers. All API requests must use `credentials: 'include'`.
-- **WebSocket Auth**: Automatically handles authentication errors by triggering token refresh via `apiClient.ensureAuth()` with a retry mechanism and backoff. Errors are logged to the console; UI toast notifications are disabled.
-- **Mobile Optimization**: Socket.IO timeout increased to 30s for mobile networks. All connection errors are captured to Sentry for debugging. Long-sleep reconnect (>60s background) immediately disconnects and reconnects to avoid timeout delays.
+**WebSocket Architecture**:
+- **Multiplexing**: A single TCP connection is shared across multiple logical namespaces using the `socketManager.ts` utility. This reduces overhead and prevents connection flickering during navigation.
+- **Centralized Management**: The shared `Manager` instance handles global concerns like lifecycle management (visibility, focus, online/offline status) and reconnection strategies.
+- **Authentication**: Automatically handles authentication errors by triggering token refresh via `apiClient.ensureAuth()` with a retry mechanism and backoff. Auth refresh is handled at the Manager level to recover all namespace sockets simultaneously.
+- **Mobile Optimization**: Socket.IO timeout increased to 30s. All connection errors are captured to Sentry. Long-sleep reconnect (>60s background) triggers an immediate full reconnection via the Manager.
 
 
 ### Testing

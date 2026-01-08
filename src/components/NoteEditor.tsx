@@ -276,14 +276,14 @@ const NoteEditor = React.memo(({
     sendUpdateRef.current = sendUpdate;
   }, [sendUpdate]);
 
-  // Determine Connection traffic light status
-  let connectionStatusClass = 'connected';
+  // 确定网络状态指示灯的状态
+  let networkStatusClass = 'connected';
   const { status } = connectionState;
 
   if (status === 'connecting' || status === 'reconnecting') {
-    connectionStatusClass = 'connecting';
+    networkStatusClass = 'connecting';
   } else if (status === 'disconnected') {
-    connectionStatusClass = 'disconnected';
+    networkStatusClass = 'disconnected';
   }
 
   // [DEBUG] Trace Render
@@ -353,13 +353,13 @@ const NoteEditor = React.memo(({
             <span>{isSyncing ? 'Saving...' : 'Saved'}</span>
           </div>
 
-          {/* Traffic Light Connection Status */}
+          {/* 网络状态指示灯 */}
           <div
-            className="connection-status-light"
+            className="network-status-indicator"
             title={status === 'connected' ? 'Connected' : 'Click to reconnect'}
             onClick={() => status !== 'connected' && reconnect()}
           >
-            <div className={`connection-dot ${connectionStatusClass}`}></div>
+            <div className={`connection-dot ${networkStatusClass}`}></div>
           </div>
 
 

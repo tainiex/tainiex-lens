@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import io, { Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
 import * as Sentry from "@sentry/react";
-import { API_BASE_URL } from '../config';
 import { ErrorHandler, ApiError } from '../utils/errorHandler';
-import { apiClient } from '../utils/apiClient';
 import { logger } from '../utils/logger';
+import { getNamespaceSocket, refreshAndReconnect } from '../utils/socketManager';
 
 interface ConnectionState {
     status: 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
@@ -15,11 +14,8 @@ interface ConnectionState {
 export function useChatSocket() {
     const socketRef = useRef<Socket | null>(null);
     const attemptRef = useRef(0);
-    const authRetryCountRef = useRef(0);
     const lastReconnectTimeRef = useRef(0);
     const isConnectedRef = useRef(false); // To track if the socket was connected before a server disconnect
-
-    const lastHiddenTimeRef = useRef<number | null>(null);
 
     const [connectionState, setConnectionState] = useState<ConnectionState>({
         status: 'disconnected',
@@ -28,7 +24,6 @@ export function useChatSocket() {
     const [error, setError] = useState<string | null>(null);
 
     const maxReconnectAttempts = Infinity;
-    const RECONNECT_DELAY = 1000; // Reduced for faster auto-reconnect
 
     /**
      * Show connection error notification (Disabled per user request - subtle UI only)
@@ -52,79 +47,47 @@ export function useChatSocket() {
         }
     }, []);
 
-    /**
-     * Refreshes the access token.
-     */
-    const refreshAccessToken = useCallback(async () => {
-        try {
-            const refreshed = await apiClient.ensureAuth();
-            if (!refreshed) {
-                logger.error('Failed to refresh access token.');
-                throw new Error('Failed to refresh access token');
-            }
-            return refreshed;
-        } catch (err) {
-            logger.error('Error refreshing access token:', err);
-            throw err;
-        }
-    }, []);
+
 
     /**
-     * Setup Socket Connection
+     * 设置 Socket 连接使用共享 Manager
      */
     const setupSocket = useCallback(() => {
         // Ensure any existing socket is fully cleaned up before creating a new one
         if (socketRef.current) {
-            logger.debug('Cleaning up existing socket before new setup...');
+            logger.debug('[ChatSocket] Cleaning up existing socket before new setup...');
             socketRef.current.removeAllListeners();
-            socketRef.current.disconnect();
             socketRef.current = null;
         }
 
-        // Socket.IO connection configuration
-        let wsUrl: string;
+        logger.debug('[ChatSocket] Getting namespace socket from Manager');
+        // Get namespace socket from shared Manager
+        const socket = getNamespaceSocket('/api/chat');
 
-        if (import.meta.env.DEV) {
-            wsUrl = '/api/chat';
+        // Check if socket is already connected immediately
+        if (socket.connected) {
+            logger.debug('[ChatSocket] Socket already connected, socket ID:', socket.id);
+            updateConnectionState('connected', 0);
         } else {
-            const baseUrl = API_BASE_URL || window.location.origin;
-            wsUrl = baseUrl.startsWith('http') ? `${baseUrl}/api/chat` : `${window.location.origin}${baseUrl}/api/chat`;
+            updateConnectionState('connecting');
         }
-
-        if (import.meta.env.DEV) {
-            logger.debug('Connecting to Socket.IO (Cookie-based):', wsUrl);
-        }
-        updateConnectionState('connecting');
-
-        const socket = io(wsUrl, {
-            transports: ['websocket'],
-            withCredentials: true,
-            reconnection: true,
-            reconnectionDelay: RECONNECT_DELAY, // Use RECONNECT_DELAY
-            reconnectionDelayMax: 3000,
-            reconnectionAttempts: maxReconnectAttempts,
-            timeout: 30000, // Increased from 20s to 30s for mobile networks
-            autoConnect: true,
-            forceNew: true // Critical for mobile: force a new connection manager
-        });
 
         socket.on('connect', () => {
-            logger.debug('WebSocket connected successfully, socket ID:', socket.id);
+            logger.debug('[ChatSocket] Connected successfully, socket ID:', socket.id);
             Sentry.addBreadcrumb({
-                category: 'websocket',
+                category: 'websocket.chat',
                 message: 'Connected',
                 data: { socketId: socket.id },
                 level: 'info'
             });
             updateConnectionState('connected', 0);
-            authRetryCountRef.current = 0;
             attemptRef.current = 0;
         });
 
         socket.on('disconnect', (reason) => {
-            logger.log('WebSocket disconnected:', reason);
+            logger.log('[ChatSocket] Disconnected:', reason);
             Sentry.addBreadcrumb({
-                category: 'websocket',
+                category: 'websocket.chat',
                 message: 'Disconnected',
                 data: { reason },
                 level: 'warning'
@@ -132,18 +95,12 @@ export function useChatSocket() {
 
             if (reason === 'io server disconnect') {
                 updateConnectionState('disconnected', 0);
-                logger.warn('Socket disconnected by server, attempting auth refresh...');
-                refreshAccessToken().then((success) => {
-                    if (success && isConnectedRef.current) { // Added isConnectedRef.current check
-                        logger.log('Auth restored, reconnecting socket...');
-                        Sentry.addBreadcrumb({
-                            category: 'websocket',
-                            message: 'Auth restored, reconnecting',
-                            level: 'info'
-                        });
-                        socket.connect();
+                logger.warn('[ChatSocket] Socket disconnected by server, attempting auth refresh...');
+                refreshAndReconnect().then((success) => {
+                    if (success && isConnectedRef.current) {
+                        logger.log('[ChatSocket] Auth restored, socket will auto-reconnect');
                     }
-                }).catch(err => logger.error('Auth refresh error:', err)); // Changed console.error to logger.error
+                }).catch(err => logger.error('[ChatSocket] Auth refresh error:', err));
             } else if (reason === 'io client disconnect') {
                 updateConnectionState('disconnected', 0);
             } else {
@@ -154,17 +111,17 @@ export function useChatSocket() {
         socket.on('connect_error', async (err) => {
             // Only log as error if it's genuinely stuck or critical
             if (attemptRef.current < 2) {
-                logger.debug('WebSocket connection attempt:', err.message);
+                logger.debug('[ChatSocket] Connection attempt:', err.message);
             } else if (attemptRef.current === maxReconnectAttempts) {
-                logger.error('WebSocket connection failed permanently:', err.message);
+                logger.error('[ChatSocket] Connection failed permanently:', err.message);
             } else {
-                logger.warn('WebSocket connection retrying:', err.message);
+                logger.warn('[ChatSocket] Connection retrying:', err.message);
             }
 
             // Capture all connection errors to Sentry for debugging
             Sentry.captureException(err, {
                 tags: {
-                    type: 'websocket_connect_error',
+                    type: 'websocket_chat_connect_error',
                     attempt: attemptRef.current
                 }
             });
@@ -175,44 +132,28 @@ export function useChatSocket() {
                 err.message === 'xhr poll error';
 
             if (isAuthError) {
-                authRetryCountRef.current++;
-                const delay = Math.min(authRetryCountRef.current * 1000, 10000);
-                logger.warn(`Socket auth error detected (Attempt ${authRetryCountRef.current}), waiting ${delay}ms to refresh token...`);
-
+                logger.warn('[ChatSocket] Auth error detected, delegating to Manager...');
                 Sentry.addBreadcrumb({
-                    category: 'websocket',
+                    category: 'websocket.chat',
                     message: 'Auth error',
-                    data: { attempt: authRetryCountRef.current, message: err.message },
+                    data: { message: err.message },
                     level: 'warning'
                 });
-
-                setTimeout(async () => {
-                    try {
-                        const refreshed = await apiClient.ensureAuth();
-                        if (refreshed) {
-                            logger.log('Token refreshed successfully, retrying socket connection...');
-                            socket.connect();
-                        }
-                    } catch (refreshErr) {
-                        logger.error('Failed to trigger auth refresh from socket:', refreshErr);
-                    }
-                }, delay);
+                // Delegate to Manager's refreshAndReconnect
+                refreshAndReconnect();
                 return;
             }
 
             const apiError = ErrorHandler.parseError(new Error(err.message), 'WebSocket connection');
             const newAttempt = attemptRef.current + 1;
             updateConnectionState(newAttempt > maxReconnectAttempts ? 'failed' : 'reconnecting', newAttempt, apiError);
-
-            if (!isAuthError) {
-                showConnectionError(apiError, newAttempt);
-            }
+            showConnectionError(apiError, newAttempt);
         });
 
         socket.on('reconnect_attempt', (attempt) => {
-            logger.debug('WebSocket reconnection attempt:', attempt);
+            logger.debug('[ChatSocket] Reconnection attempt:', attempt);
             Sentry.addBreadcrumb({
-                category: 'websocket',
+                category: 'websocket.chat',
                 message: 'Reconnection attempt',
                 data: { attempt },
                 level: 'info'
@@ -221,9 +162,9 @@ export function useChatSocket() {
         });
 
         socket.on('reconnect_failed', () => {
-            logger.error('WebSocket reconnection failed after maximum attempts');
+            logger.error('[ChatSocket] Reconnection failed after maximum attempts');
             Sentry.addBreadcrumb({
-                category: 'websocket',
+                category: 'websocket.chat',
                 message: 'Reconnection failed',
                 level: 'error'
             });
@@ -232,9 +173,9 @@ export function useChatSocket() {
         });
 
         socket.on('reconnect_error', (err) => {
-            logger.error('WebSocket reconnection error:', err.message);
+            logger.error('[ChatSocket] Reconnection error:', err.message);
             Sentry.addBreadcrumb({
-                category: 'websocket',
+                category: 'websocket.chat',
                 message: 'Reconnection error',
                 data: { error: err.message },
                 level: 'warning'
@@ -251,145 +192,41 @@ export function useChatSocket() {
     const reconnect = useCallback(() => {
         const now = Date.now();
         if (now - lastReconnectTimeRef.current < 2000) {
-            logger.log('Reconnection throttled...');
+            logger.log('[ChatSocket] Reconnection throttled...');
             return;
         }
         lastReconnectTimeRef.current = now;
 
-        logger.log('Executing manual hard reconnect...');
+        logger.log('[ChatSocket] Executing manual reconnect...');
         Sentry.addBreadcrumb({
-            category: 'websocket',
-            message: 'Manual hard reconnect',
+            category: 'websocket.chat',
+            message: 'Manual reconnect',
             level: 'info'
         });
-
-        // Hard reset: fully disconnect and clear ref
-        if (socketRef.current) {
-            socketRef.current.removeAllListeners(); // Good practice to remove listeners
-            socketRef.current.disconnect();
-            socketRef.current = null;
-        }
 
         // Reset state
         updateConnectionState('connecting', 0);
 
-        // Re-initialize
-        setupSocket();
+        // Reconnect socket
+        if (socketRef.current) {
+            socketRef.current.connect();
+        } else {
+            setupSocket();
+        }
     }, [updateConnectionState, setupSocket]);
 
     useEffect(() => {
         setupSocket();
 
-        const handleVisibilityChange = () => {
-            const now = Date.now();
-
-            if (document.visibilityState === 'hidden') {
-                lastHiddenTimeRef.current = now;
-                logger.debug("App hidden, recording timestamp.");
-
-                Sentry.addBreadcrumb({
-                    category: 'app.lifecycle',
-                    message: 'App hidden',
-                    level: 'info'
-                });
-
-            } else if (document.visibilityState === 'visible') {
-                const sleepDuration = lastHiddenTimeRef.current ? now - lastHiddenTimeRef.current : 0;
-                logger.log(`App visible. Sleep duration: ${sleepDuration}ms`);
-
-                Sentry.addBreadcrumb({
-                    category: 'app.lifecycle',
-                    message: 'App visible',
-                    data: {
-                        sleepDuration,
-                        socketConnected: socketRef.current?.connected,
-                        socketId: socketRef.current?.id
-                    },
-                    level: 'info'
-                });
-
-                // If app was backgrounded for more than 60s, force immediate hard reconnect
-                // This avoids waiting for timeout and handles zombie socket state
-                if (sleepDuration > 60000) {
-                    logger.log('App was backgrounded for >60s, forcing immediate hard socket reconnect...');
-                    Sentry.addBreadcrumb({
-                        category: 'socket.reconnect',
-                        message: 'Hard reconnect after long sleep',
-                        data: { sleepDuration },
-                        level: 'warning' // Upgraded to warning for better visibility
-                    });
-                    // Immediately disconnect to avoid waiting for timeout
-                    if (socketRef.current) {
-                        socketRef.current.disconnect();
-                    }
-                    reconnect();
-                    return;
-                }
-
-                const socket = socketRef.current;
-
-                // If not connected, or if we suspect a drop, check connection
-                if (!socket || !socket.connected) {
-                    logger.log('Socket disconnected on wake. Waiting 1s for network radio...');
-                    Sentry.addBreadcrumb({
-                        category: 'websocket',
-                        message: 'Socket disconnected on wake',
-                        level: 'warning'
-                    });
-                    // Add a small delay for network radio to wake up on mobile
-                    setTimeout(() => {
-                        if (!socketRef.current?.connected) {
-                            logger.log('Still disconnected after wait, reconnecting...');
-                            Sentry.addBreadcrumb({
-                                category: 'websocket',
-                                message: 'Still disconnected after radio wait, reconnecting',
-                                level: 'warning'
-                            });
-                            reconnect();
-                        }
-                    }, 1000);
-                }
-            }
-        };
-
-        const handleFocus = () => {
-            const socket = socketRef.current;
-            if (socket && !socket.connected) {
-                // Similar small delay logic can be applied here if needed, 
-                // but visibilityChange is usually the primary trigger on mobile.
-                Sentry.addBreadcrumb({
-                    category: 'app.lifecycle',
-                    message: 'Window focused, socket disconnected -> reconnecting',
-                    level: 'info'
-                });
-                reconnect();
-            }
-        };
-
-        const handleOnline = () => {
-            logger.log('Network online detected. Reconnecting...');
-            Sentry.addBreadcrumb({
-                category: 'app.lifecycle',
-                message: 'Network online',
-                level: 'info'
-            });
-            reconnect();
-        };
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        window.addEventListener('focus', handleFocus);
-        window.addEventListener('online', handleOnline);
-
         return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            window.removeEventListener('focus', handleFocus);
-            window.removeEventListener('online', handleOnline);
+            // Clean up listeners when component unmounts
             if (socketRef.current) {
-                socketRef.current.disconnect();
+                socketRef.current.removeAllListeners();
+                // Don't disconnect here - let Manager handle it
                 socketRef.current = null;
             }
         };
-    }, [setupSocket, reconnect]);
+    }, [setupSocket]);
 
     return {
         socket: socketRef.current,

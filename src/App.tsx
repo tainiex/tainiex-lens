@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import Header from './components/Header';
 import Background from './components/Background';
 import Footer from './components/Footer';
@@ -9,9 +10,21 @@ import AppLayout from './layouts/AppLayout';
 import AppDashboard from './pages/AppDashboard';
 import Notes from './pages/Notes';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { initializeGlobalListeners, disconnectAllSockets } from './utils/socketManager';
 import './App.css';
 
 function App() {
+  // Initialize global lifecycle listeners for shared Socket.IO Manager
+  useEffect(() => {
+    const cleanup = initializeGlobalListeners();
+
+    // Cleanup on app unmount
+    return () => {
+      cleanup();
+      disconnectAllSockets();
+    };
+  }, []);
+
   return (
     <Router>
       <ThemeProvider>
