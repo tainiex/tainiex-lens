@@ -212,7 +212,6 @@
     line-height: 1.5;
     font-size: 0.95rem;
     width: 100%;
-    white-space: pre-wrap;
     word-break: break-word;
 }
 
@@ -220,8 +219,6 @@
 .message-bubble ul,
 .message-bubble ol {
     margin: 0.4rem 0;
-    white-space: normal;
-    /* Override parent's pre-wrap to prevent HTML newlines from rendering */
 }
 
 .message-bubble p:first-child,
