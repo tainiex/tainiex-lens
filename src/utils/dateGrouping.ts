@@ -1,8 +1,6 @@
 export const groupItemsByDate = (items: any[]) => {
     const groups: { [key: string]: any[] } = {
         'Today': [],
-        'Yesterday': [],
-        'Previous 7 Days': [],
         'Earlier': []
     };
 
@@ -14,10 +12,6 @@ export const groupItemsByDate = (items: any[]) => {
 
         if (diffDays === 0) {
             groups['Today'].push(item);
-        } else if (diffDays === 1) {
-            groups['Yesterday'].push(item);
-        } else if (diffDays < 7) {
-            groups['Previous 7 Days'].push(item);
         } else {
             groups['Earlier'].push(item);
         }

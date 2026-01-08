@@ -339,6 +339,7 @@ const AppLayout = () => {
                         isLoadingNotes={isLoadingNotes}
                         onNoteSelect={handleNoteSelect}
                         onCreateNote={handleCreateNote}
+                        onRenameNote={handleUpdateNoteTitle}
                     />
 
                     <main className="dashboard-main">

@@ -155,6 +155,10 @@ set GITHUB_TOKEN=your_github_pat_here
 ### Sidebar Layout
 - **Compactness**: Reduced vertical and horizontal spacing to maximize screen real estate for content.
 - **Menu Order**: Strict ordering: **Chat**, **Notes**.
+- **Grouping Logic**:
+    - **Chats**: Simplified to "Today" and "Earlier" only.
+    - **Notes**: Displayed as a flat list with no date grouping headers.
+- **Action Menus**: Unified 3-dot (vertical ellipsis) action menu for both Chat sessions and Notes, providing "Rename" and "Delete" options. Buttons are transparent by default and show background only on hover.
 - **Scrollbar**: Scrollbars for long lists (e.g., chat history) should be pinned to the right edge/border of the sidebar for clean UI.
 
 ### Theme Toggle
@@ -166,6 +170,7 @@ set GITHUB_TOKEN=your_github_pat_here
 ### Layout Consistency
 - **Alignment**: Welcome screen content "Hi [User]" must always align exactly with the left edge of the chat input area's text placeholder across all viewport sizes.
 - **Limiter**: Use `max-width: 900px;` and `margin: 0 auto;` on specific content containers (.chat-messages, .welcome-container, .chat-input-area) rather than a shared wrapper to avoid alignment drift on wide screens.
+- **Chat Bubbles**: Message bubbles use `white-space: pre-wrap;` and `word-break: break-word;` to ensure natural text flow and correct wrapping.
 
 ---
 

@@ -19,7 +19,14 @@
     flex-shrink: 0;
     height: 100%;
     overflow: hidden;
+    overflow: hidden;
     /* Manage scrolling internally */
+}
+
+/* Light Mode Sidebar Override */
+[data-theme='light'] .app-sidebar {
+    background-color: #ffffff;
+    border-right: 1px solid var(--border-primary);
 }
 
 .sidebar-brand {
@@ -205,6 +212,8 @@
     line-height: 1.5;
     font-size: 0.95rem;
     width: 100%;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .message.user .message-bubble {
@@ -258,17 +267,18 @@
 .icon-btn {
     background: transparent;
     border: none;
-    color: var(--text-secondary);
     cursor: pointer;
-    padding: 4px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
-    border-radius: 4px;
+    justify-content: center;
+    transition: all 0.2s;
+    color: var(--text-secondary);
 }
 
 .icon-btn:hover {
-    color: var(--text-primary);
     background-color: var(--bg-hover);
+    color: var(--text-primary);
 }
 
 .sidebar-history {
@@ -330,8 +340,8 @@
 
 /* When item is active, actions bg matches active bg */
 .history-item.active .session-actions {
-    background: var(--bg-active);
-    box-shadow: -12px 0 20px var(--bg-active);
+    background: transparent;
+    box-shadow: none;
 }
 
 .history-item-input {
@@ -352,22 +362,14 @@
 
 /* When item is hovered but not active */
 .history-item:not(.active):hover .session-actions {
-    background: var(--bg-hover);
-    /* Wait, hover bg is bg-hover */
-    /* The hover effect on history-item is simple bg color.
-       The session actions sit on top. They need to match the parent's background.
-       Since parent background changes on hover/active, this is tricky with static bg.
-       Better solution: making session-actions transparent?
-       No, they cover the text ellipsis. Ideally they have a gradient fade.
-    */
-    background: var(--bg-hover);
-    box-shadow: -12px 0 20px var(--bg-hover);
+    background: transparent;
+    box-shadow: none;
 }
 
 /* Default state for actions (hidden/transparent background matching list bg) */
 .history-item .session-actions {
-    background: var(--bg-secondary);
-    box-shadow: -12px 0 20px var(--bg-secondary);
+    background: transparent;
+    box-shadow: none;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s;
@@ -377,6 +379,31 @@
 .session-actions.open {
     opacity: 1;
     pointer-events: auto;
+}
+
+/* Sidebar item styled version (for notes) */
+.sidebar-item-styled .session-actions {
+    background: transparent;
+    box-shadow: none;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.sidebar-item-styled:hover .session-actions,
+.sidebar-item-styled .session-actions.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.sidebar-item-styled.active .session-actions {
+    background: transparent;
+    box-shadow: none;
+}
+
+.sidebar-item-styled:not(.active):hover .session-actions {
+    background: transparent;
+    box-shadow: none;
 }
 
 /* Model Selector Styles */
@@ -1018,6 +1045,12 @@
     border: 1px solid var(--border-primary);
 }
 
+[data-theme='light'] .sidebar-segmented-control {
+    background-color: var(--bg-secondary);
+    /* Gray container */
+    border: none;
+}
+
 .sidebar-tab {
     flex: 1;
     border: none;
@@ -1103,7 +1136,6 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s;
     flex-shrink: 0;
     margin-left: 4px;
 }
@@ -1112,6 +1144,8 @@
     background: var(--bg-hover);
     color: var(--text-primary);
 }
+
+
 
 /* Icon (reusing existing class but adjusted position valid context) */
 .sidebar-search-icon {

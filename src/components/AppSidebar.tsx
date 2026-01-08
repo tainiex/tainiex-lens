@@ -24,6 +24,7 @@ interface AppSidebarProps {
     onNoteSelect?: (id: string | null) => void;
     onCreateNote?: () => void;
     onDeleteNote?: (id: string) => void;
+    onRenameNote?: (id: string, newTitle: string) => void;
 }
 
 const AppSidebar = ({
@@ -40,21 +41,33 @@ const AppSidebar = ({
     isLoadingNotes = false,
     onNoteSelect,
     onCreateNote,
-    onDeleteNote
+    onDeleteNote,
+    onRenameNote
 }: AppSidebarProps) => {
     const { theme, toggleTheme } = useTheme();
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
     const [deleteNoteId, setDeleteNoteId] = useState<string | null>(null);
+
+    // Session state
     const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
     const [editTitle, setEditTitle] = useState('');
     const [activeSessionMenuId, setActiveSessionMenuId] = useState<string | null>(null);
+
+    // Note state
+    const [activeNoteMenuId, setActiveNoteMenuId] = useState<string | null>(null);
+    const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+    const [noteEditTitle, setNoteEditTitle] = useState('');
+
     const [noteSearch, setNoteSearch] = useState('');
     const location = useLocation();
     const navigate = useNavigate();
     const [menuPosition, setMenuPosition] = useState<{ x: number, y: number } | null>(null);
+
+    // Refs
     const profileMenuRef = useRef<HTMLDivElement>(null);
     const sessionMenuRef = useRef<HTMLDivElement>(null);
+    const noteMenuRef = useRef<HTMLDivElement>(null);
 
     // Active Tab State (derived from URL)
     const activeTab = location.pathname.includes('/notes') ? 'notes' : 'chats';
@@ -67,15 +80,21 @@ const AppSidebar = ({
             if (sessionMenuRef.current && !sessionMenuRef.current.contains(event.target as Node)) {
                 setActiveSessionMenuId(null);
             }
+            if (noteMenuRef.current && !noteMenuRef.current.contains(event.target as Node)) {
+                setActiveNoteMenuId(null);
+            }
         };
 
-        if (isProfileMenuOpen || activeSessionMenuId) {
+        if (isProfileMenuOpen || activeSessionMenuId || activeNoteMenuId) {
             document.addEventListener('mousedown', handleClickOutside);
         }
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isProfileMenuOpen, activeSessionMenuId]);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isProfileMenuOpen, activeSessionMenuId, activeNoteMenuId]);
 
     const handleDelete = (sessionId: string) => {
         setDeleteConfirmationId(sessionId);
@@ -87,21 +106,13 @@ const AppSidebar = ({
         setEditingSessionId(null);
     };
 
-    const formatTime = (dateString: string) => {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffDays = Math.floor(diffMs / 86400000);
-
-        if (diffDays === 0) return 'Today';
-        if (diffDays === 1) return 'Yesterday';
-        if (diffDays < 7) return `${diffDays}d ago`;
-
-        return date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-        });
+    const handleRenameNote = async (noteId: string, newTitle: string) => {
+        if (!newTitle.trim()) return;
+        onRenameNote?.(noteId, newTitle);
+        setEditingNoteId(null);
     };
+
+
 
     return (
         <div className={`app-sidebar ${isOpen ? 'open' : ''}`}>
@@ -198,55 +209,72 @@ const AppSidebar = ({
                                     No notes yet
                                 </div>
                             ) : (
-                                Object.entries(groupItemsByDate(notes.filter(n => n.title.toLowerCase().includes(noteSearch.toLowerCase())))).map(([group, groupNotes]) => (
-                                    groupNotes.length > 0 && (
-                                        <div key={group}>
-                                            <div className="sidebar-group-header">{group}</div>
-                                            {groupNotes.map(note => {
-                                                const noteIdFromUrl = location.pathname.split('/notes/')[1];
-                                                const isActive = noteIdFromUrl === note.id;
-                                                return (
-                                                    <div
-                                                        key={note.id}
-                                                        className={`sidebar-item-styled ${isActive ? 'active' : ''}`}
-                                                        onClick={() => onNoteSelect?.(note.id)}
-                                                    >
-                                                        <div className="item-content">
-                                                            <div className="item-top-row">
-                                                                <div className="item-title">{note.title || 'Untitled'}</div>
-                                                                <div className="item-time">{formatTime(note.updatedAt)}</div>
-                                                            </div>
-                                                            <div className="item-preview">
-                                                                Start writing your note here...
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="note-delete-btn" onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setDeleteNoteId(note.id);
-                                                        }} style={{
-                                                            position: 'absolute',
-                                                            right: '8px',
-                                                            bottom: '8px', // Bottom aligned in new layout? Or stick to right center but subtle?
-                                                            padding: '4px',
-                                                            cursor: 'pointer',
-                                                            color: 'var(--text-tertiary)',
-                                                            opacity: 0
+                                notes.filter(n => n.title.toLowerCase().includes(noteSearch.toLowerCase())).map(note => {
+                                    const noteIdFromUrl = location.pathname.split('/notes/')[1];
+                                    const isActive = noteIdFromUrl === note.id;
+                                    return (
+                                        <div
+                                            key={note.id}
+                                            className={`sidebar-item-styled ${isActive ? 'active' : ''}`}
+                                            onClick={() => onNoteSelect?.(note.id)}
+                                        >
+                                            <div className="item-content">
+                                                {editingNoteId === note.id ? (
+                                                    <input
+                                                        autoFocus
+                                                        className="history-item-input"
+                                                        value={noteEditTitle}
+                                                        onChange={(e) => setNoteEditTitle(e.target.value)}
+                                                        onBlur={() => setEditingNoteId(null)}
+                                                        onKeyDown={async (e) => {
+                                                            if (e.key === 'Enter') {
+                                                                e.stopPropagation();
+                                                                await handleRenameNote(note.id, noteEditTitle);
+                                                            } else if (e.key === 'Escape') {
+                                                                setEditingNoteId(null);
+                                                            }
                                                         }}
-                                                            onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                                                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
-                                                        >
-                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
+                                                ) : (
+                                                    <div className="item-top-row">
+                                                        <div className="item-title">{note.title || 'Untitled'}</div>
+
+                                                        {/* Note Action Menu Trigger */}
+                                                        <div className={`session-actions ${activeNoteMenuId === note.id ? 'open' : ''}`} style={{
+                                                            marginLeft: 'auto'
+                                                        }}>
+                                                            <div style={{ position: 'relative' }} ref={activeNoteMenuId === note.id ? noteMenuRef : null}>
+                                                                <button
+                                                                    className="icon-btn"
+                                                                    onMouseDown={(e) => e.stopPropagation()}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (activeNoteMenuId === note.id) {
+                                                                            setActiveNoteMenuId(null);
+                                                                            setMenuPosition(null);
+                                                                        } else {
+                                                                            const rect = e.currentTarget.getBoundingClientRect();
+                                                                            setMenuPosition({ x: rect.right, y: rect.top });
+                                                                            setActiveNoteMenuId(note.id);
+                                                                        }
+                                                                    }}
+                                                                    style={{ padding: '2px', color: 'var(--text-secondary)' }}
+                                                                >
+                                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                        <circle cx="12" cy="12" r="1" />
+                                                                        <circle cx="12" cy="5" r="1" />
+                                                                        <circle cx="12" cy="19" r="1" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                        <style>{`
-                                                            .sidebar-item-styled:hover .note-delete-btn { opacity: 1 !important; }
-                                                        `}</style>
                                                     </div>
-                                                );
-                                            })}
+                                                )}
+                                            </div>
                                         </div>
-                                    )
-                                ))
+                                    );
+                                })
                             )}
                         </div>
                     </>
@@ -290,7 +318,6 @@ const AppSidebar = ({
                                                         ) : (
                                                             <div className="item-top-row">
                                                                 <div className="item-title">{session.title || 'New chat'}</div>
-                                                                <div className="item-time">{formatTime(session.updatedAt || session.createdAt)}</div>
 
                                                                 {/* Session Action Menu Trigger */}
                                                                 <div className={`session-actions ${activeSessionMenuId === session.id ? 'open' : ''}`} style={{
@@ -323,10 +350,7 @@ const AppSidebar = ({
                                                                 </div>
                                                             </div>
                                                         )}
-                                                        <div className="item-preview">
-                                                            {/* Chat preview text not usually available, placeholder or generic */}
-                                                            Chat conversation...
-                                                        </div>
+
                                                     </div>
                                                 </div>
                                             ))}
@@ -458,6 +482,87 @@ const AppSidebar = ({
                                 e.stopPropagation();
                                 if (activeSessionMenuId) handleDelete(activeSessionMenuId);
                                 setActiveSessionMenuId(null);
+                            }}
+                            style={{
+                                padding: '8px 12px',
+                                fontSize: '0.85rem',
+                                color: '#ef4444',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            Delete
+                        </div>
+                    </div>,
+                    document.body
+                )
+            }
+
+            {/* Note Action Menu Portal */}
+            {
+                activeNoteMenuId && menuPosition && createPortal(
+                    <div
+                        ref={noteMenuRef}
+                        className="session-menu-dropdown"
+                        style={{
+                            position: 'fixed',
+                            left: menuPosition.x,
+                            top: menuPosition.y,
+                            background: 'var(--bg-tertiary)',
+                            border: '1px solid var(--border-primary)',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                            zIndex: 9999,
+                            minWidth: '120px',
+                            overflow: 'hidden',
+                            marginLeft: '4px'
+                        }}
+                    >
+                        <div
+                            className="menu-item"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const note = notes.find(n => n.id === activeNoteMenuId);
+                                if (note) {
+                                    setEditingNoteId(note.id);
+                                    setNoteEditTitle(note.title || '');
+                                }
+                                setActiveNoteMenuId(null);
+                            }}
+                            style={{
+                                padding: '8px 12px',
+                                fontSize: '0.85rem',
+                                color: 'var(--text-secondary)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'var(--bg-hover)';
+                                e.currentTarget.style.color = 'var(--text-primary)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                                e.currentTarget.style.color = 'var(--text-secondary)';
+                            }}
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                            Rename
+                        </div>
+                        <div
+                            className="menu-item danger"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (activeNoteMenuId) setDeleteNoteId(activeNoteMenuId);
+                                setActiveNoteMenuId(null);
                             }}
                             style={{
                                 padding: '8px 12px',
