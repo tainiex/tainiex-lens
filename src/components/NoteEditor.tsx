@@ -22,7 +22,7 @@ import CodeBlock from '@tiptap/extension-code-block';
 import Blockquote from '@tiptap/extension-blockquote';
 import Placeholder from '@tiptap/extension-placeholder';
 import Collaboration from '@tiptap/extension-collaboration';
-import React, { useEffect, useCallback, useState, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useCallback, useState, useRef } from 'react';
 import * as Y from 'yjs';
 import { useCollaborationSocket } from '../hooks/useCollaborationSocket';
 import { useYjsDocument } from '../hooks/useYjsDocument';
@@ -207,6 +207,17 @@ const NoteEditor = React.memo(({
 
   // [FIX] Circular Dependency: Use a Ref to allow accessing sendUpdate from useYjsDocument
   const sendUpdateRef = useRef<((update: string, targetNoteId: string) => void) | null>(null);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+
+  // [UI] Auto-expand Title Textarea
+  useLayoutEffect(() => {
+    if (titleRef.current) {
+      // Reset height to get correct scrollHeight
+      titleRef.current.style.height = 'auto';
+      // Set height based on content
+      titleRef.current.style.height = `${titleRef.current.scrollHeight}px`;
+    }
+  }, [title]);
 
   // Y.js 文档管理
   const {
@@ -370,11 +381,11 @@ const NoteEditor = React.memo(({
             }} />
           ) : (
             <textarea
+              ref={titleRef}
               className="editor-title-input"
               placeholder="Untitled"
               value={title}
               onChange={(e) => onTitleChange?.(e.target.value)}
-              rows={1}
               spellCheck={false}
             />
           )}

@@ -216,6 +216,29 @@
     word-break: break-word;
 }
 
+.message-bubble p,
+.message-bubble ul,
+.message-bubble ol {
+    margin: 0.4rem 0;
+}
+
+.message-bubble p:first-child,
+.message-bubble ul:first-child,
+.message-bubble ol:first-child {
+    margin-top: 0;
+}
+
+.message-bubble p:last-child,
+.message-bubble ul:last-child,
+.message-bubble ol:last-child {
+    margin-bottom: 0;
+}
+
+.message-bubble ul,
+.message-bubble ol {
+    padding-left: 1.5rem;
+}
+
 .message.user .message-bubble {
     background: var(--bg-message-user);
     color: var(--text-primary);

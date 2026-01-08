@@ -515,6 +515,8 @@
     outline: none;
     font-family: inherit;
     min-height: 1.2em;
+    overflow: hidden;
+    height: auto;
 }
 
 .editor-title-input::placeholder {
