@@ -279,10 +279,13 @@ const NoteEditor = React.memo(({
   // Auto-resize title textarea to fit content
   useEffect(() => {
     if (titleRef.current) {
-      // Reset height to get accurate scrollHeight
-      titleRef.current.style.height = 'auto';
-      // Set height to match content
-      titleRef.current.style.height = titleRef.current.scrollHeight + 'px';
+      // Reset height to 0 to force scrollHeight recalculation
+      titleRef.current.style.height = '0px';
+      // Force a reflow by reading offsetHeight
+      const _ = titleRef.current.offsetHeight;
+      // Now set height to match actual content
+      const newHeight = titleRef.current.scrollHeight;
+      titleRef.current.style.height = newHeight + 'px';
     }
   }, [title]);
 
