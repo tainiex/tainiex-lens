@@ -768,9 +768,25 @@
 
 @media (max-width: 768px) {
 
-    /* Hide three-dot menu on mobile */
+    /* Hide three-dot menu on mobile (use long-press instead) */
     .session-actions {
         display: none !important;
+    }
+
+    /* Larger menu for mobile touch targets */
+    .session-menu-dropdown {
+        min-width: 160px !important;
+        border-radius: 12px !important;
+    }
+
+    .session-menu-dropdown .menu-item {
+        padding: 14px 16px !important;
+        font-size: 0.95rem !important;
+    }
+
+    .session-menu-dropdown .menu-item svg {
+        width: 18px !important;
+        height: 18px !important;
     }
 
     .app-sidebar {
@@ -1210,6 +1226,10 @@
     border-left: 3px solid transparent;
     /* Indicator strip */
     margin-bottom: 2px;
+    /* Prevent text selection and tap highlight on mobile */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .sidebar-item-styled:hover {

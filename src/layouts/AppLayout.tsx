@@ -337,6 +337,7 @@ const AppLayout = () => {
                         isLoadingNotes={isLoadingNotes}
                         onNoteSelect={handleNoteSelect}
                         onCreateNote={handleCreateNote}
+                        onDeleteNote={handleDeleteNote}
                         onRenameNote={handleUpdateNoteTitle}
                     />
 

@@ -16,6 +16,7 @@ export function useChatSocket() {
     const attemptRef = useRef(0);
     const lastReconnectTimeRef = useRef(0);
     const isConnectedRef = useRef(false); // To track if the socket was connected before a server disconnect
+    const isInitializedRef = useRef(false); // Track if socket has been initialized
 
     const [connectionState, setConnectionState] = useState<ConnectionState>({
         status: 'disconnected',
@@ -216,7 +217,18 @@ export function useChatSocket() {
     }, [updateConnectionState, setupSocket]);
 
     useEffect(() => {
-        setupSocket();
+        // If socket already exists and is connected, don't recreate
+        if (socketRef.current?.connected && isInitializedRef.current) {
+            logger.debug('[ChatSocket] Socket already initialized and connected, skipping setup');
+            updateConnectionState('connected', 0);
+            return;
+        }
+
+        // Only setup if not initialized or socket is disconnected
+        if (!isInitializedRef.current || !socketRef.current) {
+            setupSocket();
+            isInitializedRef.current = true;
+        }
 
         return () => {
             // Clean up listeners when component unmounts
@@ -225,8 +237,10 @@ export function useChatSocket() {
                 // Don't disconnect here - let Manager handle it
                 socketRef.current = null;
             }
+            // Reset initialization flag on unmount
+            isInitializedRef.current = false;
         };
-    }, [setupSocket]);
+    }, [setupSocket, updateConnectionState]);
 
     return {
         socket: socketRef.current,

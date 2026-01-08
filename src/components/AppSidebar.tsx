@@ -62,6 +62,10 @@ const AppSidebar = ({
     const [noteSearch, setNoteSearch] = useState('');
     const location = useLocation();
     const navigate = useNavigate();
+
+    // Long-press handling for mobile
+    const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const longPressTriggeredRef = useRef(false);
     const [menuPosition, setMenuPosition] = useState<{ x: number, y: number } | null>(null);
 
     // Refs
@@ -112,7 +116,46 @@ const AppSidebar = ({
         setEditingNoteId(null);
     };
 
+    // Long-press handlers
+    const handleLongPressStart = (id: string, type: 'note' | 'session', event: React.TouchEvent) => {
+        longPressTriggeredRef.current = false;
+        longPressTimerRef.current = setTimeout(() => {
+            longPressTriggeredRef.current = true;
+            // Trigger haptic feedback if available
+            if ('vibrate' in navigator) {
+                navigator.vibrate(50);
+            }
+            // Open menu
+            const target = event.target as HTMLElement;
+            const rect = target.getBoundingClientRect();
+            setMenuPosition({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+            if (type === 'note') {
+                setActiveNoteMenuId(id);
+            } else {
+                setActiveSessionMenuId(id);
+            }
+        }, 500); // 500ms long-press threshold
+    };
 
+    const handleLongPressEnd = () => {
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+    };
+
+    const handleLongPressCancel = () => {
+        handleLongPressEnd();
+        longPressTriggeredRef.current = false;
+    };
+
+    const handleItemClick = (callback: () => void) => {
+        // Only execute click if long-press wasn't triggered
+        if (!longPressTriggeredRef.current) {
+            callback();
+        }
+        longPressTriggeredRef.current = false;
+    };
 
     return (
         <div className={`app-sidebar ${isOpen ? 'open' : ''}`}>
@@ -216,7 +259,10 @@ const AppSidebar = ({
                                         <div
                                             key={note.id}
                                             className={`sidebar-item-styled ${isActive ? 'active' : ''}`}
-                                            onClick={() => onNoteSelect?.(note.id)}
+                                            onClick={() => handleItemClick(() => onNoteSelect?.(note.id))}
+                                            onTouchStart={(e) => handleLongPressStart(note.id, 'note', e)}
+                                            onTouchEnd={handleLongPressEnd}
+                                            onTouchMove={handleLongPressCancel}
                                         >
                                             <div className="item-content">
                                                 {editingNoteId === note.id ? (
@@ -295,7 +341,10 @@ const AppSidebar = ({
                                                 <div
                                                     key={session.id}
                                                     className={`sidebar-item-styled ${currentSessionId === session.id ? 'active' : ''}`}
-                                                    onClick={() => onSessionSelect(session.id)}
+                                                    onClick={() => handleItemClick(() => onSessionSelect(session.id))}
+                                                    onTouchStart={(e) => handleLongPressStart(session.id, 'session', e)}
+                                                    onTouchEnd={handleLongPressEnd}
+                                                    onTouchMove={handleLongPressCancel}
                                                 >
                                                     <div className="item-content">
                                                         {editingSessionId === session.id ? (

@@ -97,6 +97,7 @@ export function useCollaborationSocket(
   const messageQueueRef = useRef<Array<{ type: string; payload: any }>>([]);
   // [FIX] Buffer updates while waiting for sync to prevent data loss
   const pendingUpdatesQueueRef = useRef<Array<{ update: Uint8Array; targetNoteId: string }>>([]);
+  const isInitializedRef = useRef(false); // Track if socket has been initialized
 
   // [FIX] Sync Guard: Prevent local updates from overwriting server data before sync
   // We use noteId instead of boolean to prevent race conditions (Assassin Update)
@@ -506,7 +507,18 @@ export function useCollaborationSocket(
 
   // Initial setup
   useEffect(() => {
-    setupSocket();
+    // If socket already exists and is connected, don't recreate
+    if (socketRef.current?.connected && isInitializedRef.current) {
+      logger.debug('[CollabSocket] Socket already initialized and connected, skipping setup');
+      updateConnectionState('connected', currentNoteIdRef.current);
+      return;
+    }
+
+    // Only setup if not initialized or socket is disconnected
+    if (!isInitializedRef.current || !socketRef.current) {
+      setupSocket();
+      isInitializedRef.current = true;
+    }
 
     return () => {
       // Clean up listeners when component unmounts
@@ -515,8 +527,10 @@ export function useCollaborationSocket(
         // Don't disconnect here - let Manager handle it
         socketRef.current = null;
       }
+      // Reset initialization flag on unmount
+      isInitializedRef.current = false;
     };
-  }, [setupSocket]);
+  }, [setupSocket, updateConnectionState]);
 
   // 当 noteId 变化时，自动加入/离开房间
   useEffect(() => {
