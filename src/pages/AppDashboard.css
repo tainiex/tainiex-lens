@@ -220,6 +220,8 @@
 .message-bubble ul,
 .message-bubble ol {
     margin: 0.4rem 0;
+    white-space: normal;
+    /* Override parent's pre-wrap to prevent HTML newlines from rendering */
 }
 
 .message-bubble p:first-child,
@@ -237,6 +239,11 @@
 .message-bubble ul,
 .message-bubble ol {
     padding-left: 1.5rem;
+}
+
+.message-bubble li {
+    margin: 0.2rem 0;
+    /* Reduce list item spacing */
 }
 
 .message.user .message-bubble {
