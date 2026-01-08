@@ -405,8 +405,8 @@
     text-overflow: ellipsis;
 }
 
-/* Hide breadcrumb prefix on very small screens if needed */
-@media (max-width: 480px) {
+/* Hide breadcrumb prefix on mobile screens (matching 768px breakpoint) */
+@media (max-width: 768px) {
     .breadcrumb-text {
         display: block;
         /* Show Private */
