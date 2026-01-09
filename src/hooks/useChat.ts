@@ -15,7 +15,7 @@ const SUPPORTED_MODELS = [
 
 interface UseChatProps {
   currentSessionId: string | null;
-  setCurrentSessionId: (id: string | null, options?: { skipFetch?: boolean }) => void;
+  setCurrentSessionId: (id: string | null, options?: { skipFetch?: boolean; initialMessages?: Partial<IChatMessage>[] }) => void;
   messages: Partial<IChatMessage>[];
   setMessages: (messages: Partial<IChatMessage>[] | ((prev: Partial<IChatMessage>[]) => Partial<IChatMessage>[])) => void;
   selectedModel: string;
@@ -110,6 +110,22 @@ export function useChat({
     let sessionId = currentSessionId;
 
     try {
+      // Prepare optimistic messages immediately (needed for navigation state)
+      const userMessage: Partial<IChatMessage> = {
+        id: `temp_${Date.now()}`,
+        role: ChatRole.USER,
+        content: msgToSend,
+        timestamp: new Date().toISOString()
+      };
+      const assistantMsgId = `temp_ai_${Date.now()}`;
+      const assistantMessage: Partial<IChatMessage> = {
+        id: assistantMsgId,
+        role: ChatRole.ASSISTANT,
+        content: '',
+        timestamp: new Date().toISOString()
+      };
+      const optimisticMessages = [userMessage, assistantMessage];
+
       // 1. Create session if it doesn't exist
       if (!sessionId) {
         const sessionRes = await apiClient.post('/api/chat/sessions', {
@@ -120,22 +136,22 @@ export function useChat({
         sessionId = sessionData.id;
         // Prevent the upcoming prop update from triggering a history fetch
         shouldSkipHistoryFetchRef.current = true;
-        setCurrentSessionId(sessionId, { skipFetch: true });
+
+        // Navigate with explicit messages to prevent flash if remounting
+        setCurrentSessionId(sessionId, {
+          skipFetch: true,
+          initialMessages: optimisticMessages
+        });
         onSessionCreated?.();
       }
 
       // 2. Add local user message (with a temporary ID prefix)
-      const userMessage: Partial<IChatMessage> = {
-        id: `temp_${Date.now()}`,
-        role: ChatRole.USER,
-        content: msgToSend
-      };
-      const assistantMsgId = `temp_ai_${Date.now()}`;
-
+      // If we navigated (remounted), this setMessages updates the unmounting component state (harmless)
+      // The new component will init with optimisticMessages passed via navigation state.
+      // If we did NOT navigate (or reused component), this updates the current state correctly.
       setMessages(prev => [
         ...prev.filter(m => m.id !== 'welcome' && !m.id?.startsWith('temp_')),
-        userMessage,
-        { id: assistantMsgId, role: ChatRole.ASSISTANT, content: '' }
+        ...optimisticMessages
       ]);
 
 
@@ -183,4 +199,3 @@ export function useChat({
     reconnect
   };
 }
-

@@ -211,9 +211,9 @@
     max-width: 100%;
     line-height: 1.5;
     font-size: 0.95rem;
-    width: 100%;
-    word-break: normal;
-    overflow-wrap: anywhere;
+    width: fit-content;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .message-bubble p,

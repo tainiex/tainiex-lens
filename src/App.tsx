@@ -20,7 +20,11 @@ function App() {
     // Cleanup on app unmount
     return () => {
       cleanup();
-      disconnectAllSockets();
+      // [FIX] Do NOT disconnect all sockets here.
+      // In React Strict Mode (Dev), this runs immediately after mount, killing the
+      // new connection established by child components.
+      // The browser handles socket cleanup on tab close.
+      // disconnectAllSockets(); 
     };
   }, []);
 

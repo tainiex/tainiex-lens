@@ -27,6 +27,7 @@ interface ChatProviderProps {
   children: ReactNode;
   initialSessionId: string | null;
   initialSession?: { id: string; title?: string };
+  initialMessages?: Partial<IChatMessage>[];
   onSessionIdChange: (id: string | null) => void;
 }
 
@@ -34,6 +35,7 @@ export function ChatProvider({
   children,
   initialSessionId,
   initialSession,
+  initialMessages = [],
   onSessionIdChange
 }: ChatProviderProps) {
   const [currentSessionId, setCurrentSessionIdState] = useState<string | null>(initialSessionId);
@@ -49,7 +51,7 @@ export function ChatProvider({
   useEffect(() => {
     setCurrentSession(initialSession);
   }, [initialSession]);
-  const [messages, setMessages] = useState<Partial<IChatMessage>[]>([]);
+  const [messages, setMessages] = useState<Partial<IChatMessage>[]>(initialMessages);
   const [selectedModel, setSelectedModelState] = useState<string>(() => {
     return localStorage.getItem('selectedModel') || 'gemini-2.5-flash';
   });

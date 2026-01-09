@@ -1,3 +1,4 @@
+import { IChatMessage } from "@tainiex/tainiex-shared";
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import AppSidebar from '../components/AppSidebar';
@@ -18,7 +19,7 @@ export interface AppLayoutContextType {
     setIsSidebarOpen: (v: boolean) => void;
     sessions: any[]; // refined type if available
     notes: INote[];
-    handleSessionSelect: (id: string | null, options?: { skipFetch?: boolean }) => void;
+    handleSessionSelect: (id: string | null, options?: { skipFetch?: boolean; initialMessages?: Partial<IChatMessage>[] }) => void;
     handleNoteSelect: (id: string | null) => void;
     handleDeleteSession: (id: string) => void;
     handleRenameSession: (id: string, newTitle: string) => void;
@@ -166,15 +167,28 @@ const AppLayout = () => {
         return () => { isMounted = false; };
     }, []); // Run ONLY once on mount (empty deps is sufficient)
 
+    // --- Global Auth Event Listener ---
+    useEffect(() => {
+        const handleLogout = () => {
+            logger.warn('[AppLayout] Received auth:logout event. Redirecting to login...');
+            setUser(null); // Clear user state immediately
+            navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+        };
+
+        window.addEventListener('auth:logout', handleLogout);
+        return () => window.removeEventListener('auth:logout', handleLogout);
+    }, [navigate]);
+
     // --- Handlers ---
-    const handleSessionSelect = useCallback((id: string | null, options?: { skipFetch?: boolean }) => {
+    const handleSessionSelect = useCallback((id: string | null, options?: { skipFetch?: boolean; initialMessages?: Partial<IChatMessage>[] }) => {
         // Use ref for sidebar state to avoid recreating this function when sidebar toggles
         const sidebarOpen = isSidebarOpenRef.current;
         if (id) {
             navigate(`/app/chats/${id}`, {
                 state: {
                     sidebarOpen,
-                    skipFetch: options?.skipFetch
+                    skipFetch: options?.skipFetch ,
+                    initialMessages: options?.initialMessages
                 }
             });
         } else {

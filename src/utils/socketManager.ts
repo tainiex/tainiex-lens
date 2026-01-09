@@ -144,6 +144,12 @@ function setupManagerEvents(manager: Manager) {
     });
 
     manager.on('close', (reason) => {
+        // [FIX] Ignore "transport close" as it often happens on navigation/reloads and is harmless if auto-reconnect works
+        if (reason === 'transport close' || (typeof reason === 'object' && (reason as any).description === 400)) {
+            logger.debug('[SocketManager] Connection closed (transport close) - likely navigation or sleep');
+            return;
+        }
+
         logger.warn('[SocketManager] Connection closed:', reason);
         Sentry.addBreadcrumb({
             category: 'websocket.manager',
@@ -202,6 +208,10 @@ export async function refreshAndReconnect(): Promise<boolean> {
             // [FIX] If auth refresh failed, stop the reconnection loop to prevent Sentry spam
             // and yellow light blinking forever.
             logger.warn('[SocketManager] Auth refresh failed. Closing manager to stop reconnection loop.');
+
+            // Failsafe: Dispatch logout if not already done by apiClient
+            window.dispatchEvent(new CustomEvent('auth:logout'));
+
             const manager = getSocketManager();
             // Stop trying to reconnect
             manager.reconnection(false);

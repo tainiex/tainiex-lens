@@ -108,6 +108,14 @@ class ApiClient {
 
                 // Handle refresh failure
                 logger.warn('[AuthDebug] Refresh failed. Status:', res.status, 'StatusText:', res.statusText);
+
+                // [FIX] If refresh fails (401/403), it means the refresh token is invalid/expired.
+                // We must force a logout to prevent infinite loops.
+                if (res.status === 401 || res.status === 403) {
+                    logger.error('[AuthDebug] Critical Auth Failure: Refresh token invalid. Dispatching auth:logout.');
+                    window.dispatchEvent(new CustomEvent('auth:logout'));
+                }
+
                 const error = this.handleError(res, 'token refresh');
                 if (notificationCallback) {
                     notificationCallback(error);

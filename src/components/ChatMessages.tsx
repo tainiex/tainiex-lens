@@ -123,7 +123,7 @@ const ChatMessages = ({
           )}
           {messages.map((msg, idx) => (
             <div key={msg.id || idx} className={`message ${msg.role}`}>
-              <div className="message-inner-container" style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === ChatRole.USER ? 'flex-end' : 'flex-start', maxWidth: '100%' }}>
+              <div className="message-inner-container" style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === ChatRole.USER ? 'flex-end' : 'flex-start', maxWidth: '100%', flex: 1, minWidth: 0 }}>
                 {msg.role === ChatRole.USER && ((msg as any).createdAt || (msg as any).timestamp) && (
                   <div className="message-time-outside" style={{
                     fontSize: '0.7rem',

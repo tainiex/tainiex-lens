@@ -48,6 +48,7 @@ const AppDashboard = () => {
     // [FIX] Read skipFetch from navigation state
     const location = useLocation();
     const skipFetch = (location.state as any)?.skipFetch || false;
+    const initialMessages = (location.state as any)?.initialMessages;
 
     // [FIX] Memoize handlers to prevent ChatInterface re-render when Sidebar opens
     const handleMenuClick = useCallback(() => setIsSidebarOpen(true), [setIsSidebarOpen]);
@@ -68,6 +69,7 @@ const AppDashboard = () => {
                 onSessionCreated={refreshSessions} // Stable from context
                 onSessionUpdate={handleSessionUpdate}
                 initialSkipFetch={skipFetch}
+                initialMessages={initialMessages}
             />
         </div>
     );
