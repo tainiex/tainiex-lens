@@ -13,17 +13,19 @@ interface ChatInterfaceProps {
   user: IUser | null;
   onMenuClick?: () => void;
   currentSessionId: string | null;
-  setCurrentSessionId: (id: string | null) => void;
+  setCurrentSessionId: (id: string | null, options?: { skipFetch?: boolean }) => void;
   currentSession?: { id: string; title?: string };
   onSessionCreated?: () => void;
   onSessionUpdate?: (title?: string) => void;
+  initialSkipFetch?: boolean;
 }
 
 function ChatInterfaceContent({
   user,
   onMenuClick,
   onSessionCreated,
-  onSessionUpdate
+  onSessionUpdate,
+  initialSkipFetch
 }: Omit<ChatInterfaceProps, 'currentSessionId' | 'setCurrentSessionId' | 'currentSession'>) {
   const {
     currentSessionId,
@@ -99,7 +101,8 @@ function ChatInterfaceContent({
     setIsStreaming,
     onSessionCreated,
     onSessionUpdate,
-    enableAutoScroll
+    enableAutoScroll,
+    initialSkipFetch
   });
 
   // Fetch message history when session changes
@@ -111,6 +114,13 @@ function ChatInterfaceContent({
     }
 
     if (shouldSkipHistoryFetchRef.current) {
+      // shouldSkipHistoryFetchRef.current = false; // logic moved to hook/ref initialization for initial, 
+      // but we still need to respect it here if it was set to true dynamically.
+      // Actually, if we use the hook logic, the ref is persistent.
+      // BUT, we need to reset it after consuming it.
+
+      // Check if this "consumption" logic is still valid here. 
+      // Yes, if the ref is true, we skip fetch. Then we set it to false so next time it fetches.
       shouldSkipHistoryFetchRef.current = false;
       return;
     }
@@ -173,7 +183,8 @@ const ChatInterface = ({
   setCurrentSessionId,
   currentSession,
   onSessionCreated,
-  onSessionUpdate
+  onSessionUpdate,
+  initialSkipFetch
 }: ChatInterfaceProps) => {
   return (
     <ChatProvider
@@ -186,6 +197,7 @@ const ChatInterface = ({
         onMenuClick={onMenuClick}
         onSessionCreated={onSessionCreated}
         onSessionUpdate={onSessionUpdate}
+        initialSkipFetch={initialSkipFetch}
       />
     </ChatProvider>
   );

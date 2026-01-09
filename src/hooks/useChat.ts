@@ -15,7 +15,7 @@ const SUPPORTED_MODELS = [
 
 interface UseChatProps {
   currentSessionId: string | null;
-  setCurrentSessionId: (id: string | null) => void;
+  setCurrentSessionId: (id: string | null, options?: { skipFetch?: boolean }) => void;
   messages: Partial<IChatMessage>[];
   setMessages: (messages: Partial<IChatMessage>[] | ((prev: Partial<IChatMessage>[]) => Partial<IChatMessage>[])) => void;
   selectedModel: string;
@@ -24,6 +24,7 @@ interface UseChatProps {
   onSessionCreated?: () => void;
   onSessionUpdate?: (title?: string) => void;
   enableAutoScroll: () => void;
+  initialSkipFetch?: boolean;
 }
 
 export function useChat({
@@ -35,7 +36,8 @@ export function useChat({
   setIsStreaming,
   onSessionCreated,
   onSessionUpdate,
-  enableAutoScroll
+  enableAutoScroll,
+  initialSkipFetch = false
 }: UseChatProps) {
   const [models, setModels] = useState<(string | { name: string })[]>([]);
 
@@ -51,7 +53,7 @@ export function useChat({
 
   // Refs
   const currentSessionIdRef = useRef(currentSessionId);
-  const shouldSkipHistoryFetchRef = useRef(false);
+  const shouldSkipHistoryFetchRef = useRef(initialSkipFetch);
 
   useEffect(() => {
     currentSessionIdRef.current = currentSessionId;
@@ -118,7 +120,7 @@ export function useChat({
         sessionId = sessionData.id;
         // Prevent the upcoming prop update from triggering a history fetch
         shouldSkipHistoryFetchRef.current = true;
-        setCurrentSessionId(sessionId);
+        setCurrentSessionId(sessionId, { skipFetch: true });
         onSessionCreated?.();
       }
 

@@ -18,7 +18,7 @@ export interface AppLayoutContextType {
     setIsSidebarOpen: (v: boolean) => void;
     sessions: any[]; // refined type if available
     notes: INote[];
-    handleSessionSelect: (id: string | null) => void;
+    handleSessionSelect: (id: string | null, options?: { skipFetch?: boolean }) => void;
     handleNoteSelect: (id: string | null) => void;
     handleDeleteSession: (id: string) => void;
     handleRenameSession: (id: string, newTitle: string) => void;
@@ -167,11 +167,16 @@ const AppLayout = () => {
     }, []); // Run ONLY once on mount (empty deps is sufficient)
 
     // --- Handlers ---
-    const handleSessionSelect = useCallback((id: string | null) => {
+    const handleSessionSelect = useCallback((id: string | null, options?: { skipFetch?: boolean }) => {
         // Use ref for sidebar state to avoid recreating this function when sidebar toggles
         const sidebarOpen = isSidebarOpenRef.current;
         if (id) {
-            navigate(`/app/chats/${id}`, { state: { sidebarOpen } });
+            navigate(`/app/chats/${id}`, {
+                state: {
+                    sidebarOpen,
+                    skipFetch: options?.skipFetch
+                }
+            });
         } else {
             navigate('/app/chats', { state: { sidebarOpen } });
         }

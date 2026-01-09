@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { useNavigate, useParams, useOutletContext } from 'react-router-dom';
+import { useNavigate, useParams, useOutletContext, useLocation } from 'react-router-dom';
 import ChatInterface from '../components/ChatInterface';
 import { AppLayoutContextType } from '../layouts/AppLayout';
 // import { NotificationProvider } from '../contexts/NotificationContext'; // Provider is in Layout now
@@ -42,9 +42,12 @@ const AppDashboard = () => {
 
     // Find current session object
     // Use the ID from params directly to be safe, or from context.
-    // Using sessionId from params is safer for immediate consistency with URL.
     const activeSessionId = sessionId || null;
     const currentSession = sessions.find(s => s.id === activeSessionId);
+
+    // [FIX] Read skipFetch from navigation state
+    const location = useLocation();
+    const skipFetch = (location.state as any)?.skipFetch || false;
 
     // [FIX] Memoize handlers to prevent ChatInterface re-render when Sidebar opens
     const handleMenuClick = useCallback(() => setIsSidebarOpen(true), [setIsSidebarOpen]);
@@ -64,6 +67,7 @@ const AppDashboard = () => {
                 currentSession={currentSession}
                 onSessionCreated={refreshSessions} // Stable from context
                 onSessionUpdate={handleSessionUpdate}
+                initialSkipFetch={skipFetch}
             />
         </div>
     );

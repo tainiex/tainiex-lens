@@ -212,7 +212,8 @@
     line-height: 1.5;
     font-size: 0.95rem;
     width: 100%;
-    word-break: break-word;
+    word-break: normal;
+    overflow-wrap: anywhere;
 }
 
 .message-bubble p,
@@ -248,7 +249,7 @@
     color: var(--text-primary);
     border: 1px solid var(--bg-message-user-border);
     box-shadow: 0 2px 8px rgba(79, 70, 229, 0.08);
-    max-width: 70%;
+    max-width: 85%;
     width: fit-content;
 }
 
