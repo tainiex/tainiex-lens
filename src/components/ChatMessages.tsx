@@ -154,7 +154,7 @@ const ChatMessages = ({
                     msg.content ? (
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm, remarkMath]}
-                        rehypePlugins={[rehypeKatex]}
+                        rehypePlugins={[[rehypeKatex, { strict: false }]]}
                         components={{
                           code({ inline, className, children, ...props }: any) {
                             const match = /language-(\w+)/.exec(className || '');
