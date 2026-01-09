@@ -7,6 +7,8 @@ import type { INote } from '../types/collaboration';
 import { apiClient } from '../utils/apiClient';
 
 import { groupItemsByDate } from '../utils/dateGrouping';
+import SidebarNoteItem from './SidebarNoteItem';
+
 
 interface AppSidebarProps {
     user: IUser | null;
@@ -210,7 +212,7 @@ const AppSidebar = ({
                             onChange={(e) => setNoteSearch(e.target.value)}
                         />
                         <button className="sidebar-add-btn-unified" onClick={onCreateNote}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
                         </button>
                     </div>
                 </div>
@@ -253,71 +255,24 @@ const AppSidebar = ({
                             ) : (
                                 notes.filter(n => n.title.toLowerCase().includes(noteSearch.toLowerCase())).map(note => {
                                     const noteIdFromUrl = location.pathname.split('/notes/')[1];
-                                    const isActive = noteIdFromUrl === note.id;
                                     return (
-                                        <div
+                                        <SidebarNoteItem
                                             key={note.id}
-                                            className={`sidebar-item-styled ${isActive ? 'active' : ''}`}
-                                            onClick={() => handleItemClick(() => onNoteSelect?.(note.id))}
-                                            onTouchStart={(e) => handleLongPressStart(note.id, 'note', e)}
-                                            onTouchEnd={handleLongPressEnd}
-                                            onTouchMove={handleLongPressCancel}
-                                        >
-                                            <div className="item-content">
-                                                {editingNoteId === note.id ? (
-                                                    <input
-                                                        autoFocus
-                                                        className="history-item-input"
-                                                        value={noteEditTitle}
-                                                        onChange={(e) => setNoteEditTitle(e.target.value)}
-                                                        onBlur={() => setEditingNoteId(null)}
-                                                        onKeyDown={async (e) => {
-                                                            if (e.key === 'Enter') {
-                                                                e.stopPropagation();
-                                                                await handleRenameNote(note.id, noteEditTitle);
-                                                            } else if (e.key === 'Escape') {
-                                                                setEditingNoteId(null);
-                                                            }
-                                                        }}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    />
-                                                ) : (
-                                                    <div className="item-top-row">
-                                                        <div className="item-title">{note.title || 'Untitled'}</div>
-
-                                                        {/* Note Action Menu Trigger */}
-                                                        <div className={`session-actions ${activeNoteMenuId === note.id ? 'open' : ''}`} style={{
-                                                            marginLeft: 'auto'
-                                                        }}>
-                                                            <div style={{ position: 'relative' }} ref={activeNoteMenuId === note.id ? noteMenuRef : null}>
-                                                                <button
-                                                                    className="icon-btn"
-                                                                    onMouseDown={(e) => e.stopPropagation()}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        if (activeNoteMenuId === note.id) {
-                                                                            setActiveNoteMenuId(null);
-                                                                            setMenuPosition(null);
-                                                                        } else {
-                                                                            const rect = e.currentTarget.getBoundingClientRect();
-                                                                            setMenuPosition({ x: rect.right, y: rect.top });
-                                                                            setActiveNoteMenuId(note.id);
-                                                                        }
-                                                                    }}
-                                                                    style={{ padding: '2px', color: 'var(--text-secondary)' }}
-                                                                >
-                                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                        <circle cx="12" cy="12" r="1" />
-                                                                        <circle cx="12" cy="5" r="1" />
-                                                                        <circle cx="12" cy="19" r="1" />
-                                                                    </svg>
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
+                                            note={note}
+                                            level={0}
+                                            activeNoteId={noteIdFromUrl}
+                                            onSelect={(id) => onNoteSelect?.(id)}
+                                            onMenuOpen={(e, id) => {
+                                                const rect = (e.target as HTMLElement).getBoundingClientRect();
+                                                setMenuPosition({ x: rect.right, y: rect.top });
+                                                setActiveNoteMenuId(id);
+                                            }}
+                                            editingNoteId={editingNoteId}
+                                            noteEditTitle={noteEditTitle}
+                                            setNoteEditTitle={setNoteEditTitle}
+                                            onRenameSubmit={handleRenameNote}
+                                            onEditCancel={() => setEditingNoteId(null)}
+                                        />
                                     );
                                 })
                             )}

@@ -3,6 +3,9 @@ import { useParams, useOutletContext } from 'react-router-dom';
 import NoteEditor from '../components/NoteEditor';
 import { AppLayoutContextType } from '../layouts/AppLayout';
 import './AppDashboard.css';
+import { INote } from '../types/collaboration';
+import { apiClient } from '../utils/apiClient';
+
 
 const Notes = () => {
 
@@ -18,7 +21,52 @@ const Notes = () => {
         isLoadingNotes, // Now available in context
     } = useOutletContext<AppLayoutContextType>();
 
+    // Local state for fetched note (deep linking support)
+    const [fetchedNote, setFetchedNote] = useState<INote | null>(null);
+    const [isFetchingNote, setIsFetchingNote] = useState(false);
+
     const activeNote = notes.find(n => n.id === noteId);
+    const finalNote = activeNote || fetchedNote;
+
+    // Use fetchedNote if activeNote is missing, but prefer activeNote (live updates from sidebar)
+    // Actually, if activeNote exists, we should probably clear fetchedNote to avoid confusion, 
+    // OR just use 'finalNote' derived.
+
+    // Effect: Fetch note if noteId exists but not found in 'notes' (roots/cache)
+    useEffect(() => {
+        if (noteId && !activeNote && !isFetchingNote && !fetchedNote) {
+            // Guard: If we already failed or are fetching, don't loop.
+            // But if user switches noteId, we need to reset.
+            // So we depend on [noteId].
+        }
+    }, [noteId, activeNote]);
+
+    useEffect(() => {
+        // Reset fetched state when ID changes
+        setFetchedNote(null);
+        setIsFetchingNote(false);
+    }, [noteId]);
+
+    useEffect(() => {
+        if (noteId && !activeNote && !fetchedNote) {
+            setIsFetchingNote(true);
+            apiClient.get(`/api/notes/${noteId}`)
+                .then(async (res) => {
+                    if (res.ok) {
+                        const data = await res.json();
+                        // [FIX] Sanitize title to allow gray placeholder to show
+                        if (data.title === 'Untitled' || data.title === 'Untitled Note') {
+                            data.title = '';
+                        }
+                        setFetchedNote(data);
+                    } else {
+                        // 404 or error
+                    }
+                })
+                .catch(err => console.error(err))
+                .finally(() => setIsFetchingNote(false));
+        }
+    }, [noteId, activeNote, fetchedNote]);
 
     // Local state for title to support smooth typing and debounced updates
     const [localTitle, setLocalTitle] = useState<string>('');
@@ -26,10 +74,13 @@ const Notes = () => {
 
     // Sync local title when active note changes or loads
     useEffect(() => {
-        if (activeNote) {
-            setLocalTitle(activeNote.title);
+        if (finalNote) {
+            // [FIX] Double check title is not 'Untitled' locally too
+            let t = finalNote.title || '';
+            if (t === 'Untitled' || t === 'Untitled Note') t = '';
+            setLocalTitle(t);
         }
-    }, [activeNote?.id, activeNote?.title]); // Update if ID changes or remote title updates
+    }, [finalNote?.id, finalNote?.title]); // Update if ID changes or remote title updates
 
 
     const handleTitleChange = (newTitle: string) => {
@@ -58,9 +109,9 @@ const Notes = () => {
     }, []);
 
     // [FIX] 404 Detection
-    const shouldShowEditor = !!activeNote;
-    const isNoteLoading = isLoadingNotes && !activeNote;
-    const isNotFound = !isLoadingNotes && !activeNote && !!noteId;
+    const shouldShowEditor = !!finalNote;
+    const isNoteLoading = (isLoadingNotes || isFetchingNote) && !finalNote;
+    const isNotFound = !isLoadingNotes && !isFetchingNote && !finalNote && !!noteId;
 
     return (
         <div className="notes-view-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>

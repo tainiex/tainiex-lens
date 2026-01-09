@@ -181,6 +181,12 @@ export function useCollaborationSocket(
       updateConnectionState('connected', currentNoteIdRef.current);
     } else {
       updateConnectionState('connecting');
+      // [FIX] Ensure socket is active. If it was manually disconnected or manager was closed,
+      // it might need an explicit kick, especially if reusing a manager instance.
+      if (socket.disconnected) {
+        logger.debug('[CollabSocket] Socket is disconnected, calling connect()');
+        socket.connect();
+      }
     }
 
     // ===== 连接事件 =====

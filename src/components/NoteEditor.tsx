@@ -399,30 +399,14 @@ const NoteEditor = React.memo(({
     }
   */
 
-  // Extract Status Text
-  let statusText = 'Saved';
-
-  if (saveStatus === 'offline') {
-    statusText = 'Offline';
-  } else if (saveStatus === 'saving' || isSyncing) {
-    // isSyncing (Initial Load) also counts as Saving
-    statusText = 'Saving...';
-  } else {
-    statusText = 'Saved';
-  }
-
-  // Styles for dot
-  // .status-dot.saved { bg: green } (Existing)
-  // .status-dot.syncing { bg: yellow } (Existing)
-  // .status-dot.offline { bg: gray } (Need to add or reuse)
-
-  // ...
+  // Status Text
+  const statusText = saveStatus === 'saved' ? 'Saved' : (saveStatus === 'saving' ? 'Saving...' : 'Offline');
 
   return (
     <div className="note-editor-container">
-      {/* Editor Header */}
+      {/* Mobile Menu Button - Positioned in the header */}
+      {/* If isLoading, we might want to hide it or show simplified header */}
       <div className="editor-header">
-        {/* ... Mobile Menu ... */}
         <button
           className="mobile-menu-btn"
           onClick={onMobileMenuClick}
@@ -488,7 +472,16 @@ const NoteEditor = React.memo(({
               className="editor-title-input"
               placeholder="Untitled"
               value={title}
-              onChange={(e) => onTitleChange?.(e.target.value)}
+              onChange={(e) => {
+                onTitleChange?.(e.target.value);
+                // [FIX] Show saving status for title updates
+                setSaveStatus('saving');
+                // Debounce the switch back to "Saved" (matching parent's debounce ~500ms + network)
+                if (savingTimeoutRef.current) clearTimeout(savingTimeoutRef.current);
+                savingTimeoutRef.current = setTimeout(() => {
+                  setSaveStatus('saved');
+                }, 1200);
+              }}
               spellCheck={false}
             />
           )}

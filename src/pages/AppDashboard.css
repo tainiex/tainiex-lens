@@ -1319,3 +1319,202 @@
     outline: none;
     color: var(--text-primary);
 }
+/* Tree View Specific Styles */
+
+.sidebar-tree-item-container {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Base row style for a tree item */
+.sidebar-tree-row {
+    display: flex;
+    align-items: center;
+    padding: 3px 6px;
+    margin: 1px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+    color: var(--text-secondary);
+    min-height: 30px;
+    position: relative;
+    user-select: none;
+}
+
+.sidebar-tree-row:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.sidebar-tree-row.active {
+    background-color: var(--bg-active);
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.tree-chevron-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    margin-right: 2px;
+    color: var(--text-tertiary);
+    transition: all 0.2s;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.tree-chevron-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--text-secondary);
+}
+
+[data-theme='dark'] .tree-chevron-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.tree-item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+    color: var(--text-secondary);
+    opacity: 0.8;
+    flex-shrink: 0;
+}
+
+.sidebar-tree-row.active .tree-item-icon {
+    color: var(--text-primary);
+    opacity: 1;
+}
+
+.sidebar-tree-children {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Tree Icon Swapping Logic */
+.tree-icon-slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-right: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.tree-icon-slot:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme='dark'] .tree-icon-slot:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.icon-doc, .icon-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+/* Default state: Show Doc, Hide Chevron */
+.icon-chevron {
+    display: none;
+}
+
+/* Swap state: When row hovered AND has children */
+/* We need a parent class on the row to indicate has-children */
+.sidebar-tree-row.has-children:hover .icon-doc {
+    display: none;
+}
+
+.sidebar-tree-row.has-children:hover .icon-chevron {
+    display: flex;
+}
+
+/* Optional: Keep chevron visible if expanded? 
+   User request: "When mouse hover... replace". 
+   Strict interpretation: Only on hover.
+   But if I stick to strict, visually it might be confusing if expanded.
+   I will add a rule to also show chevron if expanded, as it's standard.
+   Actually, let's try STRICT first as user requested "Default not show... hover replace".
+*/
+
+/* Fix Alignment: Remove side padding from list container */
+.sidebar-history {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+/* Ensure search row aligns with items */
+.sidebar-search-row {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+/* Tree Item Alignment */
+/* The items already have internal padding via style={{ paddingLeft: ... }} */
+/* We just need to ensure the container itself doesn't add extra offsets */
+
+/* Action Buttons Styling */
+.tree-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+/* Show actions on row hover */
+.sidebar-tree-row:hover .tree-actions {
+    opacity: 1;
+}
+
+/* Override default icon-btn hover background for tree actions */
+.tree-action-btn {
+    background: transparent !important;
+    color: var(--text-secondary);
+    padding: 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+    border: none; /* Reset button border */
+}
+
+.tree-action-btn:hover {
+    color: var(--text-primary);
+    background: transparent !important; /* Explicitly remove bg */
+}
+
+/* Specific styling for the + button if needed */
+.tree-action-btn.add-child {
+    
+}
+
+/* Align Header and Tabs with widened content (0.5rem horizontal padding) */
+.sidebar-brand {
+    padding: 0 0.5rem !important;
+}
+
+.sidebar-tabs-container {
+    padding: 0 0.5rem 0.6rem !important; /* Slightly reduced bottom padding too */
+}
+
+/* Fix Hover Background Alignment: Add margin to match header padding */
+.sidebar-tree-row {
+    margin: 1px 0.5rem !important;
+    width: auto; /* Ensure it doesn't overflow if flex container width is tight, though block flex usually handles it */
+}

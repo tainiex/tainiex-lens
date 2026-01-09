@@ -198,8 +198,16 @@ export async function refreshAndReconnect(): Promise<boolean> {
             manager.connect();
 
             return true;
+        } else {
+            // [FIX] If auth refresh failed, stop the reconnection loop to prevent Sentry spam
+            // and yellow light blinking forever.
+            logger.warn('[SocketManager] Auth refresh failed. Closing manager to stop reconnection loop.');
+            const manager = getSocketManager();
+            // Stop trying to reconnect
+            manager.reconnection(false);
+            manager.close();
+            return false;
         }
-        return false;
     } catch (err) {
         logger.error('[SocketManager] Failed to refresh token:', err);
         return false;

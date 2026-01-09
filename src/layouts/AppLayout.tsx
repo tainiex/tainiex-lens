@@ -269,7 +269,7 @@ const AppLayout = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title })
             });
-            // No need to refreshNotes() as we already updated local state
+            window.dispatchEvent(new CustomEvent("note-update", { detail: { id, title } }));
         } catch (error) {
             logger.error('Failed to update note title', error);
             // Revert on error? For now, let's keep it simple. User will see error on refresh.

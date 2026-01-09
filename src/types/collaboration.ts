@@ -46,6 +46,10 @@ export interface IBlock extends SharedIBlock {
 // Shared INote doesn't have 'blocks' by default, but existing code expects it?
 export interface INote extends SharedINote {
   blocks?: IBlock[];
+  hasChildren?: boolean;
+  parentId?: string;
+  children?: INote[]; // Frontend cache for tree view
+
   // Map old 'ownerId' access to 'userId' via code changes
 }
 
