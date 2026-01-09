@@ -115,6 +115,8 @@ function setupManagerEvents(manager: Manager) {
             data: { error: err.message },
             level: 'warning',
         });
+        // Capture as exception if it persists (e.g. every 5th attempt) to reduce noise but ensure visibility
+        // counting attempts is hard here without closure state, but we can rely on reconnect_failed for final give-up.
     });
 
     // Manager-level reconnection failed
@@ -130,6 +132,37 @@ function setupManagerEvents(manager: Manager) {
             tags: { type: 'websocket_manager_error' },
         });
     });
+
+    // [New] Monitor Open/Close for stability tracking
+    manager.on('open', () => {
+        logger.debug('[SocketManager] Connection established (open)');
+        Sentry.addBreadcrumb({
+            category: 'websocket.manager',
+            message: 'Connection Open',
+            level: 'info'
+        });
+    });
+
+    manager.on('close', (reason) => {
+        logger.warn('[SocketManager] Connection closed:', reason);
+        Sentry.addBreadcrumb({
+            category: 'websocket.manager',
+            message: 'Connection Closed',
+            data: { reason },
+            level: 'warning'
+        });
+
+        // If reason indicates a transport error, we might want to know more
+        if (reason && typeof reason === 'object') {
+            Sentry.captureException(reason, {
+                tags: { type: 'websocket_transport_error' }
+            });
+        }
+    });
+
+    // [New] Monitor low-level engine errors if possible
+    // Note: manager.engine might not be attached yet or might change on reconnection
+    // The reliable way is usually via manager's 'error' event which bubbles up.
 }
 
 /**
