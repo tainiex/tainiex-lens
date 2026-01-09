@@ -98,7 +98,7 @@ export function useChatSocket() {
                 updateConnectionState('disconnected', 0);
                 logger.warn('[ChatSocket] Socket disconnected by server, attempting auth refresh...');
                 refreshAndReconnect().then((success) => {
-                    if (success && isConnectedRef.current) {
+                    if (success) {
                         logger.log('[ChatSocket] Auth restored, socket will auto-reconnect');
                     }
                 }).catch(err => logger.error('[ChatSocket] Auth refresh error:', err));

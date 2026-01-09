@@ -102,10 +102,12 @@ class ApiClient {
                 logger.debug('[AuthDebug] Refresh response status:', res.status);
 
                 if (res.ok) {
+                    logger.debug('[AuthDebug] Refresh successful. Status:', res.status);
                     return true;
                 }
 
                 // Handle refresh failure
+                logger.warn('[AuthDebug] Refresh failed. Status:', res.status, 'StatusText:', res.statusText);
                 const error = this.handleError(res, 'token refresh');
                 if (notificationCallback) {
                     notificationCallback(error);
@@ -126,6 +128,7 @@ class ApiClient {
             return await this.refreshPromise;
         } finally {
             // Clear the promise so subsequent failures can trigger a new refresh
+            logger.debug('[AuthDebug] Clearing refresh promise');
             this.refreshPromise = null;
         }
     }
@@ -142,16 +145,18 @@ class ApiClient {
             const response = await fetch(url, { ...options, headers, credentials: 'include' });
 
             if (response.status === 401 && !path.includes('/auth/refresh') && !options.skipAuthRefresh) {
-                logger.debug('[AuthDebug] 401 detected for:', path);
+                logger.debug('[AuthDebug] 401 detected for:', path, 'Attempting refresh...');
 
                 // Wait for token refresh (deduplicated)
                 const success = await this.refreshToken(notificationCallback);
-                logger.debug('[AuthDebug] Refresh finished. Success:', success);
+                logger.debug('[AuthDebug] Refresh finished for:', path, 'Success:', success);
 
                 if (success) {
                     // Retry request, relying on credentials: 'include' for cookie
+                    logger.debug('[AuthDebug] Retrying request for:', path);
                     return fetch(url, { ...options, headers, credentials: 'include' });
                 } else {
+                    logger.warn('[AuthDebug] Refresh failed, returning 401 for:', path);
                     return response;
                 }
             }
