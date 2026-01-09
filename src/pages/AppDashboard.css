@@ -1518,3 +1518,28 @@
     margin: 1px 0.5rem !important;
     width: auto; /* Ensure it doesn't overflow if flex container width is tight, though block flex usually handles it */
 }
+
+/* Tree Actions Overlay (Hover Effect) */
+.tree-actions {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: none;
+    align-items: center;
+    background: linear-gradient(to right, transparent, var(--bg-hover) 40%);
+    padding-left: 24px;
+    padding-right: 4px;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    z-index: 2;
+}
+
+.sidebar-tree-row:hover .tree-actions,
+.sidebar-tree-row:focus-within .tree-actions {
+    display: flex;
+}
+
+.sidebar-tree-row.active .tree-actions {
+    background: linear-gradient(to right, transparent, var(--bg-active) 40%);
+}
