@@ -103,9 +103,13 @@ export function useCollaborationSocket(
   // We use noteId instead of boolean to prevent race conditions (Assassin Update)
   const syncedNoteIdRef = useRef<string | null>(null);
 
-  const [connectionState, setConnectionState] = useState<CollaborationConnectionState>({
-    status: 'disconnected',
-    noteId: null,
+  const [connectionState, setConnectionState] = useState<CollaborationConnectionState>(() => {
+    // [FIX] Smart Initialization: Check if socket is already connected
+    const socket = getNamespaceSocket('/api/collaboration');
+    if (socket.connected) {
+      return { status: 'connected', noteId: null };
+    }
+    return { status: 'disconnected', noteId: null };
   });
 
   const [presenceUsers, setPresenceUsers] = useState<PresenceUser[]>([]);

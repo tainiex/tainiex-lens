@@ -11,8 +11,7 @@ interface ApiRequestInit extends RequestInit {
 }
 
 class ApiClient {
-    private isRefreshing = false;
-    private refreshSubscribers: ((status: string) => void)[] = [];
+    private refreshPromise: Promise<boolean> | null = null;
 
     /**
      * Handle error and log
@@ -81,49 +80,54 @@ class ApiClient {
     }
 
     /**
-     * Improved token refresh logic
+     * Improved token refresh logic with proper concurrency handling (deduplication)
      */
     private async refreshToken(notificationCallback?: (error: ApiError) => void): Promise<boolean> {
-        logger.debug('[AuthDebug] Starting token refresh request...');
-        try {
-            const refreshUrl = `${API_BASE_URL}/api/auth/refresh`;
-            logger.debug('[AuthDebug] Fetching:', refreshUrl);
-            const res = await fetch(refreshUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-            });
-            logger.debug('[AuthDebug] Refresh response status:', res.status);
-
-
-            if (res.ok) {
-                return true;
-            }
-
-            // Handle refresh failure
-            const error = this.handleError(res, 'token refresh');
-            if (notificationCallback) {
-                notificationCallback(error);
-            }
-
-            return false;
-        } catch (error) {
-            logger.error('[AuthDebug] Refresh exception:', error);
-            const apiError = this.handleError(error as Error, 'token refresh');
-            if (notificationCallback) {
-                notificationCallback(apiError);
-            }
-            return false;
+        // If a refresh is already in progress, return the existing promise
+        if (this.refreshPromise) {
+            logger.debug('[AuthDebug] Joining existing token refresh request...');
+            return this.refreshPromise;
         }
-    }
 
-    private onRefreshFinished(success: boolean) {
-        this.refreshSubscribers.map((cb) => cb(success ? 'success' : ''));
-        this.refreshSubscribers = [];
-    }
+        logger.debug('[AuthDebug] Starting new token refresh request...');
+        this.refreshPromise = (async () => {
+            try {
+                const refreshUrl = `${API_BASE_URL}/api/auth/refresh`;
+                logger.debug('[AuthDebug] Fetching:', refreshUrl);
+                const res = await fetch(refreshUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                });
+                logger.debug('[AuthDebug] Refresh response status:', res.status);
 
-    private addRefreshSubscriber(cb: (status: string) => void) {
-        this.refreshSubscribers.push(cb);
+                if (res.ok) {
+                    return true;
+                }
+
+                // Handle refresh failure
+                const error = this.handleError(res, 'token refresh');
+                if (notificationCallback) {
+                    notificationCallback(error);
+                }
+
+                return false;
+            } catch (error) {
+                logger.error('[AuthDebug] Refresh exception:', error);
+                const apiError = this.handleError(error as Error, 'token refresh');
+                if (notificationCallback) {
+                    notificationCallback(apiError);
+                }
+                return false;
+            }
+        })();
+
+        try {
+            return await this.refreshPromise;
+        } finally {
+            // Clear the promise so subsequent failures can trigger a new refresh
+            this.refreshPromise = null;
+        }
     }
 
     async request(path: string, options: ApiRequestInit = {}, notificationCallback?: (error: ApiError) => void): Promise<Response> {
@@ -133,47 +137,22 @@ class ApiClient {
             ...options.headers,
         };
 
-
-
         // Handle 401 Auth Error
         const makeRequest = async (_retryAttempt: number = 0): Promise<Response> => {
-            // Log retryAttempt to silence linter if needed, or remove it
-            // logger.debug('Retry attempt:', retryAttempt);
-
             const response = await fetch(url, { ...options, headers, credentials: 'include' });
 
             if (response.status === 401 && !path.includes('/auth/refresh') && !options.skipAuthRefresh) {
-                logger.debug('[AuthDebug] 401 detected for:', path, 'isRefreshing:', this.isRefreshing);
-                if (!this.isRefreshing) {
-                    this.isRefreshing = true;
-                    logger.debug('[AuthDebug] Initiating refresh flow...');
-                    const success = await this.refreshToken(notificationCallback);
-                    this.isRefreshing = false;
-                    logger.debug('[AuthDebug] Refresh finished. Success:', success);
+                logger.debug('[AuthDebug] 401 detected for:', path);
 
-                    if (success) {
-                        this.onRefreshFinished(true);
+                // Wait for token refresh (deduplicated)
+                const success = await this.refreshToken(notificationCallback);
+                logger.debug('[AuthDebug] Refresh finished. Success:', success);
 
-                        // Retry request, relying on credentials: 'include' for cookie
-                        return fetch(url, { ...options, headers, credentials: 'include' });
-                    } else {
-                        // Refresh failed, notify all subscribers
-                        this.onRefreshFinished(false);
-                        return response;
-                    }
+                if (success) {
+                    // Retry request, relying on credentials: 'include' for cookie
+                    return fetch(url, { ...options, headers, credentials: 'include' });
                 } else {
-                    // Wait for refresh to finish
-                    logger.debug('[AuthDebug] Waiting for existing refresh...');
-                    return new Promise((resolve) => {
-                        this.addRefreshSubscriber((status: string) => {
-                            logger.debug('[AuthDebug] Subscriber notified. Status:', status);
-                            if (!status) {
-                                resolve(response);
-                                return;
-                            }
-                            resolve(fetch(url, { ...options, headers, credentials: 'include' }));
-                        });
-                    });
+                    return response;
                 }
             }
 
@@ -188,7 +167,7 @@ class ApiClient {
         // Given Login.tsx passes 0, it likely means "do not retry".
         // So we ensure at least 1 attempt.
         const maxAttempts = retryCount === 0 ? 1 : retryCount;
-        
+
         return this.retryWithBackoff(
             () => makeRequest(),
             maxAttempts,

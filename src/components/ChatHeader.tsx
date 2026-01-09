@@ -65,15 +65,6 @@ const ChatHeader = ({ onMenuClick, isConnected, wsError, onReconnect }: ChatHead
       </div>
       <div className="header-right">
         {/* 网络状态指示灯 */}
-        <div
-          className="network-status-indicator"
-          title={isConnected ? 'Connected' : 'Click to reconnect'}
-          onClick={onReconnect}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className={`status-dot ${networkStatusClass}`}></div>
-        </div>
-
         <button
           type="button"
           className="new-chat-btn"
@@ -86,6 +77,16 @@ const ChatHeader = ({ onMenuClick, isConnected, wsError, onReconnect }: ChatHead
           </svg>
           <span className="new-chat-text">New chat</span>
         </button>
+
+        {/* 网络状态指示灯 */}
+        <div
+          className="network-status-indicator"
+          title={isConnected ? 'Connected' : 'Click to reconnect'}
+          onClick={onReconnect}
+          style={{ cursor: 'pointer' }}
+        >
+          <div className={`status-dot ${networkStatusClass}`}></div>
+        </div>
       </div>
     </div>
   );

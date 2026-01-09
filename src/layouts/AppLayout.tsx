@@ -27,6 +27,7 @@ export interface AppLayoutContextType {
     handleUpdateNoteTitle: (id: string, title: string) => void;
     refreshSessions: () => void;
     refreshNotes: () => void;
+    isLoadingNotes: boolean; // Added for detecting 404s
 }
 
 const AppLayout = () => {
@@ -293,6 +294,7 @@ const AppLayout = () => {
         handleUpdateNoteTitle, // Export new handler
         refreshSessions: fetchSessions,
         refreshNotes: fetchNotes,
+        isLoadingNotes,
     }), [
         user,
         isNotesPath,
@@ -301,13 +303,14 @@ const AppLayout = () => {
         setIsSidebarOpen,
         sessions,
         notes,
+        isLoadingNotes, // Add to dep array
         handleSessionSelect,
         handleNoteSelect,
         handleDeleteSession,
         handleRenameSession,
         handleCreateNote,
         handleDeleteNote,
-        handleUpdateNoteTitle, // Add to dep array
+        handleUpdateNoteTitle,
         fetchSessions,
         fetchNotes
     ]);

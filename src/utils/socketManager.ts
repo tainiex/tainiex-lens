@@ -139,17 +139,24 @@ function setupManagerEvents(manager: Manager) {
 export async function refreshAndReconnect(): Promise<boolean> {
     try {
         authRetryCount++;
-        const delay = Math.min(authRetryCount * 1000, 10000);
+        // Use a much shorter delay for the first attempt to be responsive
+        // But backoff if it keeps failing despite ensuring auth
+        const delay = authRetryCount === 1 ? 0 : Math.min(authRetryCount * 1000, 10000);
 
-        logger.warn(
-            `[SocketManager] Auth error (attempt ${authRetryCount}), retrying in ${delay}ms`
-        );
+        if (delay > 0) {
+            logger.warn(
+                `[SocketManager] Auth error (attempt ${authRetryCount}), retrying in ${delay}ms`
+            );
+            await new Promise((resolve) => setTimeout(resolve, delay));
+        }
 
-        await new Promise((resolve) => setTimeout(resolve, delay));
-
+        // apiClient now correctly deduplicates concurrent refresh requests
+        // so we can call this safely from multiple contexts
+        logger.debug(`[SocketManager] Ensuring auth (attempt ${authRetryCount})...`);
         const refreshed = await apiClient.ensureAuth();
+
         if (refreshed) {
-            logger.log('[SocketManager] Token refreshed, reconnecting...');
+            logger.log('[SocketManager] Token refreshed/valid, reconnecting...');
             authRetryCount = 0; // Reset on success
 
             // Reconnect Manager (this will reconnect all namespace sockets)
