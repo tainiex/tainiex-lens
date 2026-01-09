@@ -347,10 +347,15 @@ const NoteEditor = React.memo(({
       return;
     }
 
-    // If we just reconnected, checking timestamps might be stale, 
-    // but assuming we are 'saved' initially is safe until a new update comes.
-    // However, if we had pending updates, they might be flushing now.
-    // Let's rely on the update triggers below.
+    // [FIX] Connection restored!
+    // Check if we have pending unsaved changes.
+    // If lastSentTime >= lastUpdateTime, we are effectively saved.
+    // Otherwise, we are still saving (waiting for emit).
+    if (lastSentTimeRef.current >= lastUpdateTimeRef.current) {
+      setSaveStatus('saved');
+    } else {
+      setSaveStatus('saving');
+    }
   }, [status]);
 
   // 清除错误
