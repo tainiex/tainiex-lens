@@ -233,8 +233,36 @@ const NoteEditor = React.memo(({
     noteId,
     onLocalUpdate: (update) => {
       logger.debug('[NoteEditor] Sending local update, size:', update.length);
+
+      // [FIX] Status Tracking: Mark as saving
+      lastUpdateTimeRef.current = Date.now();
+      if (connectionState.status === 'connected') {
+        setSaveStatus('saving');
+
+        // Clear any pending 'saved' switch
+        if (savingTimeoutRef.current) {
+          clearTimeout(savingTimeoutRef.current);
+          savingTimeoutRef.current = null;
+        }
+      } else {
+        setSaveStatus('offline');
+      }
+
       if (noteId && sendUpdateRef.current) {
         sendUpdateRef.current(update, noteId);
+
+        // [FIX] Status Tracking: Mark as sent to transport
+        lastSentTimeRef.current = Date.now();
+
+        // [FIX] Debounce "Saved" state
+        if (connectionState.status === 'connected') {
+          savingTimeoutRef.current = setTimeout(() => {
+            // Only switch to saved if we haven't typed since
+            if (lastSentTimeRef.current >= lastUpdateTimeRef.current) {
+              setSaveStatus('saved');
+            }
+          }, 800);
+        }
       }
     },
   });
@@ -282,14 +310,14 @@ const NoteEditor = React.memo(({
       // Reset height to 0 to force scrollHeight recalculation
       titleRef.current.style.height = '0px';
       // Force a reflow by reading offsetHeight
-      const _ = titleRef.current.offsetHeight;
+      void titleRef.current.offsetHeight;
       // Now set height to match actual content
       const newHeight = titleRef.current.scrollHeight;
       titleRef.current.style.height = newHeight + 'px';
     }
   }, [title]);
 
-  // 确定网络状态指示灯的状态
+  // Determine Network Status Light Class
   let networkStatusClass = 'connected';
   const { status } = connectionState;
 
@@ -299,16 +327,31 @@ const NoteEditor = React.memo(({
     networkStatusClass = 'disconnected';
   }
 
-  // [DEBUG] Trace Render
+  // [FIX] Real-time Saving Status Logic
+  // 1. Offline Priority
+  // 2. Saving (Unsent changes)
+  // 3. Saved (All clear)
 
+  // Track timestamps to determine if we have unsent changes
+  // We use refs to avoid re-renders during rapid typing, but trigger re-render on status change
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'offline'>('saved');
+  const lastUpdateTimeRef = useRef<number>(0);
+  const lastSentTimeRef = useRef<number>(0);
+  const savingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 监听 noteId 变化，重置 socket 状态
+  // Sync effect to update status based on connection and timestamps
   useEffect(() => {
-    if (noteId) {
-      setCollaborationError(null);
-      setIsLimitReached(false);
+    // If disconnected, force offline status
+    if (status !== 'connected') {
+      setSaveStatus('offline');
+      return;
     }
-  }, [noteId]);
+
+    // If we just reconnected, checking timestamps might be stale, 
+    // but assuming we are 'saved' initially is safe until a new update comes.
+    // However, if we had pending updates, they might be flushing now.
+    // Let's rely on the update triggers below.
+  }, [status]);
 
   // 清除错误
   const handleDismissError = useCallback(() => {
@@ -324,11 +367,57 @@ const NoteEditor = React.memo(({
     setIsEditorReady(false);
   }, [noteId]);
 
+  // Update logic when Data is Sent (Emitted)
+  // We need to hook into the socket send. 
+  // Since `useCollaborationSocket` owns `sendUpdate`, we can wrap it or listen to it?
+  // We passed `onLocalUpdate` to `useYjsDocument`, which calls `sendUpdate`.
+  // Let's wrap the `onLocalUpdate` passed to `useYjsDocument`!
+
+  // In `useYjsDocument` props below:
+  /*
+    onLocalUpdate: (update) => {
+        handleLocalUpdate(); // Mark as dirty/saving
+        if (noteId && sendUpdateRef.current) {
+            sendUpdateRef.current(update, noteId);
+            // Mark as sent immediately after handing to socket?
+            // Yes, "Sent to Transport".
+            lastSentTimeRef.current = Date.now();
+            
+            // Debounce the switch back to "Saved" to avoid flickering
+            if (savingTimeoutRef.current) clearTimeout(savingTimeoutRef.current);
+            savingTimeoutRef.current = setTimeout(() => {
+                if (lastSentTimeRef.current >= lastUpdateTimeRef.current) {
+                    setSaveStatus('saved');
+                }
+            }, 800); // 800ms natural pause
+        }
+    }
+  */
+
+  // Extract Status Text
+  let statusText = 'Saved';
+
+  if (saveStatus === 'offline') {
+    statusText = 'Offline';
+  } else if (saveStatus === 'saving' || isSyncing) {
+    // isSyncing (Initial Load) also counts as Saving
+    statusText = 'Saving...';
+  } else {
+    statusText = 'Saved';
+  }
+
+  // Styles for dot
+  // .status-dot.saved { bg: green } (Existing)
+  // .status-dot.syncing { bg: yellow } (Existing)
+  // .status-dot.offline { bg: gray } (Need to add or reuse)
+
+  // ...
+
   return (
     <div className="note-editor-container">
       {/* Editor Header */}
       <div className="editor-header">
-        {/* Mobile Menu Button - Same as in Notes.tsx */}
+        {/* ... Mobile Menu ... */}
         <button
           className="mobile-menu-btn"
           onClick={onMobileMenuClick}
@@ -339,7 +428,6 @@ const NoteEditor = React.memo(({
             padding: '0.5rem',
             marginRight: '0.5rem',
             color: 'var(--text-primary)',
-            // CSS will handle display: none on desktop
           }}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -361,12 +449,13 @@ const NoteEditor = React.memo(({
           <span className="breadcrumb-current">{title || 'Untitled'}</span>
         </div>
         <div className="header-actions">
-          <div className={`status-indicator ${isSyncing ? 'syncing' : 'saved'}`}>
-            <div className="status-dot"></div>
-            <span>{isSyncing ? 'Saving...' : 'Saved'}</span>
+          {/* New Status Indicator */}
+          <div className={`status-indicator ${saveStatus === 'saving' || isSyncing ? 'syncing' : saveStatus === 'offline' ? 'offline' : 'saved'}`}>
+            <div className="status-dot" style={saveStatus === 'offline' ? { backgroundColor: 'var(--text-quaternary)' } : {}}></div>
+            <span>{statusText}</span>
           </div>
 
-          {/* 网络状态指示灯 */}
+          {/* Network Status Light */}
           <div
             className="network-status-indicator"
             title={status === 'connected' ? 'Connected' : 'Click to reconnect'}
@@ -374,10 +463,6 @@ const NoteEditor = React.memo(({
           >
             <div className={`connection-dot ${networkStatusClass}`}></div>
           </div>
-
-
-
-          {/* Removed the second star/favorite icon as requested */}
         </div>
       </div>
 
