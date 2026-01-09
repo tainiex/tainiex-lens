@@ -420,7 +420,25 @@ const AppSidebar = ({
                     >
                         {isProfileMenuOpen && (
                             <div className="profile-menu">
-
+                                <div className="profile-menu-item" style={{ opacity: 0.5, cursor: 'not-allowed' }} onClick={(e) => e.stopPropagation()}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M12 4.5a2.5 2.5 0 0 0-4.96-.46 2.5 2.5 0 0 0-1.98 3 2.5 2.5 0 0 0-1.32 3.64 2.5 2.5 0 0 0 2.16 3.66h.7a2 2 0 0 0 3.8 0h.4a2 2 0 0 0 3.82 0h.7A2.5 2.5 0 0 0 17 9.83a2.5 2.5 0 0 0-1.26-3.7A2.5 2.5 0 0 0 12 4.5z"></path>
+                                        <path d="M12 14v6"></path>
+                                        <path d="M9 20h6"></path>
+                                        <path d="M12 11a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"></path>
+                                    </svg>
+                                    Memories
+                                </div>
+                                <div className="profile-menu-item" style={{ opacity: 0.5, cursor: 'not-allowed' }} onClick={(e) => e.stopPropagation()}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M20.5 11.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3a1.5 1.5 0 0 1 0 3 1.5 1.5 0 0 1 0-3"></path>
+                                        <path d="M10 21V19a2 2 0 0 1 2-2h3"></path>
+                                        <path d="M12 3H8a2 2 0 0 0-2 2v3a2 2 0 0 1-2 2 2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h3"></path>
+                                        <path d="M19 14v3a2 2 0 0 1-2 2h-3"></path>
+                                        <path d="M14 3h3a2 2 0 0 1 2 2v3"></path>
+                                    </svg>
+                                    Tools
+                                </div>
                                 <div className="profile-menu-item danger" onClick={async (e) => {
                                     e.stopPropagation();
                                     try {
