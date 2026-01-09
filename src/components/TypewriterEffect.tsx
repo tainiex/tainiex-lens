@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import ts from 'react-syntax-highlighter/dist/esm/languages/prism/typescript';
 import js from 'react-syntax-highlighter/dist/esm/languages/prism/javascript';
 import python from 'react-syntax-highlighter/dist/esm/languages/prism/python';
@@ -36,7 +36,7 @@ SyntaxHighlighter.registerLanguage('csharp', csharp);
 SyntaxHighlighter.registerLanguage('go', go);
 SyntaxHighlighter.registerLanguage('rust', rust);
 SyntaxHighlighter.registerLanguage('css', css);
-import { useTheme } from '../contexts/ThemeContext';
+
 
 const Mermaid = ({ chart }: { chart: string }) => {
     // Basic btoa implementation for mermaid.ink
@@ -68,7 +68,6 @@ interface TypewriterEffectProps {
 
 const TypewriterEffect = ({ content, isStreaming }: TypewriterEffectProps) => {
     const [displayedContent, setDisplayedContent] = useState('');
-    const { theme } = useTheme();
     const indexRef = useRef(0);
     const contentRef = useRef(content);
     const isFirstMount = useRef(true);
@@ -134,7 +133,7 @@ const TypewriterEffect = ({ content, isStreaming }: TypewriterEffectProps) => {
 
                         return !inline && match ? (
                             <SyntaxHighlighter
-                                style={theme === 'dark' ? vscDarkPlus : oneLight}
+                                style={oneLight}
                                 language={match[1]}
                                 PreTag="div"
                                 customStyle={{ background: 'transparent', padding: 0, margin: 0 }}

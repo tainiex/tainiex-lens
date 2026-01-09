@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { IUser, IChatSession } from '@tainiex/tainiex-shared';
 import type { INote } from '../types/collaboration';
 import { apiClient } from '../utils/apiClient';
-import { useTheme } from '../contexts/ThemeContext';
+
 import { groupItemsByDate } from '../utils/dateGrouping';
 
 interface AppSidebarProps {
@@ -44,7 +44,6 @@ const AppSidebar = ({
     onDeleteNote,
     onRenameNote
 }: AppSidebarProps) => {
-    const { theme, toggleTheme } = useTheme();
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
     const [deleteNoteId, setDeleteNoteId] = useState<string | null>(null);
@@ -161,7 +160,7 @@ const AppSidebar = ({
         <div className={`app-sidebar ${isOpen ? 'open' : ''}`}>
             <div className="sidebar-brand">
                 <div style={{ display: 'flex', alignItems: 'center', flex: 1, padding: '0.4rem 0', gap: '0.75rem' }}>
-                    <img src="/header-logo.png" alt="Tainiex" style={{ height: '32px', width: 'auto', filter: theme === 'light' ? 'none' : 'brightness(1.2)' }} />
+                    <img src="/header-logo.png" alt="Tainiex" style={{ height: '32px', width: 'auto', filter: 'none' }} />
                 </div>
                 <button
                     className="mobile-close-btn"
@@ -421,25 +420,7 @@ const AppSidebar = ({
                     >
                         {isProfileMenuOpen && (
                             <div className="profile-menu">
-                                <div style={{ padding: '0.5rem 0.8rem' }} onClick={(e) => {
-                                    e.stopPropagation();
-                                    // Removed toggleTheme() here to prevent double toggling or clicking the container
-                                }}>
-                                    <div className="theme-toggle-row" data-theme={theme} onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleTheme();
-                                    }}>
-                                        <div className="theme-slide" />
-                                        <div className={`theme-toggle-option ${theme === 'light' ? 'active' : ''}`}>
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-                                            Light
-                                        </div>
-                                        <div className={`theme-toggle-option ${theme === 'dark' ? 'active' : ''}`}>
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                                            Dark
-                                        </div>
-                                    </div>
-                                </div>
+
                                 <div className="profile-menu-item danger" onClick={async (e) => {
                                     e.stopPropagation();
                                     try {

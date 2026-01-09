@@ -4,7 +4,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { IUser, ChatRole } from '@tainiex/tainiex-shared';
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import ts from 'react-syntax-highlighter/dist/esm/languages/prism/typescript';
 import js from 'react-syntax-highlighter/dist/esm/languages/prism/javascript';
 import python from 'react-syntax-highlighter/dist/esm/languages/prism/python';
@@ -38,7 +38,6 @@ SyntaxHighlighter.registerLanguage('rust', rust);
 SyntaxHighlighter.registerLanguage('css', css);
 import TypewriterEffect from './TypewriterEffect';
 import { useChatContext } from '../contexts/ChatContext';
-import { useTheme } from '../contexts/ThemeContext';
 
 interface ChatMessagesProps {
   user: IUser | null;
@@ -83,7 +82,6 @@ const ChatMessages = ({
   handleScroll
 }: ChatMessagesProps) => {
   const { messages, isLoading, isStreaming } = useChatContext();
-  const { theme } = useTheme();
 
   return (
     <div
@@ -162,7 +160,7 @@ const ChatMessages = ({
                             const match = /language-(\w+)/.exec(className || '');
                             return !inline && match ? (
                               <SyntaxHighlighter
-                                style={theme === 'dark' ? vscDarkPlus : oneLight}
+                                style={oneLight}
                                 language={match[1]}
                                 PreTag="div"
                                 customStyle={{ background: 'transparent', padding: 0, margin: 0 }}
