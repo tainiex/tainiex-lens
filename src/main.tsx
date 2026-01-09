@@ -24,10 +24,19 @@ if (!import.meta.env.DEV) {
     // Set 'tracePropagationTargets' to control for which URLs distributed tracing should be enabled
     tracePropagationTargets: ["localhost", /^https:\/\/yourserver\.io\/api/],
     // Session Replay
-    replaysSessionSampleRate: 0.1, // This sets the sample rate at 10%. You may want to change it to 100% while in development and then sample at a lower rate in production.
     replaysOnErrorSampleRate: 1.0, // If you're not already sampling the entire session, change the sample rate to 100% when sampling sessions where errors occur.
     sendDefaultPii: true
   });
+}
+
+// Initialize Microsoft Clarity
+const clarityId = import.meta.env.VITE_CLARITY_ID;
+if (clarityId) {
+  (function (c: any, l: any, a: any, r: any, i: any, t?: any, y?: any) {
+    c[a] = c[a] || function (...args: any[]) { (c[a].q = c[a].q || []).push(args) };
+    t = l.createElement(r); t.async = 1; t.src = "https://www.clarity.ms/tag/" + i;
+    y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
+  })(window, document, "clarity", "script", clarityId);
 }
 
 msalInstance.initialize().then(() => {
