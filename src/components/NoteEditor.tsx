@@ -440,7 +440,7 @@ const NoteEditor = React.memo(({
         <div className="header-actions">
           {/* New Status Indicator */}
           <div className={`status-indicator ${saveStatus === 'saving' || isSyncing ? 'syncing' : saveStatus === 'offline' ? 'offline' : 'saved'}`}>
-            <div className="status-dot" style={saveStatus === 'offline' ? { backgroundColor: 'var(--text-quaternary)' } : {}}></div>
+            {saveStatus !== 'offline' && <div className="status-dot"></div>}
             <span>{statusText}</span>
           </div>
 
