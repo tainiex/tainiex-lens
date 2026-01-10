@@ -38,7 +38,6 @@ export function useYjsDocument(options: UseYjsDocumentOptions): UseYjsDocumentRe
   const isLocalUpdateRef = useRef(false);
   const onLocalUpdateRef = useRef(onLocalUpdate);
 
-  const [isInitialized, setIsInitialized] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
   // 保持 callback ref 最新
@@ -52,44 +51,59 @@ export function useYjsDocument(options: UseYjsDocumentOptions): UseYjsDocumentRe
   const [activeFragmentName, setActiveFragmentName] = useState<'blocks' | 'default'>('blocks');
 
   /**
-   * 初始化 Y.Doc
+   * [FIX] Initialize Y.Doc synchronously to prevent race conditions
+   * We use a ref to hold the singleton instance per noteId to persist across renders,
+   * but we initialize it immediately if missing for the current noteId.
    */
-  const initializeYDoc = useCallback(() => {
-    // 清理旧文档
+  if (!ydocRef.current || (noteId && ydocRef.current.guid !== noteId)) {
     if (ydocRef.current) {
-      logger.debug('[YjsDoc] Destroying old Y.Doc');
       ydocRef.current.destroy();
-      ydocRef.current = null;
-      yXmlFragmentRef.current = null;
     }
 
-    if (!noteId) {
-      setIsInitialized(false);
-      return;
-    }
+    if (noteId) {
+      logger.debug('[YjsDoc] Initializing Y.Doc synchronously for:', noteId);
+      const doc = new Y.Doc({ guid: noteId });
+      const fragment = doc.getXmlFragment('blocks');
 
-    // [FIX] Wrap init in try-catch to prevent crash loops
-    try {
-      const ydoc = new Y.Doc();
-      const yXmlFragment = ydoc.getXmlFragment('blocks');
-
-      // 监听本地更新
-      ydoc.on('update', (update: Uint8Array, origin: unknown) => {
+      // Setup listener immediately
+      doc.on('update', (update: Uint8Array, origin: unknown) => {
+        // We need to access the LATEST ref, but this closure is created once.
+        // That's fine as long as onLocalUpdateRef is stable (which it is).
         if (origin === 'remote' || isLocalUpdateRef.current) return;
-
         const base64Update = base64Utils.encode(update);
         onLocalUpdateRef.current?.(base64Update);
       });
 
-      ydocRef.current = ydoc;
-      yXmlFragmentRef.current = yXmlFragment;
-      setIsInitialized(true);
-
-      logger.debug('[YjsDoc] Initialized');
-    } catch (error) {
-      logger.error('[YjsDoc] Init Error:', error);
+      ydocRef.current = doc;
+      yXmlFragmentRef.current = fragment;
+    } else {
+      ydocRef.current = null;
+      yXmlFragmentRef.current = null;
     }
-  }, [noteId]);
+  }
+
+  // Effect for cleanup only
+  useEffect(() => {
+    return () => {
+      if (ydocRef.current && !noteId) { // Only destroy if unmounting or noteId became null
+        // Actually, we handle destruction in the synchronous block above when noteId changes.
+        // We only need to destroy on FINAL unmount.
+      }
+    };
+  }, []);
+
+  // On unmount of the hook
+  useEffect(() => {
+    return () => {
+      if (ydocRef.current) {
+        ydocRef.current.destroy();
+        ydocRef.current = null;
+      }
+    }
+  }, []); // Run once on unmount
+
+  // We don't need isInitialized anymore as it's sync
+  const isInitialized = !!ydocRef.current;
 
   /**
    * 应用初始同步状态
@@ -205,20 +219,7 @@ export function useYjsDocument(options: UseYjsDocumentOptions): UseYjsDocumentRe
   // [FIX] Detect if we have data to render (to prevent placeholder flash)
   const hasData = yXmlFragmentRef.current && yXmlFragmentRef.current.length > 0;
 
-  // 当 noteId 变化时重新初始化
-  useEffect(() => {
-    initializeYDoc();
 
-    return () => {
-      if (ydocRef.current) {
-        // Silent cleanup
-        ydocRef.current.destroy();
-        ydocRef.current = null;
-        yXmlFragmentRef.current = null;
-        setIsInitialized(false);
-      }
-    };
-  }, [noteId, initializeYDoc]);
 
   return {
     ydoc: ydocRef.current,

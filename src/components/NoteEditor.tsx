@@ -445,13 +445,7 @@ const NoteEditor = React.memo(({
           </div>
 
           {/* Network Status Light */}
-          <div
-            className="network-status-indicator"
-            title={status === 'connected' ? 'Connected' : 'Click to reconnect'}
-            onClick={() => status !== 'connected' && reconnect()}
-          >
-            <div className={`connection-dot ${networkStatusClass}`}></div>
-          </div>
+          {/* Network Status Light removed - using Global NetworkStatusBar */}
         </div>
       </div>
 

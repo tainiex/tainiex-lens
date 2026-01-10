@@ -157,43 +157,55 @@ export function useCollaborationSocket(
     }
     logger.debug('[CollabSocket] Auth check passed');
 
-    // [FIX] 检查 socket 是否已经连接
-    if (socket.connected) {
-      logger.debug('[CollabSocket] Socket already connected, socket ID:', socket.id);
-      updateConnectionState('connected', currentNoteIdRef.current);
-    } else {
-      updateConnectionState('connecting');
-      // [FIX] Manually connect after auth is ready
-      logger.debug('[CollabSocket] Manually connecting socket...');
-      socket.connect();
-    }
-
-    // ===== 连接事件 =====
-    socket.on('connect', () => {
-      logger.debug('[CollabSocket] Connected, socket ID:', socket.id);
+    // [FIX] Abstract connection logic to handle both "Event" and "Immediate" connection
+    const handleConnected = () => {
+      logger.debug('[CollabSocket] Socket Connected/Ready, ID:', socket.id);
       updateConnectionState('connected', currentNoteIdRef.current);
 
       if (currentNoteIdRef.current) {
         logger.debug('[CollabSocket] Auto-joining note:', currentNoteIdRef.current);
+
+        syncedNoteIdRef.current = null;
+
         const joinPayload = {
           noteId: currentNoteIdRef.current,
-          // [FIX] Send empty state vector to request full history
           stateVector: base64Utils.encode(Y.encodeStateVector(new Y.Doc()))
         };
         // @ts-ignore
         socket.emit('note:join', joinPayload);
 
+        const syncPayload = {
+          noteId: currentNoteIdRef.current,
+          type: 'sync-step-1',
+          stateVector: joinPayload.stateVector
+        };
+        // @ts-ignore
+        socket.emit('yjs:sync', syncPayload);
+
         // Flush message queue
         if (messageQueueRef.current.length > 0) {
           logger.debug('[CollabSocket] Flushing message queue:', messageQueueRef.current.length);
           messageQueueRef.current.forEach(({ type, payload }) => {
-            // @ts-ignore - Dynamic emit
+            // @ts-ignore
             socket.emit(type, payload);
           });
           messageQueueRef.current = [];
         }
       }
-    });
+    };
+
+    // [FIX] 检查 socket 是否已经连接
+    if (socket.connected) {
+      logger.debug('[CollabSocket] Socket already connected, triggering handler manually');
+      handleConnected();
+    } else {
+      updateConnectionState('connecting');
+      logger.debug('[CollabSocket] Manually connecting socket...');
+      socket.connect();
+    }
+
+    // ===== 连接事件 =====
+    socket.on('connect', handleConnected);
 
     socket.on('disconnect', (reason) => {
       logger.log('[CollabSocket] Disconnected:', reason);

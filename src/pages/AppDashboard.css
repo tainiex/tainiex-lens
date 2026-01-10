@@ -150,7 +150,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 2rem;
+    padding: 0.75rem 3.5rem 0.75rem 2rem;
+    /* Added right padding for global indicator */
     margin-bottom: 0;
     border-bottom: 1px solid var(--border-primary);
     flex-shrink: 0;
@@ -1320,6 +1321,7 @@
     outline: none;
     color: var(--text-primary);
 }
+
 /* Tree View Specific Styles */
 
 .sidebar-tree-item-container {
@@ -1419,7 +1421,8 @@
     background-color: rgba(255, 255, 255, 0.1);
 }
 
-.icon-doc, .icon-chevron {
+.icon-doc,
+.icon-chevron {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1492,18 +1495,18 @@
     align-items: center;
     justify-content: center;
     transition: color 0.2s;
-    border: none; /* Reset button border */
+    border: none;
+    /* Reset button border */
 }
 
 .tree-action-btn:hover {
     color: var(--text-primary);
-    background: transparent !important; /* Explicitly remove bg */
+    background: transparent !important;
+    /* Explicitly remove bg */
 }
 
 /* Specific styling for the + button if needed */
-.tree-action-btn.add-child {
-    
-}
+.tree-action-btn.add-child {}
 
 /* Align Header and Tabs with widened content (0.5rem horizontal padding) */
 .sidebar-brand {
@@ -1511,13 +1514,15 @@
 }
 
 .sidebar-tabs-container {
-    padding: 0 0.5rem 0.6rem !important; /* Slightly reduced bottom padding too */
+    padding: 0 0.5rem 0.6rem !important;
+    /* Slightly reduced bottom padding too */
 }
 
 /* Fix Hover Background Alignment: Add margin to match header padding */
 .sidebar-tree-row {
     margin: 1px 0.5rem !important;
-    width: auto; /* Ensure it doesn't overflow if flex container width is tight, though block flex usually handles it */
+    width: auto;
+    /* Ensure it doesn't overflow if flex container width is tight, though block flex usually handles it */
 }
 
 /* Tree Actions Overlay (Hover Effect) */

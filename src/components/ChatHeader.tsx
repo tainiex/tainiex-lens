@@ -79,14 +79,7 @@ const ChatHeader = ({ onMenuClick, isConnected, wsError, onReconnect }: ChatHead
         </button>
 
         {/* 网络状态指示灯 */}
-        <div
-          className="network-status-indicator"
-          title={isConnected ? 'Connected' : 'Click to reconnect'}
-          onClick={onReconnect}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className={`status-dot ${networkStatusClass}`}></div>
-        </div>
+        {/* Network Status Light removed - using Global NetworkStatusBar */}
       </div>
     </div>
   );

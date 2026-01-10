@@ -11,6 +11,8 @@ import { useLoadingAnimation } from '../hooks/useLoadingAnimation';
 import '../pages/AppDashboard.css'; // Shared styles
 import { INote } from '../types/collaboration';
 import { getCachedNotes, setCachedNotes } from '../utils/noteCache';
+import { SocketProvider } from '../contexts/SocketContext';
+import NetworkStatusBar from '../components/NetworkStatusBar';
 
 export interface AppLayoutContextType {
     user: IUser | null;
@@ -187,7 +189,7 @@ const AppLayout = () => {
             navigate(`/app/chats/${id}`, {
                 state: {
                     sidebarOpen,
-                    skipFetch: options?.skipFetch ,
+                    skipFetch: options?.skipFetch,
                     initialMessages: options?.initialMessages
                 }
             });
@@ -335,48 +337,51 @@ const AppLayout = () => {
     ]);
 
     return (
-        <NotificationProvider>
-            <ErrorBoundary>
-                <div className={`app-dashboard ${isSidebarOpen ? 'sidebar-open' : ''}`}>
-                    <div className={`loading-line ${loadingClass}`} style={{ position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 9999 }}></div>
+        <SocketProvider>
+            <NotificationProvider>
+                <ErrorBoundary>
+                    <div className={`app-dashboard ${isSidebarOpen ? 'sidebar-open' : ''}`}>
+                        <NetworkStatusBar />
+                        <div className={`loading-line ${loadingClass}`} style={{ position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 9999 }}></div>
 
-                    {/* Render Outlet with Context */}
-                    {/* Problem: If isSidebarOpen changes, contextValue changes, Outlet re-renders. */}
-                    {/* We rely on Child components (ChatInterface) being React.memo so they only re-render if THEIR specific props change. */}
-                    {/* And we made the handler props stable! */}
+                        {/* Render Outlet with Context */}
+                        {/* Problem: If isSidebarOpen changes, contextValue changes, Outlet re-renders. */}
+                        {/* We rely on Child components (ChatInterface) being React.memo so they only re-render if THEIR specific props change. */}
+                        {/* And we made the handler props stable! */}
 
-                    {isSidebarOpen && (
-                        <div className="mobile-overlay" onClick={() => setIsSidebarOpen(false)} />
-                    )}
+                        {isSidebarOpen && (
+                            <div className="mobile-overlay" onClick={() => setIsSidebarOpen(false)} />
+                        )}
 
-                    <AppSidebar
-                        user={user}
-                        isOpen={isSidebarOpen}
-                        setIsOpen={setIsSidebarOpen}
+                        <AppSidebar
+                            user={user}
+                            isOpen={isSidebarOpen}
+                            setIsOpen={setIsSidebarOpen}
 
-                        // Session Props
-                        currentSessionId={!isNotesPath ? currentActiveId : null}
-                        onSessionSelect={handleSessionSelect}
-                        sessions={sessions}
-                        isLoading={isLoadingSessions}
-                        onDeleteSession={handleDeleteSession}
-                        onRenameSession={handleRenameSession}
+                            // Session Props
+                            currentSessionId={!isNotesPath ? currentActiveId : null}
+                            onSessionSelect={handleSessionSelect}
+                            sessions={sessions}
+                            isLoading={isLoadingSessions}
+                            onDeleteSession={handleDeleteSession}
+                            onRenameSession={handleRenameSession}
 
-                        // Note Props
-                        notes={notes}
-                        isLoadingNotes={isLoadingNotes}
-                        onNoteSelect={handleNoteSelect}
-                        onCreateNote={handleCreateNote}
-                        onDeleteNote={handleDeleteNote}
-                        onRenameNote={handleUpdateNoteTitle}
-                    />
+                            // Note Props
+                            notes={notes}
+                            isLoadingNotes={isLoadingNotes}
+                            onNoteSelect={handleNoteSelect}
+                            onCreateNote={handleCreateNote}
+                            onDeleteNote={handleDeleteNote}
+                            onRenameNote={handleUpdateNoteTitle}
+                        />
 
-                    <main className="dashboard-main">
-                        <Outlet context={contextValue} />
-                    </main>
-                </div>
-            </ErrorBoundary>
-        </NotificationProvider>
+                        <main className="dashboard-main">
+                            <Outlet context={contextValue} />
+                        </main>
+                    </div>
+                </ErrorBoundary>
+            </NotificationProvider>
+        </SocketProvider>
     );
 };
 

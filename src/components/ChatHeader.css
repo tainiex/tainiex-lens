@@ -1,3 +1,12 @@
+.chat-interface-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 3.5rem 1rem 1.5rem;
+    /* Added right padding for global indicator */
+    height: 60px;
+}
+
 .chat-interface-header .header-right .connection-status {
     font-size: 0.8rem;
     display: flex;
