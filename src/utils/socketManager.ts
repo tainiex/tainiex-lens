@@ -56,7 +56,7 @@ export function getSocketManager(): Manager {
         reconnectionDelayMax: 5000,
         reconnectionAttempts: Infinity,
         timeout: 30000,
-        autoConnect: true,
+        autoConnect: false, // [FIX] Wait for auth before connecting
         forceNew: false, // Reuse existing Manager
     });
 
@@ -200,9 +200,9 @@ export async function refreshAndReconnect(): Promise<boolean> {
         const refreshed = await apiClient.ensureAuth();
 
         if (refreshed) {
-            logger.log('[SocketManager] Token refreshed. Socket will auto-reconnect.');
-            // ✅ Trust Socket.IO's auto-reconnection mechanism
-            // The next reconnection attempt will succeed with fresh token
+            logger.log('[SocketManager] Token refreshed. Connecting sockets...');
+            // [FIX] Manually connect sockets after successful auth refresh
+            connectAllSockets();
             return true;
         } else {
             logger.warn('[SocketManager] Auth ensure failed. Closing manager.');
@@ -220,6 +220,25 @@ export async function refreshAndReconnect(): Promise<boolean> {
         return false;
     } finally {
         isRefreshing = false;
+    }
+}
+
+/**
+ * Manually connect all sockets (used after auth is ready)
+ * 手动连接所有 socket (在认证就绪后使用)
+ */
+export function connectAllSockets() {
+    const manager = getSocketManager();
+    if (!manager.engine.readyState) {
+        logger.debug('[SocketManager] Manually connecting...');
+        manager.connect();
+        Sentry.addBreadcrumb({
+            category: 'websocket.manager',
+            message: 'Manual connect',
+            level: 'info',
+        });
+    } else {
+        logger.debug('[SocketManager] Already connected, skipping connect');
     }
 }
 

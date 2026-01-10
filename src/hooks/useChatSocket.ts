@@ -3,6 +3,7 @@ import { Socket } from 'socket.io-client';
 import * as Sentry from "@sentry/react";
 import { ErrorHandler, ApiError } from '../utils/errorHandler';
 import { logger } from '../utils/logger';
+import { apiClient } from '../utils/apiClient';
 import { getNamespaceSocket, refreshAndReconnect } from '../utils/socketManager';
 
 interface ConnectionState {
@@ -53,7 +54,7 @@ export function useChatSocket() {
     /**
      * 设置 Socket 连接使用共享 Manager
      */
-    const setupSocket = useCallback(() => {
+    const setupSocket = useCallback(async () => {
         // Ensure any existing socket is fully cleaned up before creating a new one
         if (socketRef.current) {
             logger.debug('[ChatSocket] Cleaning up existing socket before new setup...');
@@ -65,12 +66,26 @@ export function useChatSocket() {
         // Get namespace socket from shared Manager
         const socket = getNamespaceSocket('/api/chat');
 
+        // [FIX] Ensure auth is valid before connecting
+        logger.debug('[ChatSocket] Checking authentication...');
+        const authReady = await apiClient.ensureAuth();
+        if (!authReady) {
+            logger.warn('[ChatSocket] Auth check failed, not connecting');
+            updateConnectionState('failed', 0);
+            socketRef.current = socket;
+            return socket;
+        }
+        logger.debug('[ChatSocket] Auth check passed');
+
         // Check if socket is already connected immediately
         if (socket.connected) {
             logger.debug('[ChatSocket] Socket already connected, socket ID:', socket.id);
             updateConnectionState('connected', 0);
         } else {
             updateConnectionState('connecting');
+            // [FIX] Manually connect after auth is ready
+            logger.debug('[ChatSocket] Manually connecting socket...');
+            socket.connect();
         }
 
         socket.on('connect', () => {

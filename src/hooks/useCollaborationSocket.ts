@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import * as Sentry from '@sentry/react';
 import * as Y from 'yjs'; // Added for encodeStateVector
 import { logger } from '../utils/logger';
+import { apiClient } from '../utils/apiClient';
 import { getNamespaceSocket, refreshAndReconnect } from '../utils/socketManager';
 import { base64Utils } from '../utils/base64';
 import type {
@@ -132,7 +133,7 @@ export function useCollaborationSocket(
   /**
    * 设置 Socket 连接使用共享 Manager
    */
-  const setupSocket = useCallback(() => {
+  const setupSocket = useCallback(async () => {
     // 清理现有连接
     if (socketRef.current) {
       logger.debug('[CollabSocket] Cleaning up existing socket');
@@ -145,18 +146,26 @@ export function useCollaborationSocket(
     // Get namespace socket from shared Manager
     const socket = getNamespaceSocket('/api/collaboration') as CollaborationSocket;
 
+    // [FIX] Ensure auth is valid before connecting
+    logger.debug('[CollabSocket] Checking authentication...');
+    const authReady = await apiClient.ensureAuth();
+    if (!authReady) {
+      logger.warn('[CollabSocket] Auth check failed, not connecting');
+      updateConnectionState('disconnected', null);
+      socketRef.current = socket;
+      return socket;
+    }
+    logger.debug('[CollabSocket] Auth check passed');
+
     // [FIX] 检查 socket 是否已经连接
     if (socket.connected) {
       logger.debug('[CollabSocket] Socket already connected, socket ID:', socket.id);
       updateConnectionState('connected', currentNoteIdRef.current);
     } else {
       updateConnectionState('connecting');
-      // [FIX] Ensure socket is active. If it was manually disconnected or manager was closed,
-      // it might need an explicit kick, especially if reusing a manager instance.
-      if (socket.disconnected) {
-        logger.debug('[CollabSocket] Socket is disconnected, calling connect()');
-        socket.connect();
-      }
+      // [FIX] Manually connect after auth is ready
+      logger.debug('[CollabSocket] Manually connecting socket...');
+      socket.connect();
     }
 
     // ===== 连接事件 =====
