@@ -53,7 +53,7 @@ export function getSocketManager(): Manager {
         withCredentials: true,
         reconnection: true,
         reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
+        reconnectionDelayMax: 3000,
         reconnectionAttempts: Infinity,
         timeout: 30000,
         autoConnect: false, // [FIX] Wait for auth before connecting
