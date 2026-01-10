@@ -20,6 +20,7 @@ interface UseYjsDocumentReturn {
   activeFragmentName: 'blocks' | 'default';
   isInitialized: boolean;
   isSyncing: boolean; // Computed locally or from state
+  isSynced: boolean; // [FIX] Expose sync status (syncedOnce)
   hasData: boolean;
   applyRemoteUpdate: (payload: YjsUpdatePayload) => void;
   applyInitialSync: (payload: YjsSyncPayload) => void;
@@ -38,12 +39,7 @@ export function useYjsDocument({ noteId, onLocalUpdate }: UseYjsDocumentOptions)
     yDocManager.setSendUpdateCallback((targetNoteId, update) => {
       // Only trigger if this hook is responsible for THIS note
       // (Though Manager is global, so this callback is global replacement)
-      // This is the weak link of "Global Singleton, Component Socket".
-      // But since Socket is also Singleton-ish (one active connection), it works.
       // We just need to make sure onLocalUpdate is valid.
-
-      // Actually, we can ignore targetNoteId check if we trust the Manager routing.
-      // But onLocalUpdate is usually bound to the current note in NoteEditor.
       if (onLocalUpdate) {
         onLocalUpdate(update);
       }
@@ -80,7 +76,8 @@ export function useYjsDocument({ noteId, onLocalUpdate }: UseYjsDocumentOptions)
     yXmlFragment: state?.fragment || null,
     activeFragmentName: state?.activeFragmentName || 'blocks',
     isInitialized: !!state,
-    isSyncing: false, // Manager handles sync state internally now
+    isSyncing: false,
+    isSynced: state?.syncedOnce || false, // [FIX]
     hasData,
     applyRemoteUpdate,
     applyInitialSync,

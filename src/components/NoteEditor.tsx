@@ -227,6 +227,7 @@ const NoteEditor = React.memo(({
     activeFragmentName, // [FIX] Get fragment name for key
     isInitialized: isYjsInitialized,
     isSyncing,
+    isSynced: isYDocSynced, // [FIX] Get synced status from Manager
     hasData,
     applyRemoteUpdate,
     applyInitialSync,
@@ -505,9 +506,10 @@ const NoteEditor = React.memo(({
           // [FIX] Strict Loading Strategy:
           // Show Editor ONLY if:
           // 1. We have local data (hasData == true)
-          // 2. OR we have finished syncing and verified it is empty (isSocketSynced == true)
-          // 3. Fallback: If fully connected, assume ready to avoid permanent skeleton.
-          const readyToMount = isYjsInitialized && ydoc && (hasData || isSocketSynced || connectionState.status === 'connected');
+          // 2. OR we have finished syncing and verified it is empty (isYDocSynced == true)
+          // 3. Fallback: If fully connected AND synced at socket level (double check), mount.
+          // Note: isYDocSynced from Manager is the source of truth for "Did we apply initial sync?"
+          const readyToMount = isYjsInitialized && ydoc && (hasData || isYDocSynced);
           return readyToMount;
         })() ? (
           <>
