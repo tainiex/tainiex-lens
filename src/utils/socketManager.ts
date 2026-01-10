@@ -321,7 +321,11 @@ export function initializeGlobalListeners() {
                     data: { sleepDuration },
                     level: 'warning',
                 });
-                reconnectAllSockets();
+                // [FIX] Add delay to allow radio to wake up
+                setTimeout(() => {
+                    logger.log('[SocketManager] Executing hard reconnect after sleep...');
+                    reconnectAllSockets();
+                }, 1500);
             } else if (managerInstance && !managerInstance.engine.readyState) {
                 // If disconnected, wait 1s for network radio to wake up
                 setTimeout(() => {
