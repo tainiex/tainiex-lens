@@ -200,15 +200,9 @@ export async function refreshAndReconnect(): Promise<boolean> {
         const refreshed = await apiClient.ensureAuth();
 
         if (refreshed) {
-            logger.log('[SocketManager] Token refreshed/valid, reconnecting...');
-
-            // Reconnect Manager (this will reconnect all namespace sockets)
-            const manager = getSocketManager();
-            if (manager.engine) {
-                manager.engine.close();
-            }
-            manager.connect();
-
+            logger.log('[SocketManager] Token refreshed. Socket will auto-reconnect.');
+            // ✅ Trust Socket.IO's auto-reconnection mechanism
+            // The next reconnection attempt will succeed with fresh token
             return true;
         } else {
             logger.warn('[SocketManager] Auth ensure failed. Closing manager.');
