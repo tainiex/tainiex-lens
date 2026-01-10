@@ -140,7 +140,7 @@
 @media (max-width: 480px) {
   .network-status-indicator-global {
     top: 1rem;
-    right: 3.5rem;
+    right: 1rem;
     /* Left of mobile menu or avatar */
     width: 24px;
     height: 24px;

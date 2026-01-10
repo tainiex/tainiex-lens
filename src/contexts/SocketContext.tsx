@@ -70,6 +70,24 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         manager.on('reconnect_attempt', onReconnectAttempt);
         manager.on('reconnect_failed', onReconnectFailed);
 
+        // [FIX] Add global network status listeners
+        const onNetworkOnline = () => {
+            logger.info('[SocketContext] Network is ONLINE, forcing reconnect...');
+            setConnectionState({ status: 'reconnecting', error: undefined });
+            // Slight delay to allow OS/Browser networking to stabilize
+            setTimeout(() => {
+                manager.connect();
+            }, 1000);
+        };
+
+        const onNetworkOffline = () => {
+            logger.warn('[SocketContext] Network is OFFLINE');
+            setConnectionState({ status: 'disconnected', error: 'No Internet Connection' });
+        };
+
+        window.addEventListener('online', onNetworkOnline);
+        window.addEventListener('offline', onNetworkOffline);
+
         // Also listen to the underlying engine for immediate open/close if manager doesn't emit immediately on first connect
         // (Manager usually emits 'open' when a socket connects, but 'open' event on Manager is for the engine connection)
 
@@ -79,6 +97,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             manager.off('close', onClose);
             manager.off('reconnect_attempt', onReconnectAttempt);
             manager.off('reconnect_failed', onReconnectFailed);
+
+            window.removeEventListener('online', onNetworkOnline);
+            window.removeEventListener('offline', onNetworkOffline);
         };
     }, []);
 
