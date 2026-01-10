@@ -46,6 +46,7 @@ interface UseCollaborationSocketReturn {
   leaveNote: () => void;
   reconnect: () => void;
   isSynced: boolean;
+  pendingUpdatesCount: number;
 }
 
 
@@ -124,10 +125,15 @@ export function useCollaborationSocket(
 
   // State to track if synchronization is complete for current note
   const [isSynced, setIsSynced] = useState(false);
+  // [FIX] Track pending updates count for UI feedback
+  const [pendingUpdatesCount, setPendingUpdatesCount] = useState(0);
 
   // Reset sync state when noteId changes
   useEffect(() => {
     setIsSynced(false);
+    setPendingUpdatesCount(0);
+    pendingUpdatesQueueRef.current = [];
+    messageQueueRef.current = [];
   }, [noteId]);
 
   /**
@@ -190,6 +196,7 @@ export function useCollaborationSocket(
             socket.emit(type, payload);
           });
           messageQueueRef.current = [];
+          setPendingUpdatesCount(pendingUpdatesQueueRef.current.length); // Update count
         }
       }
     };
@@ -272,6 +279,7 @@ export function useCollaborationSocket(
             }
           });
           pendingUpdatesQueueRef.current = [];
+          setPendingUpdatesCount(messageQueueRef.current.length); // Update count (messageQueue should be empty here anyway)
         }
       }
 
@@ -422,7 +430,9 @@ export function useCollaborationSocket(
     // If not synced yet (or syncing wrong note), buffer the update!
     if (syncedNoteIdRef.current !== targetNoteId) {
       logger.debug(`[CollabSocket] Not synced yet. Buffering update for ${targetNoteId}.`);
+      logger.debug(`[CollabSocket] Not synced yet. Buffering update for ${targetNoteId}.`);
       pendingUpdatesQueueRef.current.push({ update: updateBytes, targetNoteId });
+      setPendingUpdatesCount(prev => prev + 1);
       return;
     }
 
@@ -441,8 +451,10 @@ export function useCollaborationSocket(
 
     if (!socketRef.current?.connected) {
       logger.debug('[CollabSocket] Socket not connected, buffering update');
+      logger.debug('[CollabSocket] Socket not connected, buffering update');
       // This is the socket connection buffer, distinct from sync buffer
       messageQueueRef.current.push({ type: 'yjs:update', payload });
+      setPendingUpdatesCount(prev => prev + 1);
     } else {
       // @ts-ignore
       socketRef.current.emit('yjs:update', payload);
@@ -560,5 +572,6 @@ export function useCollaborationSocket(
     leaveNote,
     reconnect,
     isSynced,
+    pendingUpdatesCount,
   };
 }

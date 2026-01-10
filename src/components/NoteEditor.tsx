@@ -257,8 +257,8 @@ const NoteEditor = React.memo(({
         // [FIX] Debounce "Saved" state
         if (connectionState.status === 'connected') {
           savingTimeoutRef.current = setTimeout(() => {
-            // Only switch to saved if we haven't typed since
-            if (lastSentTimeRef.current >= lastUpdateTimeRef.current) {
+            // Only switch to saved if we haven't typed since AND no pending updates
+            if (lastSentTimeRef.current >= lastUpdateTimeRef.current && pendingUpdatesCountRef.current === 0) {
               setSaveStatus('saved');
             }
           }, 800);
@@ -275,6 +275,7 @@ const NoteEditor = React.memo(({
     sendCursorUpdate,
     reconnect,
     isSynced: isSocketSynced, // Rename to avoid conflict if needed
+    pendingUpdatesCount,
   } = useCollaborationSocket({
     noteId,
     user, // Pass user here
@@ -338,6 +339,12 @@ const NoteEditor = React.memo(({
   const lastUpdateTimeRef = useRef<number>(0);
   const lastSentTimeRef = useRef<number>(0);
   const savingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingUpdatesCountRef = useRef(pendingUpdatesCount);
+
+  // Keep ref in sync
+  useEffect(() => {
+    pendingUpdatesCountRef.current = pendingUpdatesCount;
+  }, [pendingUpdatesCount]);
 
   // Sync effect to update status based on connection and timestamps
   useEffect(() => {
@@ -349,14 +356,14 @@ const NoteEditor = React.memo(({
 
     // [FIX] Connection restored!
     // Check if we have pending unsaved changes.
-    // If lastSentTime >= lastUpdateTime, we are effectively saved.
+    // If lastSentTime >= lastUpdateTime AND no pending updates, we are effectively saved.
     // Otherwise, we are still saving (waiting for emit).
-    if (lastSentTimeRef.current >= lastUpdateTimeRef.current) {
+    if (lastSentTimeRef.current >= lastUpdateTimeRef.current && pendingUpdatesCount === 0) {
       setSaveStatus('saved');
     } else {
       setSaveStatus('saving');
     }
-  }, [status]);
+  }, [status, pendingUpdatesCount]);
 
   // 清除错误
   const handleDismissError = useCallback(() => {
@@ -514,7 +521,7 @@ const NoteEditor = React.memo(({
                 key={`${noteId}-${activeFragmentName}`} // [FIX] Force remount when fragment changes
                 ydoc={ydoc!}
                 fragment={yXmlFragment || ydoc!.getXmlFragment('blocks')} // [FIX] Pass dynamic fragment
-                initialContent={hasData ? '' : (initialContent || '')} // [FIX] Prevent Tiptap from merging initialContent if Yjs has data
+                initialContent={hasData ? undefined : (initialContent || '')} // [FIX] Prevent Tiptap from merging initialContent if Yjs has data
                 editable={editable}
                 isLimitReached={isLimitReached}
                 onChange={onChange}

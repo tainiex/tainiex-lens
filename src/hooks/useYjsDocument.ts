@@ -149,6 +149,7 @@ export function useYjsDocument(options: UseYjsDocumentOptions): UseYjsDocumentRe
         if (blocksText.length === 0 && defaultText.length > 0) {
           logger.warn('[YjsDoc] Legacy content detected in "default". Migrating to Tiptap "blocks".');
 
+          /* [DEBUG] Disable Migration temporarily to check if it causes "Extra Blank Line"
           // [MIGRATION] Convert legacy text to Tiptap Node Structure
           ydoc.transact(() => {
             const blocks = ydoc.getXmlFragment('blocks');
@@ -158,6 +159,7 @@ export function useYjsDocument(options: UseYjsDocumentOptions): UseYjsDocumentRe
             p.insert(0, [text]);
             blocks.insert(0, [p]);
           });
+          */
 
           // Use 'blocks' fragment (now populated)
           yXmlFragmentRef.current = blocksFrag;
