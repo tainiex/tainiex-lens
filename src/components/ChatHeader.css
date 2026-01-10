@@ -1,20 +1,18 @@
-.chat-interface-header {
+/* .chat-interface-header styles removed - replaced by PageHeader */
+
+.new-chat-btn {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 1rem 3.5rem 1rem 1.5rem;
-    /* Added right padding for global indicator */
-    height: 60px;
+    gap: 0.5rem;
+    /* Reusing header-icon-btn styles from PageHeader but keeping the gap for text if visible */
 }
 
-.chat-interface-header .header-right .connection-status {
-    font-size: 0.8rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
+/* Hide text on mobile, likely handled by header layout logic or media query if needed later */
+.new-chat-text {
+    display: none;
 }
+
+/* Re-enable text on larger screens if needed, but for now we proceed with icon-only or minimal */
 
 .status-dot {
     width: 8px;

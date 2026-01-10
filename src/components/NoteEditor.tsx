@@ -26,6 +26,7 @@ import React, { useEffect, useLayoutEffect, useCallback, useState, useRef } from
 import * as Y from 'yjs';
 import { useCollaborationSocket } from '../hooks/useCollaborationSocket';
 import { useYjsDocument } from '../hooks/useYjsDocument';
+import PageHeader from './PageHeader';
 // import NetworkStatusBar from './NetworkStatusBar';
 import { logger } from '../utils/logger';
 import type {
@@ -413,48 +414,46 @@ const NoteEditor = React.memo(({
     <div className="note-editor-container">
       {/* Mobile Menu Button - Positioned in the header */}
       {/* If isLoading, we might want to hide it or show simplified header */}
-      <div className="editor-header">
-        <button
-          className="mobile-menu-btn"
-          onClick={onMobileMenuClick}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '0.5rem',
-            marginRight: '0.5rem',
-            color: 'var(--text-primary)',
-          }}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
-        </button>
-
-        <div className="breadcrumbs">
-          <span className="breadcrumb-icon">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+      {/* Mobile Menu Button - Positioned in the header */}
+      {/* Using PageHeader for consistent top bar */}
+      <PageHeader
+        className="editor-page-header"
+        startContent={
+          <button
+            className="header-icon-btn mobile-menu-btn"
+            onClick={onMobileMenuClick}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
             </svg>
-          </span>
-          <span className="breadcrumb-text">Private</span>
-          <span className="breadcrumb-separator">/</span>
-          <span className="breadcrumb-current">{title || 'Untitled'}</span>
-        </div>
-        <div className="header-actions">
-          {/* New Status Indicator */}
-          <div className={`status-indicator ${saveStatus === 'saving' || isSyncing ? 'syncing' : saveStatus === 'offline' ? 'offline' : 'saved'}`}>
-            {saveStatus !== 'offline' && <div className="status-dot"></div>}
-            <span>{statusText}</span>
+          </button>
+        }
+        centerContent={
+          <div className="breadcrumbs">
+            <span className="breadcrumb-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </span>
+            <span className="breadcrumb-text">Private</span>
+            <span className="breadcrumb-separator">/</span>
+            <span className="breadcrumb-current">{title || 'Untitled'}</span>
           </div>
-
-          {/* Network Status Light */}
-          {/* Network Status Light removed - using Global NetworkStatusBar */}
-        </div>
-      </div>
+        }
+        endContent={
+          <div className="header-actions">
+            {/* New Status Indicator */}
+            <div className={`status-indicator ${saveStatus === 'saving' || isSyncing ? 'syncing' : saveStatus === 'offline' ? 'offline' : 'saved'}`}>
+              {saveStatus !== 'offline' && <div className="status-dot"></div>}
+              <span>{statusText}</span>
+            </div>
+            {/* Network Status Light removed - using Global NetworkStatusBar */}
+          </div>
+        }
+      />
 
       <div className="editor-scroll-container">
         <div className="editor-title-section">

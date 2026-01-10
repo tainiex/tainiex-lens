@@ -368,18 +368,8 @@
     position: relative;
 }
 
-/* Editor Header */
-.editor-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 3.5rem 0 1.5rem;
-    /* Added right padding for global indicator */
-    height: 60px;
-    border-bottom: 1px solid transparent;
-    /* Transparent border to maintain layout but clean look */
-}
-
+/* Editor Header replaced by PageHeader */
+/* .editor-header removed */
 
 .breadcrumbs {
     display: flex;
@@ -387,9 +377,11 @@
     gap: 0.5rem;
     font-size: 0.875rem;
     color: var(--text-tertiary);
-    flex: 1;
-    min-width: 0;
-    /* Allow Flexbox truncation */
+    /* Flex 1 removed as resizing is handled by PageHeader.header-center */
+    width: 100%;
+    /* Fill center slot */
+    justify-content: flex-start;
+    /* Left align breadcrumbs */
     overflow: hidden;
 }
 
@@ -1026,22 +1018,4 @@
     background-color: var(--accent-warning);
 }
 
-.header-icon-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border: none;
-    background: transparent;
-    color: var(--text-tertiary);
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
-    padding: 0;
-}
-
-.header-icon-btn:hover {
-    background-color: var(--bg-hover);
-    color: var(--text-secondary);
-}
+/* .header-icon-btn removed - using PageHeader styles */

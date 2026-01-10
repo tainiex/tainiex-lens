@@ -2,7 +2,8 @@
 
 .network-status-indicator-global {
   position: fixed;
-  top: 12px;
+  top: 16px;
+  /* (60px header - 28px icon) / 2 = 16px */
   right: 0.5rem;
   z-index: 10000;
   display: flex;
@@ -139,7 +140,8 @@
 /* Mobile Responsive */
 @media (max-width: 480px) {
   .network-status-indicator-global {
-    top: 1rem;
+    top: 18px;
+    /* (60px header - 24px icon) / 2 = 18px */
     right: 1rem;
     /* Left of mobile menu or avatar */
     width: 24px;
