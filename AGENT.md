@@ -39,7 +39,9 @@
 - **Improved Reliability**: WebSocket auto-reconnect with auth-refresh logic.
 - **WebSocket Multiplexing**: Uses a single physical connection via a shared Socket.IO Manager for both Chat (`/api/chat`) and Collaboration (`/api/collaboration`) features.
 - **Rich Content Rendering**: Support for Markdown (GFM), LaTeX (KaTeX), and Mermaid diagrams.
-- Tests not yet added
+- **Tests not yet added
+- **Centralized Utilities**: `base64Utils` (src/utils/base64.ts) for consistent encoding/decoding.
+- **Unified Authentication**: `apiClient` manages token refresh and retries; `socketManager` delegates auth errors to it to prevent race conditions.
 
 ---
 
@@ -96,16 +98,27 @@ c:\Users\Cselerity\Codes\tainiex-lens\
 │   │   ├── GoogleCallback.tsx      # OAuth callback handler (placeholder)
 │   │   └── AppDashboard.tsx        # Protected dashboard (3-column layout)
 │   │
+│   ├── utils/
+│   │   ├── apiClient.ts            # Axios wrapper with auth refresh
+│   │   ├── socketManager.ts        # Shared Socket.IO Manager
+│   │   ├── base64.ts               # Centralized Base64 utility
+│   │   └── logger.ts               # Sentry-integrated logger
+│   │
 │   └── components/
 │       ├── Header.tsx              # Top nav with large logo & text (home only)
 │       ├── Header.css              # Header styles
 │       ├── Hero.tsx                # Hero section with CTA
 │       ├── Hero.css                # Hero styles
-│       ├── Background.tsx          # Visual background component
-│       ├── Background.css          # Background styles
+│       ├── background/
+│       │   ├── Background.tsx          # Visual background component
+│       │   └── Background.css          # Background styles
+│       ├── sidebar/
+│       │   ├── UserProfileMenu.tsx     # User profile dropdown
+│       │   ├── SidebarSessionList.tsx  # Grouped chat list
+│       │   └── SidebarNoteList.tsx     # Note list with context menu
 │       ├── Footer.tsx              # Footer component
 │       ├── Footer.css              # Footer styles
-│       ├── AppSidebar.tsx          # App sidebar (nav + user info + logout)
+│       ├── AppSidebar.tsx          # Main sidebar container (composes sidebar/*)
 │       ├── ChatInterface.tsx       # Session-based chat with SSE support
 │       ├── ContextPanel.tsx        # Chat History & Memory management
 │       └── AppDashboard.css        # Dashboard layout styles

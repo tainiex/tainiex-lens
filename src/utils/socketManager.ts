@@ -22,7 +22,7 @@ let collaborationSocket: Socket | null = null;
 
 // Lifecycle tracking
 let lastHiddenTimeRef: number | null = null;
-let authRetryCount = 0;
+// Removed: authRetryCount - delegating to apiClient for retry logic
 
 /**
  * Get or create the shared Socket.IO Manager
@@ -175,51 +175,42 @@ function setupManagerEvents(manager: Manager) {
  * Refresh access token and reconnect
  * 刷新访问 token 并重连
  */
+/**
+ * Refresh access token and reconnect
+ * 刷新访问 token 并重连
+ */
 export async function refreshAndReconnect(): Promise<boolean> {
     try {
-        authRetryCount++;
-        // Use a much shorter delay for the first attempt to be responsive
-        // But backoff if it keeps failing despite ensuring auth
-        const delay = authRetryCount === 1 ? 0 : Math.min(authRetryCount * 1000, 10000);
+        // [REF] Simplified logic: Delegate entirely to apiClient
+        // apiClient handles deduplication of refresh requests.
+        logger.debug('[SocketManager] Delegating auth check toApiClient...');
 
-        if (delay > 0) {
-            logger.warn(
-                `[SocketManager] Auth error (attempt ${authRetryCount}), retrying in ${delay}ms`
-            );
-            await new Promise((resolve) => setTimeout(resolve, delay));
-        }
-
-        // apiClient now correctly deduplicates concurrent refresh requests
-        // so we can call this safely from multiple contexts
-        logger.debug(`[SocketManager] Ensuring auth (attempt ${authRetryCount})...`);
         const refreshed = await apiClient.ensureAuth();
 
         if (refreshed) {
             logger.log('[SocketManager] Token refreshed/valid, reconnecting...');
-            authRetryCount = 0; // Reset on success
 
             // Reconnect Manager (this will reconnect all namespace sockets)
             const manager = getSocketManager();
-            manager.engine.close();
+            if (manager.engine) {
+                manager.engine.close();
+            }
             manager.connect();
 
             return true;
         } else {
-            // [FIX] If auth refresh failed, stop the reconnection loop to prevent Sentry spam
-            // and yellow light blinking forever.
-            logger.warn('[SocketManager] Auth refresh failed. Closing manager to stop reconnection loop.');
+            logger.warn('[SocketManager] Auth ensure failed. Closing manager.');
 
-            // Failsafe: Dispatch logout if not already done by apiClient
-            window.dispatchEvent(new CustomEvent('auth:logout'));
-
+            // If ensureAuth failed, it likely means we are logged out or network is dead.
+            // We should stop the socket from spinning.
             const manager = getSocketManager();
-            // Stop trying to reconnect
-            manager.reconnection(false);
+            manager.reconnection(false); // Stop auto-reconnect
             manager.close();
+
             return false;
         }
     } catch (err) {
-        logger.error('[SocketManager] Failed to refresh token:', err);
+        logger.error('[SocketManager] Failed to refresh/reconnect:', err);
         return false;
     }
 }

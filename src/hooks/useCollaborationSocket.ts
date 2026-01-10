@@ -10,7 +10,7 @@ import * as Sentry from '@sentry/react';
 import * as Y from 'yjs'; // Added for encodeStateVector
 import { logger } from '../utils/logger';
 import { getNamespaceSocket, refreshAndReconnect } from '../utils/socketManager';
-// import { base64Utils } from '../utils/base64Utils'; // Removed: using local def
+import { base64Utils } from '../utils/base64';
 import type {
   // NoteJoinPayload, // Unused in this file directly
   // NoteLeavePayload, // Unused
@@ -47,37 +47,7 @@ interface UseCollaborationSocketReturn {
   isSynced: boolean;
 }
 
-// Copied base64Utils to avoid cross-hook dependency issues during refactor
-const base64Utils = {
-  encode(uint8Array: Uint8Array): string {
-    let binary = '';
-    const len = uint8Array.byteLength;
-    for (let i = 0; i < len; i++) {
-      binary += String.fromCharCode(uint8Array[i]);
-    }
-    return btoa(binary);
-  },
-  decode(base64: string): Uint8Array {
-    if (!base64) return new Uint8Array(0);
-    try {
-      // [FIX] Robust Decode
-      let cleanBase64 = base64.replace(/\s/g, '').replace(/-/g, '+').replace(/_/g, '/');
-      while (cleanBase64.length % 4) {
-        cleanBase64 += '=';
-      }
-      const binary = atob(cleanBase64);
-      const len = binary.length;
-      const uint8Array = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-        uint8Array[i] = binary.charCodeAt(i);
-      }
-      return uint8Array;
-    } catch (e) {
-      console.error('[CollabSocket] Base64 decode failed', e);
-      return new Uint8Array(0);
-    }
-  }
-};
+
 
 export function useCollaborationSocket(
   options: UseCollaborationSocketOptions
@@ -196,7 +166,6 @@ export function useCollaborationSocket(
 
       if (currentNoteIdRef.current) {
         logger.debug('[CollabSocket] Auto-joining note:', currentNoteIdRef.current);
-        console.log('[DEBUG_TRACE] [SOCKET] Connected event fired! Performing Auto-join for:', currentNoteIdRef.current);
         const joinPayload = {
           noteId: currentNoteIdRef.current,
           // [FIX] Send empty state vector to request full history
@@ -204,10 +173,6 @@ export function useCollaborationSocket(
         };
         // @ts-ignore
         socket.emit('note:join', joinPayload);
-
-        // Confirm emit details
-        console.log('[DEBUG_TRACE] [SOCKET] note:join emitted for:', currentNoteIdRef.current);
-        console.log('[DEBUG_TRACE] [SOCKET] Join Payload:', JSON.stringify(joinPayload));
 
         // Flush message queue
         if (messageQueueRef.current.length > 0) {
@@ -218,8 +183,6 @@ export function useCollaborationSocket(
           });
           messageQueueRef.current = [];
         }
-      } else {
-        console.log('[DEBUG_TRACE] [SOCKET] Connected event fired, but NO currentNoteIdRef set. Implicit join skipped.');
       }
     });
 
@@ -264,7 +227,6 @@ export function useCollaborationSocket(
 
     // ===== Y.js 同步事件 =====
     socket.on('yjs:sync', (payload: YjsSyncPayload) => {
-      console.log('[DEBUG_TRACE] [READ] Received sync data from server. NoteId:', payload.noteId, 'Data Length:', payload.update?.length);
 
 
       // [FIX] Unblock outgoing updates for THIS note
@@ -273,7 +235,6 @@ export function useCollaborationSocket(
 
         // [FIX] Flush pending updates that were blocked awaiting sync
         if (pendingUpdatesQueueRef.current.length > 0) {
-          console.log(`[DEBUG_TRACE] [FLUSH] Flushing ${pendingUpdatesQueueRef.current.length} buffered updates for Note: ${payload.noteId}`);
           pendingUpdatesQueueRef.current.forEach(({ update, targetNoteId }) => {
             if (targetNoteId === payload.noteId) {
               // Encode update if needed or send as is? 
@@ -388,16 +349,9 @@ export function useCollaborationSocket(
    */
   const joinNote = useCallback((noteIdToJoin: string) => {
     logger.debug('[CollabSocket] Joining note:', noteIdToJoin);
-    console.log('[DEBUG_TRACE] [SOCKET] joinNote called for:', noteIdToJoin, 'Socket connected:', socketRef.current?.connected);
-
-    // [FIX] Reset sync state so we don't send updates until we get data
-    syncedNoteIdRef.current = null;
-    currentNoteIdRef.current = noteIdToJoin;
-    // [FIX] Clear pending updates from previous note
     pendingUpdatesQueueRef.current = [];
 
     if (socketRef.current?.connected) {
-      console.log('[DEBUG_TRACE] [SOCKET] Socket is open. Emitting note:join immediately.');
       const joinPayload = {
         noteId: noteIdToJoin,
         stateVector: base64Utils.encode(Y.encodeStateVector(new Y.Doc()))
@@ -414,9 +368,8 @@ export function useCollaborationSocket(
       };
       // @ts-ignore
       socketRef.current.emit('yjs:sync', syncPayload);
-      console.log('[DEBUG_TRACE] [SOCKET] Emitted explicit yjs:sync:', JSON.stringify(syncPayload));
     } else {
-      console.log('[DEBUG_TRACE] [SOCKET] Socket is NOT open. Will auto-join upon connect.');
+      logger.debug('[CollabSocket] Socket is NOT open. Will auto-join upon connect.');
     }
   }, []);
 
@@ -435,9 +388,6 @@ export function useCollaborationSocket(
   /**
    * 发送 Y.js 更新
    */
-  /**
-   * 发送 Y.js 更新
-   */
   const sendUpdate = useCallback((update: Uint8Array | string, targetNoteId: string) => {
 
     // Convert string to Uint8Array if needed (though usually it comes as Uint8Array from Yjs)
@@ -446,7 +396,7 @@ export function useCollaborationSocket(
     // [FIX] Sync Guard & Buffering
     // If not synced yet (or syncing wrong note), buffer the update!
     if (syncedNoteIdRef.current !== targetNoteId) {
-      console.log(`[DEBUG_TRACE] [WRITE] Not synced yet. Buffering update for ${targetNoteId}. (Current Synced: ${syncedNoteIdRef.current})`);
+      logger.debug(`[CollabSocket] Not synced yet. Buffering update for ${targetNoteId}.`);
       pendingUpdatesQueueRef.current.push({ update: updateBytes, targetNoteId });
       return;
     }
@@ -545,10 +495,8 @@ export function useCollaborationSocket(
   // 当 noteId 变化时，自动加入/离开房间
   useEffect(() => {
     if (noteId) {
-      console.log('[DEBUG_TRACE] [SOCKET] useEffect triggered for noteId:', noteId);
       joinNote(noteId);
     } else {
-      console.log('[DEBUG_TRACE] [SOCKET] useEffect triggered: No noteId, leaving.');
       leaveNote();
     }
 
