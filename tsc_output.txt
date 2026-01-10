@@ -1,0 +1,15 @@
+src/components/ChatInterface.tsx(30,3): error TS6133: 'initialMessages' is declared but its value is never read.
+src/components/ChatInterface.tsx(206,9): error TS2322: Type 'boolean' is not assignable to type 'Partial<IChatMessage>[]'.
+src/components/SidebarNoteItem.tsx(34,11): error TS6133: 'navigate' is declared but its value is never read.
+src/hooks/useChat.ts(118,9): error TS2353: Object literal may only specify known properties, and 'timestamp' does not exist in type 'Partial<IChatMessage>'.
+src/hooks/useChat.ts(125,9): error TS2353: Object literal may only specify known properties, and 'timestamp' does not exist in type 'Partial<IChatMessage>'.
+src/pages/AppDashboard.tsx(1,10): error TS6133: 'useEffect' is declared but its value is never read.
+src/pages/AppDashboard.tsx(10,11): error TS6133: 'navigate' is declared but its value is never read.
+src/pages/AppDashboard.tsx(15,9): error TS6133: 'currentSessionId' is declared but its value is never read.
+src/pages/AppDashboard.tsx(19,9): error TS6133: 'handleRenameSession' is declared but its value is never read.
+src/pages/AppDashboard.tsx(55,46): error TS6133: 'title' is declared but its value is never read.
+src/types/collaboration.ts(32,3): error TS2305: Module '"@tainiex/tainiex-shared"' has no exported member 'CursorPosition'.
+src/types/collaboration.ts(32,3): error TS6133: 'CursorPosition' is declared but its value is never read.
+src/types/collaboration.ts(33,3): error TS2305: Module '"@tainiex/tainiex-shared"' has no exported member 'CollaborationEvent'.
+src/types/collaboration.ts(33,3): error TS6133: 'CollaborationEvent' is declared but its value is never read.
+src/utils/socketManager.ts(214,21): error TS2551: Property 'close' does not exist on type 'Manager<DefaultEventsMap, DefaultEventsMap>'. Did you mean '_close'?

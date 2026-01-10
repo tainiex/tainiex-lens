@@ -31,6 +31,16 @@ import {
   ServerToClientEvents,
 } from '@tainiex/tainiex-shared';
 
+export interface CursorPosition {
+  blockId: string;
+  offset: number;
+}
+
+export interface CollaborationEvent {
+  type: string;
+  payload: any;
+}
+
 // Re-export BlockType
 export { BlockType };
 

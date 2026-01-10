@@ -15,7 +15,7 @@
     "@azure/msal-react": "^3.0.23",
     "@react-oauth/google": "^0.13.4",
     "@sentry/react": "^10.32.1",
-    "@tainiex/tainiex-shared": "^0.0.11",
+    "@tainiex/tainiex-shared": "0.0.13",
     "@tiptap/extension-blockquote": "^3.15.1",
     "@tiptap/extension-bold": "^3.15.1",
     "@tiptap/extension-bubble-menu": "^3.15.1",

@@ -1,0 +1,7 @@
+src/components/ChatInterface.tsx(205,9): error TS2322: Type 'boolean' is not assignable to type 'Partial<IChatMessage>[]'.
+src/components/SidebarNoteItem.tsx(34,11): error TS6133: 'navigate' is declared but its value is never read.
+src/pages/AppDashboard.tsx(1,10): error TS6133: 'useEffect' is declared but its value is never read.
+src/pages/AppDashboard.tsx(10,11): error TS6133: 'navigate' is declared but its value is never read.
+src/pages/AppDashboard.tsx(15,9): error TS6133: 'currentSessionId' is declared but its value is never read.
+src/pages/AppDashboard.tsx(19,9): error TS6133: 'handleRenameSession' is declared but its value is never read.
+src/pages/AppDashboard.tsx(55,46): error TS6133: 'title' is declared but its value is never read.

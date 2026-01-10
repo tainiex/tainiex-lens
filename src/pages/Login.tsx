@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
+import { GoogleLoginDto } from '@tainiex/tainiex-shared';
 import { useMsal } from '@azure/msal-react';
 import { loginRequest } from '../utils/msalConfig';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -105,7 +106,8 @@ const Login = () => {
             if (codeResponse.code) {
                 setIsLoading(true); // Show loading while verifying
                 try {
-                    const res = await apiClient.post('/api/auth/google', { code: codeResponse.code });
+                    const payload: GoogleLoginDto = { code: codeResponse.code };
+                    const res = await apiClient.post('/api/auth/google', payload);
 
                     // Start by trying to parse JSON
                     const data = await res.json();

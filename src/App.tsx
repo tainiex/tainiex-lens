@@ -9,7 +9,7 @@ import GoogleCallback from './pages/GoogleCallback';
 import AppLayout from './layouts/AppLayout';
 import AppDashboard from './pages/AppDashboard';
 import Notes from './pages/Notes';
-import { initializeGlobalListeners, disconnectAllSockets } from './utils/socketManager';
+import { initializeGlobalListeners } from './utils/socketManager';
 import './App.css';
 
 function App() {

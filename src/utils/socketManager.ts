@@ -211,7 +211,7 @@ export async function refreshAndReconnect(): Promise<boolean> {
             // We should stop the socket from spinning.
             const manager = getSocketManager();
             manager.reconnection(false); // Stop auto-reconnect
-            manager.close();
+            manager.engine.close(); // Close the underlying connection
 
             return false;
         }

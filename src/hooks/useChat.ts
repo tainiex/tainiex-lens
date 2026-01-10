@@ -114,15 +114,13 @@ export function useChat({
       const userMessage: Partial<IChatMessage> = {
         id: `temp_${Date.now()}`,
         role: ChatRole.USER,
-        content: msgToSend,
-        timestamp: new Date().toISOString()
+        content: msgToSend
       };
       const assistantMsgId = `temp_ai_${Date.now()}`;
       const assistantMessage: Partial<IChatMessage> = {
         id: assistantMsgId,
         role: ChatRole.ASSISTANT,
-        content: '',
-        timestamp: new Date().toISOString()
+        content: ''
       };
       const optimisticMessages = [userMessage, assistantMessage];
 

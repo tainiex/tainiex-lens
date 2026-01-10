@@ -1,7 +1,6 @@
-import { IChatMessage } from "@tainiex/tainiex-shared";
+import { IChatMessage, IUser } from "@tainiex/tainiex-shared";
 import React, { useEffect, useRef } from 'react';
 import { logger } from '../utils/logger';
-import { IUser } from '@tainiex/tainiex-shared';
 import { ChatProvider, useChatContext } from '../contexts/ChatContext';
 import { useChat } from '../hooks/useChat';
 import { useMessageHistory } from '../hooks/useMessageHistory';
@@ -27,8 +26,7 @@ function ChatInterfaceContent({
   onMenuClick,
   onSessionCreated,
   onSessionUpdate,
-  initialSkipFetch,
-  initialMessages
+  initialSkipFetch
 }: Omit<ChatInterfaceProps, 'currentSessionId' | 'setCurrentSessionId' | 'currentSession'>) {
   const {
     currentSessionId,
@@ -105,13 +103,12 @@ function ChatInterfaceContent({
     onSessionCreated,
     onSessionUpdate,
     enableAutoScroll,
-    initialSkipFetch,
-  initialMessages
+    initialSkipFetch
   });
 
   // Fetch message history when session changes
   useEffect(() => {
-logger.debug("[ChatInterface] useEffect triggered", { currentSessionId, skipFetch: shouldSkipHistoryFetchRef.current, msgCount: messages.length });
+    logger.debug("[ChatInterface] useEffect triggered", { currentSessionId, skipFetch: shouldSkipHistoryFetchRef.current, msgCount: messages.length });
     if (!currentSessionId) {
       setMessages([]);
       resetHistory();
@@ -205,7 +202,6 @@ const ChatInterface = ({
         onSessionCreated={onSessionCreated}
         onSessionUpdate={onSessionUpdate}
         initialSkipFetch={initialSkipFetch}
-  initialMessages
       />
     </ChatProvider>
   );

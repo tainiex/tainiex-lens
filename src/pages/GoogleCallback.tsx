@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiClient } from '../utils/apiClient';
+import { GoogleLoginDto } from '@tainiex/tainiex-shared';
 import { logger } from '../utils/logger';
 
 const GoogleCallback = () => {
@@ -14,7 +15,8 @@ const GoogleCallback = () => {
         if (code) {
             const exchangeCode = async () => {
                 try {
-                    const res = await apiClient.post('/api/auth/google', { code });
+                    const payload: GoogleLoginDto = { code };
+                    const res = await apiClient.post('/api/auth/google', payload);
                     if (res.ok) {
                         navigate('/app/chats');
                     } else {
