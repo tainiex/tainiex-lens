@@ -48,29 +48,16 @@ const NetworkStatusBar = ({ connectionState: propsState, onReconnect: propsOnRec
           className: 'connected',
         };
       case 'reconnecting':
+      case 'disconnected':
+      case 'failed':
         return {
           icon: (
             <div className="status-dot-pulse warning"></div>
           ),
-          title: 'Reconnecting...',
+          title: 'Connecting...',
           className: 'reconnecting',
         };
-      case 'disconnected':
-        return {
-          icon: (
-            <div className="status-dot-static danger"></div>
-          ),
-          title: 'Disconnected',
-          className: 'disconnected',
-        };
-      case 'failed':
-        return {
-          icon: (
-            <div className="status-dot-static danger"></div>
-          ),
-          title: error || 'Connection Failed',
-          className: 'failed',
-        };
+
       default:
         return {
           icon: <div className="status-dot-static gray"></div>,

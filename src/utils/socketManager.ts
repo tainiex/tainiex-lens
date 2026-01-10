@@ -205,13 +205,13 @@ export async function refreshAndReconnect(): Promise<boolean> {
             connectAllSockets();
             return true;
         } else {
-            logger.warn('[SocketManager] Auth ensure failed. Closing manager.');
+            logger.warn('[SocketManager] Auth ensure failed. Retrying in 5s...');
 
-            // If ensureAuth failed, it likely means we are logged out or network is dead.
-            // We should stop the socket from spinning.
-            const manager = getSocketManager();
-            manager.reconnection(false); // Stop auto-reconnect
-            manager.engine.close(); // Close the underlying connection
+            // [ROBUSTNESS] Do NOT stop. Retry loop for network recovery.
+            // If it was a 401, apiClient would have redirected. Since we are here, it's a network retry.
+            setTimeout(() => {
+                refreshAndReconnect();
+            }, 5000);
 
             return false;
         }
