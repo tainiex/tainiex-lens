@@ -506,8 +506,8 @@ const NoteEditor = React.memo(({
           // Show Editor ONLY if:
           // 1. We have local data (hasData == true)
           // 2. OR we have finished syncing and verified it is empty (isSocketSynced == true)
-          // This prevents the "Flash of Default Content" on existing notes.
-          const readyToMount = isYjsInitialized && ydoc && (hasData || isSocketSynced);
+          // 3. Fallback: If fully connected, assume ready to avoid permanent skeleton.
+          const readyToMount = isYjsInitialized && ydoc && (hasData || isSocketSynced || connectionState.status === 'connected');
           return readyToMount;
         })() ? (
           <>

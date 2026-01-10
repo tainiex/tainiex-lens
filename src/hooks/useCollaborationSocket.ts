@@ -64,6 +64,7 @@ export function useCollaborationSocket(
     onError,
   } = options;
 
+  const listenersRef = useRef<{ [key: string]: (...args: any[]) => void }>({});
   const socketRef = useRef<CollaborationSocket | null>(null);
   const currentNoteIdRef = useRef<string | null>(null);
   const messageQueueRef = useRef<Array<{ type: string; payload: any }>>([]);
@@ -201,7 +202,113 @@ export function useCollaborationSocket(
       }
     };
 
-    // [FIX] 检查 socket 是否已经连接
+
+
+
+
+
+    // [FIX] Store listeners for cleanup in REF
+    listenersRef.current = {
+      connect: handleConnected,
+      disconnect: (reason: string) => {
+        logger.log('[CollabSocket] Disconnected:', reason);
+        if (reason === 'io server disconnect') {
+          updateConnectionState('disconnected', currentNoteIdRef.current);
+          refreshAndReconnect().then((success) => {
+            if (success) logger.log('[CollabSocket] Auth restored, socket will auto-reconnect');
+          });
+        } else if (reason === 'io client disconnect') {
+          updateConnectionState('disconnected', null);
+        } else {
+          updateConnectionState('reconnecting', currentNoteIdRef.current);
+        }
+      },
+      connect_error: async (err: Error) => {
+        logger.warn('[CollabSocket] Connection error:', err.message);
+        Sentry.captureException(err, { tags: { type: 'collaboration_socket_error' } });
+        if (err.message.includes('Authentication') || err.message.includes('Unauthorized') || err.message.includes('401')) {
+          logger.warn('[CollabSocket] Auth error detected, delegating to Manager...');
+          refreshAndReconnect();
+          return;
+        }
+        updateConnectionState('reconnecting', currentNoteIdRef.current, err.message);
+      },
+      yjs_sync: (payload: YjsSyncPayload) => {
+        if (payload.noteId === currentNoteIdRef.current) {
+          syncedNoteIdRef.current = payload.noteId;
+          if (pendingUpdatesQueueRef.current.length > 0) {
+            pendingUpdatesQueueRef.current.forEach(({ update, targetNoteId }) => {
+              if (targetNoteId === payload.noteId) {
+                const encodedUpdate = base64Utils.encode(update);
+                // @ts-ignore
+                socketRef.current?.emit('yjs:update', { noteId: targetNoteId, update: encodedUpdate });
+              }
+            });
+            pendingUpdatesQueueRef.current = [];
+            setPendingUpdatesCount(messageQueueRef.current.length);
+          }
+        }
+        logger.debug('[CollabSocket] Received yjs:sync for note:', payload.noteId);
+        onSyncRef.current?.(payload);
+        setIsSynced(true);
+      },
+      yjs_update: (payload: YjsUpdatePayload) => {
+        if (payload.noteId !== currentNoteIdRef.current) return;
+        // logger.debug('[CollabSocket] Received yjs:update'); // too noisy
+        onUpdateRef.current?.(payload);
+      },
+      presence_list: (users: any) => {
+        // logger.debug('[CollabSocket] Presence list:', users?.length || 0, 'users');
+        setPresenceUsers(users as any);
+        onPresenceChangeRef.current?.(users as any);
+      },
+      presence_join: (payload: any) => {
+        const user: PresenceUser = { userId: payload.userId, userName: payload.username, avatar: payload.avatar, color: payload.color };
+        // logger.debug('[CollabSocket] User joined:', user.userName);
+        setPresenceUsers((prev) => {
+          const exists = prev.some((u) => u.userId === user.userId);
+          if (exists) return prev;
+          const newUsers = [...prev, user];
+          onPresenceChangeRef.current?.(newUsers);
+          return newUsers;
+        });
+      },
+      presence_leave: (payload: any) => {
+        // logger.debug('[CollabSocket] User left:', payload.userId);
+        setPresenceUsers((prev) => {
+          const newUsers = prev.filter((u) => u.userId !== payload.userId);
+          onPresenceChangeRef.current?.(newUsers);
+          return newUsers;
+        });
+      },
+      cursor_update: (payload: any) => {
+        if (!onCursorUpdateRef.current) return;
+        onCursorUpdateRef.current(payload as any);
+      },
+      collaboration_limit: (payload: CollaborationLimitPayload) => {
+        logger.warn('[CollabSocket] Collaboration limit reached:', payload.error);
+        onLimitRef.current?.(payload);
+      }
+    };
+
+    const listeners = listenersRef.current;
+
+    // Register Listeners
+    socket.on('connect', listeners.connect);
+    socket.on('disconnect', listeners.disconnect);
+    socket.on('connect_error', listeners.connect_error);
+    socket.on('yjs:sync', listeners.yjs_sync);
+    socket.on('yjs:update', listeners.yjs_update);
+    socket.on('presence:list', listeners.presence_list);
+    socket.on('presence:join', listeners.presence_join);
+    socket.on('presence:leave', listeners.presence_leave);
+    socket.on('cursor:update', listeners.cursor_update);
+    socket.on('collaboration:limit', listeners.collaboration_limit);
+
+    // collaboration:error not in Shared ServerToClientEvents
+    // socket.on('collaboration:error', ... );
+
+    // [FIX] 检查 socket 是否已经连接 - AFTER registering listeners
     if (socket.connected) {
       logger.debug('[CollabSocket] Socket already connected, triggering handler manually');
       handleConnected();
@@ -210,161 +317,6 @@ export function useCollaborationSocket(
       logger.debug('[CollabSocket] Manually connecting socket...');
       socket.connect();
     }
-
-    // ===== 连接事件 =====
-    socket.on('connect', handleConnected);
-
-    socket.on('disconnect', (reason) => {
-      logger.log('[CollabSocket] Disconnected:', reason);
-
-      if (reason === 'io server disconnect') {
-        updateConnectionState('disconnected', currentNoteIdRef.current);
-        // 服务器主动断开，尝试刷新认证
-        refreshAndReconnect().then((success) => {
-          if (success) {
-            logger.log('[CollabSocket] Auth restored, socket will auto-reconnect');
-          }
-        });
-      } else if (reason === 'io client disconnect') {
-        updateConnectionState('disconnected', null);
-      } else {
-        updateConnectionState('reconnecting', currentNoteIdRef.current);
-      }
-    });
-
-    socket.on('connect_error', async (err) => {
-      logger.warn('[CollabSocket] Connection error:', err.message);
-
-      Sentry.captureException(err, {
-        tags: { type: 'collaboration_socket_error' },
-      });
-
-      const isAuthError =
-        err.message.includes('Authentication') ||
-        err.message.includes('Unauthorized') ||
-        err.message.includes('401');
-
-      if (isAuthError) {
-        logger.warn('[CollabSocket] Auth error detected, delegating to Manager...');
-        refreshAndReconnect();
-        return;
-      }
-
-      updateConnectionState('reconnecting', currentNoteIdRef.current, err.message);
-    });
-
-    // ===== Y.js 同步事件 =====
-    socket.on('yjs:sync', (payload: YjsSyncPayload) => {
-
-
-      // [FIX] Unblock outgoing updates for THIS note
-      if (payload.noteId === currentNoteIdRef.current) {
-        syncedNoteIdRef.current = payload.noteId;
-
-        // [FIX] Flush pending updates that were blocked awaiting sync
-        if (pendingUpdatesQueueRef.current.length > 0) {
-          pendingUpdatesQueueRef.current.forEach(({ update, targetNoteId }) => {
-            if (targetNoteId === payload.noteId) {
-              // Encode update if needed or send as is? 
-              // sendUpdate logic does: socket.emit('yjs:update', { noteId, update: base64Utils.encode(update) })
-              // So we need to replicate the emit logic or reuse sendUpdate?
-              // Reuse logic manually to avoid recursion checks
-              const encodedUpdate = base64Utils.encode(update);
-              const updatePayload = {
-                noteId: targetNoteId,
-                update: encodedUpdate
-              };
-              // @ts-ignore
-              socketRef.current.emit('yjs:update', updatePayload);
-            }
-          });
-          pendingUpdatesQueueRef.current = [];
-          setPendingUpdatesCount(messageQueueRef.current.length); // Update count (messageQueue should be empty here anyway)
-        }
-      }
-
-      logger.debug('[CollabSocket] Received yjs:sync for note:', payload.noteId);
-      onSyncRef.current?.(payload);
-      setIsSynced(true);
-    });
-
-    socket.on('yjs:update', (payload: YjsUpdatePayload) => {
-      logger.debug('[CollabSocket] Received yjs:update');
-      onUpdateRef.current?.(payload);
-    });
-
-    // ===== Presence 事件 =====
-    socket.on('presence:list', (users) => {
-      // Shared payload IS the array of users (ICollaborator[])
-      // const users = payload?.users || []; // Old
-      logger.debug('[CollabSocket] Presence list:', users?.length || 0, 'users');
-      // Shared ICollaborator might need mapping to local PresenceUser if types differ?
-      // Assuming they are compatible for now or compatible enough.
-      // Shared ICollaborator likely has userId, username, etc.
-      // Local PresenceUser has userId, userName, color.
-      // We might need a map if Shared uses 'username' and Local uses 'userName'.
-      // For now passing as is, if TS fails we fix mapping.
-      setPresenceUsers(users as any);
-      onPresenceChangeRef.current?.(users as any);
-    });
-
-    socket.on('presence:join', (payload) => {
-      // Shared payload is flat: { userId, username, avatar, color }
-      const user: PresenceUser = {
-        userId: payload.userId,
-        userName: payload.username,
-        avatar: payload.avatar,
-        color: payload.color
-      };
-
-      logger.debug('[CollabSocket] User joined:', user.userName);
-      setPresenceUsers((prev) => {
-        const exists = prev.some((u) => u.userId === user.userId);
-        if (exists) return prev;
-        const newUsers = [...prev, user];
-        onPresenceChangeRef.current?.(newUsers);
-        return newUsers;
-      });
-    });
-
-    socket.on('presence:leave', (payload) => {
-      logger.debug('[CollabSocket] User left:', payload.userId);
-      setPresenceUsers((prev) => {
-        const newUsers = prev.filter((u) => u.userId !== payload.userId);
-        onPresenceChangeRef.current?.(newUsers);
-        return newUsers;
-      });
-    });
-
-    // ===== 光标事件 =====
-    // Shared payload differs from local. We receive Shared, need to emit Local to callback?
-    // Actually, onCursorUpdate expects Local CursorUpdatePayload.
-    socket.on('cursor:update', (payload) => {
-      // Shared: { position: { blockId, offset }, selection: ... }
-      // Local expectation: { cursor: { position: number } }
-      // If backend sends Shared structure, we need to map it or ignore it if we stick to local.
-      // For now, casting or ignoring to prevent crash, assuming backend might still send legacy or we need deep change.
-      // User said "backend sending... TS knows payload".
-      // Assuming backend sends Shared structure. Front needs to adapt.
-      // But Tiptap relies on Y.js awareness mostly? This event might be supplementary.
-      // Let's safe-guard usage.
-      if (!onCursorUpdateRef.current) return;
-
-      // Temporary Adapter:
-      // If payload has 'cursor' (Legacy), pass it.
-      // If payload has 'position' (Shared), map it? No, blockId mapping is hard without doc context.
-      // We silence the cast for now to pass build, but mark Todo.
-      onCursorUpdateRef.current(payload as any);
-    });
-
-    // ===== 错误事件 =====
-    socket.on('collaboration:limit', (payload: CollaborationLimitPayload) => {
-      logger.warn('[CollabSocket] Collaboration limit reached:', payload.error);
-      onLimitRef.current?.(payload);
-    });
-
-    // collaboration:error not in Shared ServerToClientEvents
-    // socket.on('collaboration:error', ... );
 
     socketRef.current = socket;
     return socket;
@@ -429,8 +381,7 @@ export function useCollaborationSocket(
     // [FIX] Sync Guard & Buffering
     // If not synced yet (or syncing wrong note), buffer the update!
     if (syncedNoteIdRef.current !== targetNoteId) {
-      logger.debug(`[CollabSocket] Not synced yet. Buffering update for ${targetNoteId}.`);
-      logger.debug(`[CollabSocket] Not synced yet. Buffering update for ${targetNoteId}.`);
+      logger.debug(`[CollabSocket] Not synced yet. Buffering update for ${targetNoteId}. Current synced: ${syncedNoteIdRef.current}`);
       pendingUpdatesQueueRef.current.push({ update: updateBytes, targetNoteId });
       setPendingUpdatesCount(prev => prev + 1);
       return;
@@ -451,11 +402,11 @@ export function useCollaborationSocket(
 
     if (!socketRef.current?.connected) {
       logger.debug('[CollabSocket] Socket not connected, buffering update');
-      logger.debug('[CollabSocket] Socket not connected, buffering update');
       // This is the socket connection buffer, distinct from sync buffer
       messageQueueRef.current.push({ type: 'yjs:update', payload });
       setPendingUpdatesCount(prev => prev + 1);
     } else {
+      logger.debug('[CollabSocket] Emitting yjs:update for note:', currentNoteIdRef.current, 'size:', encodedUpdate.length);
       // @ts-ignore
       socketRef.current.emit('yjs:update', payload);
     }
@@ -520,7 +471,24 @@ export function useCollaborationSocket(
     return () => {
       // Clean up listeners when component unmounts
       if (socketRef.current) {
-        socketRef.current.removeAllListeners();
+        // [FIX] Use stored listeners to remove them
+        const listeners = listenersRef.current;
+        if (listeners.connect) {
+          socketRef.current.off('connect', listeners.connect);
+          socketRef.current.off('disconnect', listeners.disconnect);
+          socketRef.current.off('connect_error', listeners.connect_error);
+          socketRef.current.off('yjs:sync', listeners.yjs_sync);
+          socketRef.current.off('yjs:update', listeners.yjs_update);
+          socketRef.current.off('presence:list', listeners.presence_list);
+          socketRef.current.off('presence:join', listeners.presence_join);
+          socketRef.current.off('presence:leave', listeners.presence_leave);
+          socketRef.current.off('cursor:update', listeners.cursor_update);
+          socketRef.current.off('collaboration:limit', listeners.collaboration_limit);
+        } else {
+          // Fallback
+          socketRef.current.removeAllListeners();
+        }
+
         // Don't disconnect here - let Manager handle it
         socketRef.current = null;
       }

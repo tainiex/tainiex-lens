@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import NoteEditor from '../components/NoteEditor';
+import PageHeader from '../components/PageHeader';
 import { AppLayoutContextType } from '../layouts/AppLayout';
 import './AppDashboard.css';
 import { INote } from '../types/collaboration';
@@ -119,39 +120,23 @@ const Notes = () => {
             {/* Actually, NoteEditor has its own mobile header button. We only show this placeholder header when NO note is selected. */}
             {/* But if 404, we also want a way to open sidebar? */}
             {(!noteId || isNotFound) && (
-                <div className="mobile-header" style={{
-                    padding: '0 1rem',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                    borderBottom: '1px solid var(--border-primary)',
-                    height: '60px',
-                    minHeight: '60px',
-                    display: 'flex' // Ensure flex display
-                }}>
-                    <button
-                        className="mobile-menu-btn"
-                        onClick={() => setIsSidebarOpen(true)}
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '0.5rem',
-                            display: 'flex',
-                            color: 'var(--text-primary)',
-                            position: 'absolute',
-                            left: '1rem',
-                            zIndex: 1
-                        }}
-                    >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="3" y1="12" x2="21" y2="12"></line>
-                            <line x1="3" y1="6" x2="21" y2="6"></line>
-                            <line x1="3" y1="18" x2="21" y2="18"></line>
-                        </svg>
-                    </button>
-                    <span style={{ fontWeight: 600, fontSize: '1.1rem', whiteSpace: 'nowrap' }}>Notes</span>
-                </div>
+                <PageHeader
+                    startContent={
+                        <button
+                            className="header-icon-btn mobile-menu-btn"
+                            onClick={() => setIsSidebarOpen(true)}
+                        >
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="3" y1="12" x2="21" y2="12"></line>
+                                <line x1="3" y1="6" x2="21" y2="6"></line>
+                                <line x1="3" y1="18" x2="21" y2="18"></line>
+                            </svg>
+                        </button>
+                    }
+                    centerContent={
+                        <span style={{ fontWeight: 600, fontSize: '1rem' }}>Notes</span>
+                    }
+                />
             )}
 
             <div style={{ flex: 1, padding: 0, overflowY: 'hidden' }}>
@@ -190,7 +175,11 @@ const Notes = () => {
                         color: 'var(--text-tertiary)',
                         gap: '1rem'
                     }}>
-                        <div style={{ fontSize: '3rem' }}>🚫</div>
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--text-quaternary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="15" y1="9" x2="9" y2="15"></line>
+                            <line x1="9" y1="9" x2="15" y2="15"></line>
+                        </svg>
                         <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)' }}>Note not found</h3>
                         <p>The note you are looking for does not exist or has been deleted.</p>
                     </div>
@@ -205,7 +194,13 @@ const Notes = () => {
                         color: 'var(--text-tertiary)',
                         gap: '1rem'
                     }}>
-                        <div style={{ fontSize: '3rem' }}>📝</div>
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--text-quaternary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
                         <p>Select a note to view or create a new one</p>
                     </div>
                 )}
