@@ -1019,3 +1019,22 @@
 }
 
 /* .header-icon-btn removed - using PageHeader styles */
+
+/* Skeleton Loading Shell */
+.editor-content-shell {
+    width: 100%;
+    max-width: 850px;
+    margin: 0 auto;
+    padding: 0 3rem;
+    padding-top: 3rem;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Mobile adjustments for skeleton */
+@media (max-width: 768px) {
+    .editor-content-shell {
+        padding: 0 1.5rem 2rem 1.5rem;
+        padding-top: 2rem;
+    }
+}

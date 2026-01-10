@@ -246,7 +246,8 @@ const NoteEditor = React.memo(({
           savingTimeoutRef.current = null;
         }
       } else {
-        setSaveStatus('offline');
+        // [FIX] Even if disconnected, treat local updates as "Saving" (locally)
+        setSaveStatus('saving');
       }
 
       if (noteId && sendUpdateRef.current) {
@@ -408,7 +409,19 @@ const NoteEditor = React.memo(({
   */
 
   // Status Text
-  const statusText = saveStatus === 'saved' ? 'Saved' : (saveStatus === 'saving' ? 'Saving...' : 'Offline');
+  // Status Text
+  let statusText = '';
+  if (saveStatus === 'saved') {
+    statusText = 'Saved';
+  } else if (saveStatus === 'saving') {
+    statusText = 'Saving...';
+  } else {
+    // Offline state
+    // [FIX] Don't show "Offline" during initialization or connecting
+    if (!isLoading && status !== 'connecting' && status !== 'reconnecting') {
+      statusText = 'Offline';
+    }
+  }
 
   return (
     <div className="note-editor-container">
@@ -499,15 +512,7 @@ const NoteEditor = React.memo(({
         })() ? (
           <>
             {!isEditorReady && (
-              <div className="editor-content-shell" style={{
-                width: '100%',
-                maxWidth: '850px',
-                margin: '0 auto',
-                padding: '0 3rem',
-                paddingTop: '3rem', // Match editor-title-section vertical alignment
-                display: 'flex',
-                flexDirection: 'column',
-              }}>
+              <div className="editor-content-shell">
                 {/* [FIX] Unify skeleton style with initial load state */}
                 <div style={{ height: '20px', width: '100%', backgroundColor: 'rgba(0,0,0,0.03)', marginBottom: '0.8rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
                 <div style={{ height: '20px', width: '92%', backgroundColor: 'rgba(0,0,0,0.03)', marginBottom: '0.8rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
@@ -536,15 +541,7 @@ const NoteEditor = React.memo(({
         ) : (
           // [FIX] Show Skeleton during initial Sync/Load instead of Spinner or "Initializing..." text
           // This fixes the "Gray Bar" glitch by making the loading state look like the editor
-          <div className="editor-content-shell" style={{
-            width: '100%',
-            maxWidth: '850px',
-            margin: '0 auto',
-            padding: '0 3rem',
-            paddingTop: '3rem', // Match editor-title-section vertical alignment
-            display: 'flex',
-            flexDirection: 'column',
-          }}>
+          <div className="editor-content-shell">
             {/* [FIX] Removed duplicate title block to prevent layout shift */}
             <div style={{ height: '20px', width: '100%', backgroundColor: 'rgba(0,0,0,0.03)', marginBottom: '0.8rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
             <div style={{ height: '20px', width: '92%', backgroundColor: 'rgba(0,0,0,0.03)', marginBottom: '0.8rem', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />

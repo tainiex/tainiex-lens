@@ -18,7 +18,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (manager.engine && manager.engine.readyState === 'open') {
             return { status: 'connected' };
         }
-        return { status: 'disconnected' };
+        // [FIX] Default to 'connecting' instead of 'disconnected' to prevent red flash
+        return { status: 'connecting' };
     });
 
     useEffect(() => {
