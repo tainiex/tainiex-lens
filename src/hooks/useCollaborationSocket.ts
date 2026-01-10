@@ -349,6 +349,10 @@ export function useCollaborationSocket(
    */
   const joinNote = useCallback((noteIdToJoin: string) => {
     logger.debug('[CollabSocket] Joining note:', noteIdToJoin);
+
+    // [FIX] Reset sync state and update current note ID
+    syncedNoteIdRef.current = null;
+    currentNoteIdRef.current = noteIdToJoin;
     pendingUpdatesQueueRef.current = [];
 
     if (socketRef.current?.connected) {

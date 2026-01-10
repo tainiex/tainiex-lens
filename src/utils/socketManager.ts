@@ -179,8 +179,20 @@ function setupManagerEvents(manager: Manager) {
  * Refresh access token and reconnect
  * 刷新访问 token 并重连
  */
+let isRefreshing = false;
+
+/**
+ * Refresh access token and reconnect
+ * 刷新访问 token 并重连
+ */
 export async function refreshAndReconnect(): Promise<boolean> {
+    if (isRefreshing) {
+        logger.debug('[SocketManager] Refresh already in progress, skipping duplicate call.');
+        return false;
+    }
+
     try {
+        isRefreshing = true;
         // [REF] Simplified logic: Delegate entirely to apiClient
         // apiClient handles deduplication of refresh requests.
         logger.debug('[SocketManager] Delegating auth check toApiClient...');
@@ -212,6 +224,8 @@ export async function refreshAndReconnect(): Promise<boolean> {
     } catch (err) {
         logger.error('[SocketManager] Failed to refresh/reconnect:', err);
         return false;
+    } finally {
+        isRefreshing = false;
     }
 }
 
