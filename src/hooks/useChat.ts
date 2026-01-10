@@ -148,7 +148,7 @@ export function useChat({
       // The new component will init with optimisticMessages passed via navigation state.
       // If we did NOT navigate (or reused component), this updates the current state correctly.
       setMessages(prev => [
-        ...prev.filter(m => m.id !== 'welcome' && !m.id?.startsWith('temp_')),
+        ...prev.filter(m => m.id !== 'welcome'),
         ...optimisticMessages
       ]);
 

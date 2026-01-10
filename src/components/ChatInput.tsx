@@ -41,7 +41,8 @@ const ChatInput = ({ onSend, isConnected, scrollToBottom, models, selectedModel,
     const isMobile = window.innerWidth <= 768;
 
     if (e.key === 'Enter' && !e.shiftKey) {
-      if (isComposing || isMobile) {
+      if (isComposing || isMobile || isLoading) {
+        if (isLoading) e.preventDefault(); // Prevent newline insertion if we just want to block send
         return;
       }
       e.preventDefault();
@@ -74,7 +75,8 @@ const ChatInput = ({ onSend, isConnected, scrollToBottom, models, selectedModel,
           onFocus={() => {
             setTimeout(() => scrollToBottom(), 100);
           }}
-          disabled={isLoading}
+          disabled={false} // [FIX] Allow typing while loading
+          autoFocus
           style={{ width: '100%', marginBottom: '8px' }}
         />
         <div className="input-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>

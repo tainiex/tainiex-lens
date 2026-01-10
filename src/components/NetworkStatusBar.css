@@ -73,20 +73,20 @@
 /* States Containers - Backgrounds */
 /* We can enable subtle background for visibility or keep it transparent */
 .network-status-indicator-global.disconnected {
-  background: rgba(231, 76, 60, 0.1);
+  background: transparent;
 }
 
 .network-status-indicator-global.failed {
-  background: rgba(231, 76, 60, 0.1);
+  background: transparent;
   color: #e74c3c;
 }
 
 .network-status-indicator-global.connecting {
-  background: rgba(241, 196, 15, 0.1);
+  background: transparent;
 }
 
 .network-status-indicator-global.reconnecting {
-  background: rgba(241, 196, 15, 0.1);
+  background: transparent;
 }
 
 .network-status-indicator-global.connected {
@@ -110,7 +110,7 @@
 
   70% {
     transform: scale(1);
-    box-shadow: 0 0 0 3px rgba(46, 204, 113, 0);
+    box-shadow: 0 0 0 1.25px rgba(46, 204, 113, 0);
   }
 
   100% {
@@ -127,7 +127,7 @@
 
   70% {
     transform: scale(1);
-    box-shadow: 0 0 0 3px rgba(241, 196, 15, 0);
+    box-shadow: 0 0 0 1.25px rgba(241, 196, 15, 0);
   }
 
   100% {

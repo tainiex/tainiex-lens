@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useOutletContext, useLocation } from 'react-router-dom';
 import ChatInterface from '../components/ChatInterface';
 import { AppLayoutContextType } from '../layouts/AppLayout';
@@ -50,11 +50,24 @@ const AppDashboard = () => {
     const skipFetch = (location.state as any)?.skipFetch || false;
     const initialMessages = (location.state as any)?.initialMessages;
 
-    // [FIX] Memoize handlers to prevent ChatInterface re-render when Sidebar opens
+    // [FIX] Memoize handlers to prevent ChatInterface re-render
     const handleMenuClick = useCallback(() => setIsSidebarOpen(true), [setIsSidebarOpen]);
+
+    // [FIX] Debounce session refresh to prevent sidebar flicker on rapid updates
+    const refreshTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
     const handleSessionUpdate = useCallback((title?: string) => {
-        refreshSessions();
+        if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = setTimeout(() => {
+            refreshSessions();
+        }, 2000); // 2 second debounce
     }, [refreshSessions]);
+
+    // Clean up timeout
+    useEffect(() => {
+        return () => {
+            if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+        };
+    }, []);
 
     // Note: ChatInterface should be React.memo-ized in its own file
     return (
