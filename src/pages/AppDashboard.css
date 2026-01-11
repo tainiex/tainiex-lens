@@ -285,7 +285,16 @@
 }
 
 .chat-input::-webkit-scrollbar {
-    display: none;
+    width: 4px;
+}
+
+.chat-input::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-input::-webkit-scrollbar-thumb {
+    background: var(--bg-hover);
+    border-radius: 4px;
 }
 
 .input-actions {

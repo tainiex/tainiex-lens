@@ -6,7 +6,7 @@ Tainiex Lens is the frontend interface for the Tainiex AI Memory & Knowledge Inf
 
 - **Authentication**: Secure login via Google & Microsoft OAuth with backend verification and cookie-based session management.
 - **Adaptive Dashboard**: A responsive, full-height adaptive interface that eliminates unnecessary scrollbars.
-- **Chat & Collaboration**: Real-time chat (via `/api/chat`) and shared notes (via `/api/collaboration`) using a single multiplexed WebSocket connection. Features robust auto-reconnection, centralized authentication handling, and optimized mobile sleep/wake behavior.
+- **Chat & Collaboration**: Real-time chat (via `/api/chat`) and shared notes (via `/api/collaboration`) using a single multiplexed WebSocket connection. Features robust auto-reconnection, centralized authentication handling, and optimized mobile sleep/wake behavior. Powered by a **YDocManager** service architecture to ensure strict data integrity and offline-graceful handling.
 - **Rich Content Rendering**: Advanced support for Markdown (GFM), LaTeX mathematical formulas (via KaTeX), and Mermaid DSL diagrams.
 - **Context Panel**: Sidebar panel for displaying relevant context and memories.
 - **Efficient Layout**: Sticky footer design ensuring content fills the screen gracefully on all devices.

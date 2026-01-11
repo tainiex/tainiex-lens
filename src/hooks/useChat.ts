@@ -98,7 +98,7 @@ export function useChat({
       });
   }, []);
 
-  const handleSend = useCallback(async (inputValue: string) => {
+  const handleSend = useCallback(async (inputValue: string, parentId?: string) => {
     if (!inputValue.trim()) return;
 
     // Reset scroll lock when sending a new message to follow the new response
@@ -114,13 +114,15 @@ export function useChat({
       const userMessage: Partial<IChatMessage> = {
         id: `temp_${Date.now()}`,
         role: ChatRole.USER,
-        content: msgToSend
+        content: msgToSend,
+        parentId // Store parentId locally for complete history structure if needed
       };
       const assistantMsgId = `temp_ai_${Date.now()}`;
       const assistantMessage: Partial<IChatMessage> = {
         id: assistantMsgId,
         role: ChatRole.ASSISTANT,
-        content: ''
+        content: '',
+        parentId: userMessage.id // Assistant message is child of user message
       };
       const optimisticMessages = [userMessage, assistantMessage];
 
@@ -157,7 +159,8 @@ export function useChat({
       await wsSendMessage({
         sessionId: sessionId!,
         content: msgToSend,
-        model: selectedModel
+        model: selectedModel,
+        parentId // Pass optional parentId to backend
       });
 
     } catch (error) {

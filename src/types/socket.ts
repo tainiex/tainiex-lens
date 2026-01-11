@@ -13,6 +13,7 @@ export const ChatSendPayloadSchema: z.ZodType<ChatSendPayload> = z.object({
   sessionId: z.string(),
   content: z.string(),
   model: z.string().optional(),
+  parentId: z.string().optional(),
   role: z.any().optional(), // Role is optional enum, allow any compatible value for validation
   // Shared interface: { sessionId, content, role?, model? }
   // My previous code added timestamp. Shared doesn't have it. I should make it optional or remove if strict.

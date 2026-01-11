@@ -76,6 +76,14 @@
 - **Authentication**: Automatically handles authentication errors by triggering token refresh via `apiClient.ensureAuth()` with a retry mechanism and backoff. Auth refresh is handled at the Manager level to recover all namespace sockets simultaneously.
 - **Mobile Optimization**: Socket.IO timeout increased to 30s. All connection errors are captured to Sentry. Long-sleep reconnect (>60s background) triggers an immediate full reconnection via the Manager.
 
+### Collaboration Architecture (Y.js)
+- **Architecture**: Service-based singleton pattern (`YDocManager`) decoupled from React lifecycle.
+- **Data Persistence**: 
+    - Y.Doc instances are cached in memory (LRU-like behavior via Map) and **not destroyed** on component unmount, ensuring instant note switching and preventing data loss for in-flight updates.
+    - **Strict Gating**: Local updates are blocked (`syncedOnce` flag) until the initial server sync is fully applied.
+- **Data Integrity**: 
+    - **Routing**: Updates are routed strictly by `payload.noteId`, decoupling them from the currently active React component to prevent cross-talk.
+    - **Weak Network**: `useYjsDocument` exposes `isSynced` state. The Editor strictly waits for `hasData || isSynced` before mounting Tiptap, preventing "blank line" insertion race conditions on slow connections.
 
 ### Testing
 - **Framework**: Vitest + React Testing Library

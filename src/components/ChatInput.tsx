@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import ModelSelector from './ModelSelector';
 import { useChatContext } from '../contexts/ChatContext';
 
@@ -35,6 +35,11 @@ const ChatInput = ({ onSend, isConnected, scrollToBottom, models, selectedModel,
     onSend(inputValue);
     setInputValue('');
     localStorage.removeItem('chat_input_draft');
+
+    // Reset height explicitly
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -51,11 +56,22 @@ const ChatInput = ({ onSend, isConnected, scrollToBottom, models, selectedModel,
   };
 
   // Auto-resize textarea height
-  useEffect(() => {
+  useLayoutEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
+      // Reset height to auto to get the correct scrollHeight
       textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+
+      // Calculate new height
+      // Line height is approx 24px (1.5 * 16px)
+      // Max height for ~6 lines is around 144px + padding
+      const maxHeight = 150;
+      const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+
+      textarea.style.height = `${newHeight}px`;
+
+      // Show scrollbar if we hit the limit
+      textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
     }
   }, [inputValue]);
 
@@ -77,7 +93,7 @@ const ChatInput = ({ onSend, isConnected, scrollToBottom, models, selectedModel,
           }}
           disabled={false} // [FIX] Allow typing while loading
           autoFocus
-          style={{ width: '100%', marginBottom: '8px' }}
+          style={{ width: '100%', marginBottom: '8px', flex: 'none', resize: 'none' }}
         />
         <div className="input-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <div className="model-selector-wrapper">
