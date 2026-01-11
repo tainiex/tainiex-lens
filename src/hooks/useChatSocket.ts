@@ -3,8 +3,7 @@ import { Socket } from 'socket.io-client';
 import * as Sentry from "@sentry/react";
 import { ErrorHandler, ApiError } from '../utils/errorHandler';
 import { logger } from '../utils/logger';
-import { apiClient } from '../utils/apiClient';
-import { getNamespaceSocket, refreshAndReconnect } from '../utils/socketManager';
+import { socketService } from '../services/SocketService';
 
 interface ConnectionState {
     status: 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
@@ -13,11 +12,13 @@ interface ConnectionState {
 }
 
 export function useChatSocket() {
-    const socketRef = useRef<Socket | null>(null);
+    // We don't manage the socket instance anymore, the Service does.
+    // But we need a local reference to return to consumers who might use it directly.
+    const [socket, setSocket] = useState<Socket | null>(null);
+
     const attemptRef = useRef(0);
     const lastReconnectTimeRef = useRef(0);
-    const isConnectedRef = useRef(false); // To track if the socket was connected before a server disconnect
-    const isInitializedRef = useRef(false); // Track if socket has been initialized
+    const isConnectedRef = useRef(false);
 
     const [connectionState, setConnectionState] = useState<ConnectionState>({
         status: 'disconnected',
@@ -25,22 +26,13 @@ export function useChatSocket() {
     });
     const [error, setError] = useState<string | null>(null);
 
-    const maxReconnectAttempts = Infinity;
-
-    /**
-     * Show connection error notification (Disabled per user request - subtle UI only)
-     */
-    const showConnectionError = useCallback((error: ApiError, attempt: number) => {
-        logger.warn('Connection error (silent):', error.message, 'Attempt:', attempt);
-    }, []);
-
     /**
      * Handle connection state changes
      */
     const updateConnectionState = useCallback((status: ConnectionState['status'], attempt: number = 0, error?: ApiError) => {
         attemptRef.current = attempt;
         setConnectionState({ status, attempt, lastError: error });
-        isConnectedRef.current = status === 'connected'; // Update isConnectedRef
+        isConnectedRef.current = status === 'connected';
 
         if (error) {
             setError(error.message);
@@ -49,158 +41,62 @@ export function useChatSocket() {
         }
     }, []);
 
-
-
     /**
-     * 设置 Socket 连接使用共享 Manager
+     * Attach listeners to the shared socket
      */
-    const setupSocket = useCallback(async () => {
-        // Ensure any existing socket is fully cleaned up before creating a new one
-        if (socketRef.current) {
-            logger.debug('[ChatSocket] Cleaning up existing socket before new setup...');
-            socketRef.current.removeAllListeners();
-            socketRef.current = null;
-        }
+    useEffect(() => {
+        let activeSocket: Socket | null = null;
+        let unsubscribeService: (() => void) | null = null;
 
-        logger.debug('[ChatSocket] Getting namespace socket from Manager');
-        // Get namespace socket from shared Manager
-        const socket = getNamespaceSocket('/api/chat');
+        const initSocket = async () => {
+            // Ensure service is connected (or connecting)
+            await socketService.connect();
+            activeSocket = socketService.getSocket();
 
-        // [FIX] Ensure auth is valid before connecting
-        logger.debug('[ChatSocket] Checking authentication...');
-        const authReady = await apiClient.ensureAuth();
-        if (!authReady) {
-            logger.warn('[ChatSocket] Auth check failed, not connecting');
-            updateConnectionState('failed', 0);
-            socketRef.current = socket;
-            return socket;
-        }
-        logger.debug('[ChatSocket] Auth check passed');
-
-        // Check if socket is already connected immediately
-        if (socket.connected) {
-            logger.debug('[ChatSocket] Socket already connected, socket ID:', socket.id);
-            updateConnectionState('connected', 0);
-        } else {
-            updateConnectionState('connecting');
-            // [FIX] Manually connect after auth is ready
-            logger.debug('[ChatSocket] Manually connecting socket...');
-            socket.connect();
-        }
-
-        socket.on('connect', () => {
-            logger.debug('[ChatSocket] Connected successfully, socket ID:', socket.id);
-            Sentry.addBreadcrumb({
-                category: 'websocket.chat',
-                message: 'Connected',
-                data: { socketId: socket.id },
-                level: 'info'
-            });
-            updateConnectionState('connected', 0);
-            attemptRef.current = 0;
-        });
-
-        socket.on('disconnect', (reason) => {
-            logger.log('[ChatSocket] Disconnected:', reason);
-            Sentry.addBreadcrumb({
-                category: 'websocket.chat',
-                message: 'Disconnected',
-                data: { reason },
-                level: 'warning'
-            });
-
-            if (reason === 'io server disconnect') {
-                updateConnectionState('disconnected', 0);
-                logger.warn('[ChatSocket] Socket disconnected by server, attempting auth refresh...');
-                refreshAndReconnect().then((success) => {
-                    if (success) {
-                        logger.log('[ChatSocket] Auth restored, socket will auto-reconnect');
-                    }
-                }).catch(err => logger.error('[ChatSocket] Auth refresh error:', err));
-            } else if (reason === 'io client disconnect') {
-                updateConnectionState('disconnected', 0);
-            } else {
-                updateConnectionState('reconnecting', attemptRef.current);
-            }
-        });
-
-        socket.on('connect_error', async (err) => {
-            // Only log as error if it's genuinely stuck or critical
-            if (attemptRef.current < 2) {
-                logger.debug('[ChatSocket] Connection attempt:', err.message);
-            } else if (attemptRef.current === maxReconnectAttempts) {
-                logger.error('[ChatSocket] Connection failed permanently:', err.message);
-            } else {
-                logger.warn('[ChatSocket] Connection retrying:', err.message);
-            }
-
-            // Capture all connection errors to Sentry for debugging
-            Sentry.captureException(err, {
-                tags: {
-                    type: 'websocket_chat_connect_error',
-                    attempt: attemptRef.current
-                }
-            });
-
-            const isAuthError = err.message.includes('Authentication error') ||
-                err.message.includes('Unauthorized') ||
-                err.message.includes('401') ||
-                err.message === 'xhr poll error';
-
-            if (isAuthError) {
-                logger.warn('[ChatSocket] Auth error detected, delegating to Manager...');
-                Sentry.addBreadcrumb({
-                    category: 'websocket.chat',
-                    message: 'Auth error',
-                    data: { message: err.message },
-                    level: 'warning'
-                });
-                // Delegate to Manager's refreshAndReconnect
-                refreshAndReconnect();
+            if (!activeSocket) {
+                logger.warn('[useChatSocket] Failed to get socket from service');
+                updateConnectionState('failed');
                 return;
             }
 
-            const apiError = ErrorHandler.parseError(new Error(err.message), 'WebSocket connection');
-            const newAttempt = attemptRef.current + 1;
-            updateConnectionState(newAttempt > maxReconnectAttempts ? 'failed' : 'reconnecting', newAttempt, apiError);
-            showConnectionError(apiError, newAttempt);
-        });
+            setSocket(activeSocket);
 
-        socket.on('reconnect_attempt', (attempt) => {
-            logger.debug('[ChatSocket] Reconnection attempt:', attempt);
-            Sentry.addBreadcrumb({
-                category: 'websocket.chat',
-                message: 'Reconnection attempt',
-                data: { attempt },
-                level: 'info'
+            // [FIX] Subscribe to SocketService global state to ensure UI sync
+            unsubscribeService = socketService.subscribe((isConnected) => {
+                updateConnectionState(isConnected ? 'connected' : 'disconnected');
             });
-            updateConnectionState('reconnecting', attempt);
-        });
 
-        socket.on('reconnect_failed', () => {
-            logger.error('[ChatSocket] Reconnection failed after maximum attempts');
-            Sentry.addBreadcrumb({
-                category: 'websocket.chat',
-                message: 'Reconnection failed',
-                level: 'error'
+            // Define Handlers for detailed errors only (optional)
+            const onConnectError = (err: Error) => {
+                logger.warn(`[useChatSocket] Connect error: ${err.message}`);
+                // activeSocket will emit connect_error, but Service will handle retry.
+                // We show 'reconnecting' state.
+                updateConnectionState('reconnecting', attemptRef.current + 1);
+            };
+
+            // Attach Listeners
+            // We rely on Service Subscription for Connect/Disconnect state now.
+            // But we keep connect_error for granular feedback if needed.
+            activeSocket.on('connect_error', onConnectError);
+
+            // Cleanup function for this effect
+            return () => {
+                if (unsubscribeService) unsubscribeService();
+                if (activeSocket) {
+                    activeSocket.off('connect_error', onConnectError);
+                }
+            };
+        };
+
+        const cleanupPromise = initSocket();
+
+        return () => {
+            cleanupPromise.then((cleanup) => {
+                if (cleanup) cleanup();
             });
-            const apiError = ErrorHandler.parseError(new Error('Reconnection failed'), 'WebSocket reconnection');
-            updateConnectionState('failed', maxReconnectAttempts, apiError);
-        });
+        };
+    }, [updateConnectionState]);
 
-        socket.on('reconnect_error', (err) => {
-            logger.error('[ChatSocket] Reconnection error:', err.message);
-            Sentry.addBreadcrumb({
-                category: 'websocket.chat',
-                message: 'Reconnection error',
-                data: { error: err.message },
-                level: 'warning'
-            });
-        });
-
-        socketRef.current = socket;
-        return socket;
-    }, [updateConnectionState, showConnectionError]);
 
     /**
      * Manual reconnect
@@ -208,57 +104,20 @@ export function useChatSocket() {
     const reconnect = useCallback(() => {
         const now = Date.now();
         if (now - lastReconnectTimeRef.current < 2000) {
-            logger.log('[ChatSocket] Reconnection throttled...');
+            logger.log('[useChatSocket] Reconnection throttled...');
             return;
         }
         lastReconnectTimeRef.current = now;
 
-        logger.log('[ChatSocket] Executing manual reconnect...');
-        Sentry.addBreadcrumb({
-            category: 'websocket.chat',
-            message: 'Manual reconnect',
-            level: 'info'
-        });
-
-        // Reset state
         updateConnectionState('connecting', 0);
-
-        // Reconnect socket
-        if (socketRef.current) {
-            socketRef.current.connect();
-        } else {
-            setupSocket();
-        }
-    }, [updateConnectionState, setupSocket]);
-
-    useEffect(() => {
-        // If socket already exists and is connected, don't recreate
-        if (socketRef.current?.connected && isInitializedRef.current) {
-            logger.debug('[ChatSocket] Socket already initialized and connected, skipping setup');
-            updateConnectionState('connected', 0);
-            return;
-        }
-
-        // Only setup if not initialized or socket is disconnected
-        if (!isInitializedRef.current || !socketRef.current) {
-            setupSocket();
-            isInitializedRef.current = true;
-        }
-
-        return () => {
-            // Clean up listeners when component unmounts
-            if (socketRef.current) {
-                socketRef.current.removeAllListeners();
-                // Don't disconnect here - let Manager handle it
-                socketRef.current = null;
-            }
-            // Reset initialization flag on unmount
-            isInitializedRef.current = false;
-        };
-    }, [setupSocket, updateConnectionState]);
+        socketService.disconnect();
+        setTimeout(() => {
+            socketService.connect();
+        }, 500);
+    }, [updateConnectionState]);
 
     return {
-        socket: socketRef.current,
+        socket,
         isConnected: connectionState.status === 'connected',
         connectionState,
         error,

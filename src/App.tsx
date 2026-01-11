@@ -15,16 +15,26 @@ import './App.css';
 function App() {
   // Initialize global lifecycle listeners for shared Socket.IO Manager
   useEffect(() => {
-    const cleanup = initializeGlobalListeners();
+    // Start global socket connection
+    import('./services/SocketService').then(({ socketService }) => {
+      socketService.connect();
+    });
 
-    // Cleanup on app unmount
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        import('./services/SocketService').then(({ socketService }) => {
+          socketService.connect(); // Reconnect if needed
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
-      cleanup();
-      // [FIX] Do NOT disconnect all sockets here.
-      // In React Strict Mode (Dev), this runs immediately after mount, killing the
-      // new connection established by child components.
-      // The browser handles socket cleanup on tab close.
-      // disconnectAllSockets(); 
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      import('./services/SocketService').then(({ socketService }) => {
+        socketService.disconnect();
+      });
     };
   }, []);
 
