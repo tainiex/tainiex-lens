@@ -1,0 +1,78 @@
+/* PageHeader.css */
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    padding: 0 3.5rem 0 1.5rem;
+    /* Right padding for global status indicator */
+    background-color: transparent;
+    border-bottom: 1px solid transparent;
+    /* Reserve space for border if needed */
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.header-start,
+.header-end {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.header-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 0 1rem;
+    min-width: 0;
+}
+
+/* Standard Header Icon Button */
+.header-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    /* Standard touch target size */
+    height: 32px;
+    border: 1px solid transparent;
+    /* Consistent border box */
+    background: transparent;
+    color: var(--text-tertiary);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.header-icon-btn:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-secondary);
+}
+
+.header-icon-btn:active {
+    background-color: var(--bg-active);
+}
+
+/* Mobile Responsive Adjustments */
+/* Hide mobile menu button by default (desktop) */
+.mobile-menu-btn {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        padding: 0 3.5rem 0 1rem;
+        /* Slightly less left padding on mobile */
+    }
+
+    /* Show mobile menu button on small screens */
+    .mobile-menu-btn {
+        display: flex;
+    }
+}

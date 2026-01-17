@@ -1,0 +1,174 @@
+diff --git a/node_modules/@tiptap/react/dist/index.cjs b/node_modules/@tiptap/react/dist/index.cjs
+index 7815e60..b754dd2 100644
+--- a/node_modules/@tiptap/react/dist/index.cjs
++++ b/node_modules/@tiptap/react/dist/index.cjs
+@@ -200,10 +200,12 @@ var PureEditorContent = class extends import_react.default.Component {
+   }
+   render() {
+     const { editor, innerRef, ...rest } = this.props;
+-    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
++    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, {
++      children: [
+       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { ref: mergeRefs(innerRef, this.editorContentRef), ...rest }),
+-      (editor == null ? void 0 : editor.contentComponent) && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portals, { contentComponent: editor.contentComponent })
+-    ] });
++        (editor == null ? void 0 : editor.contentComponent) && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portals, { contentComponent: editor.contentComponent })
++      ]
++    });
+   }
+ };
+ var EditorContentWithKey = (0, import_react.forwardRef)(
+@@ -599,12 +601,14 @@ function EditorProvider({
+   if (!editor) {
+     return null;
+   }
+-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(EditorContext.Provider, { value: contextValue, children: [
+-    slotBefore,
+-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(EditorConsumer, { children: ({ editor: currentEditor }) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(EditorContent, { editor: currentEditor, ...editorContainerProps }) }),
+-    children,
+-    slotAfter
+-  ] });
++  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(EditorContext.Provider, {
++    value: contextValue, children: [
++      slotBefore,
++    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(EditorConsumer, { children: ({ editor: currentEditor }) => /* @__PURE__ */(0, import_jsx_runtime2.jsx)(EditorContent, { editor: currentEditor, ...editorContainerProps }) }),
++      children,
++      slotAfter
++    ]
++  });
+ }
+ 
+ // src/useReactNodeView.ts
+@@ -732,8 +736,13 @@ var ReactRenderer = class {
+       this.element.classList.add(...className.split(" "));
+     }
+     if (this.editor.isInitialized) {
+-      (0, import_react_dom2.flushSync)(() => {
+-        this.render();
++      queueMicrotask(() => {
++        if (this.destroyed) {
++          return;
++        }
++        (0, import_react_dom2.flushSync)(() => {
++          this.render();
++        });
+       });
+     } else {
+       queueMicrotask(() => {
+diff --git a/node_modules/@tiptap/react/dist/index.js b/node_modules/@tiptap/react/dist/index.js
+index 41ce8e9..e8325e5 100644
+--- a/node_modules/@tiptap/react/dist/index.js
++++ b/node_modules/@tiptap/react/dist/index.js
+@@ -144,10 +144,12 @@ var PureEditorContent = class extends React.Component {
+   }
+   render() {
+     const { editor, innerRef, ...rest } = this.props;
+-    return /* @__PURE__ */ jsxs(Fragment, { children: [
++    return /* @__PURE__ */ jsxs(Fragment, {
++      children: [
+       /* @__PURE__ */ jsx("div", { ref: mergeRefs(innerRef, this.editorContentRef), ...rest }),
+-      (editor == null ? void 0 : editor.contentComponent) && /* @__PURE__ */ jsx(Portals, { contentComponent: editor.contentComponent })
+-    ] });
++        (editor == null ? void 0 : editor.contentComponent) && /* @__PURE__ */ jsx(Portals, { contentComponent: editor.contentComponent })
++      ]
++    });
+   }
+ };
+ var EditorContentWithKey = forwardRef(
+@@ -543,12 +545,14 @@ function EditorProvider({
+   if (!editor) {
+     return null;
+   }
+-  return /* @__PURE__ */ jsxs2(EditorContext.Provider, { value: contextValue, children: [
+-    slotBefore,
++  return /* @__PURE__ */ jsxs2(EditorContext.Provider, {
++    value: contextValue, children: [
++      slotBefore,
+     /* @__PURE__ */ jsx2(EditorConsumer, { children: ({ editor: currentEditor }) => /* @__PURE__ */ jsx2(EditorContent, { editor: currentEditor, ...editorContainerProps }) }),
+-    children,
+-    slotAfter
+-  ] });
++      children,
++      slotAfter
++    ]
++  });
+ }
+ 
+ // src/useReactNodeView.ts
+@@ -575,18 +579,18 @@ function NodeViewContent({
+   return (
+     // @ts-ignore
+     /* @__PURE__ */ jsx3(
+-      Tag,
+-      {
+-        ...props,
+-        ref: nodeViewContentRef,
+-        "data-node-view-content": "",
+-        style: {
+-          whiteSpace: "pre-wrap",
+-          ...props.style
+-        },
+-        children: nodeViewContentChildren
+-      }
+-    )
++    Tag,
++    {
++      ...props,
++      ref: nodeViewContentRef,
++      "data-node-view-content": "",
++      style: {
++        whiteSpace: "pre-wrap",
++        ...props.style
++      },
++      children: nodeViewContentChildren
++    }
++  )
+   );
+ }
+ 
+@@ -599,18 +603,18 @@ var NodeViewWrapper = React3.forwardRef((props, ref) => {
+   return (
+     // @ts-ignore
+     /* @__PURE__ */ jsx4(
+-      Tag,
+-      {
+-        ...props,
+-        ref,
+-        "data-node-view-wrapper": "",
+-        onDragStart,
+-        style: {
+-          whiteSpace: "normal",
+-          ...props.style
+-        }
++    Tag,
++    {
++      ...props,
++      ref,
++      "data-node-view-wrapper": "",
++      onDragStart,
++      style: {
++        whiteSpace: "normal",
++        ...props.style
+       }
+-    )
++    }
++  )
+   );
+ });
+ 
+@@ -676,8 +680,13 @@ var ReactRenderer = class {
+       this.element.classList.add(...className.split(" "));
+     }
+     if (this.editor.isInitialized) {
+-      flushSync(() => {
+-        this.render();
++      queueMicrotask(() => {
++        if (this.destroyed) {
++          return;
++        }
++        flushSync(() => {
++          this.render();
++        });
+       });
+     } else {
+       queueMicrotask(() => {

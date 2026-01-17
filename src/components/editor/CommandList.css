@@ -1,0 +1,149 @@
+.slash-command-menu {
+    background: var(--bg-tertiary);
+    /* Fallback */
+    background: rgba(255, 255, 255, 0.95);
+    /* Light mode translucent */
+    border: 1px solid var(--border-primary);
+    border-radius: 12px;
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06),
+        0 12px 24px -4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem;
+    width: 300px;
+    max-height: 320px;
+    overflow-y: auto;
+    z-index: 9999;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    animation: slashMenuFadeIn 0.15s ease-out;
+}
+
+/* Dark mode override if variables support it, or rely on var(--bg-tertiary) being correct */
+@media (prefers-color-scheme: dark) {
+    .slash-command-menu {
+        background: rgba(30, 30, 30, 0.95);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+}
+
+/* Modern Scrollbar */
+.slash-command-menu::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.slash-command-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.slash-command-menu::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+.slash-command-menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode scrollbar */
+@media (prefers-color-scheme: dark) {
+    .slash-command-menu::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .slash-command-menu::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+}
+
+.slash-command-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    /* Slightly more rounded */
+    cursor: pointer;
+    text-align: left;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    transition: all 0.1s ease;
+    margin-bottom: 2px;
+}
+
+.slash-command-item.is-selected,
+.slash-command-item:hover {
+    background: var(--bg-hover);
+    /* Ensure this var exists, or use rgba */
+    background: rgba(0, 0, 0, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+
+    .slash-command-item.is-selected,
+    .slash-command-item:hover {
+        background: rgba(255, 255, 255, 0.08);
+    }
+}
+
+.slash-command-item .item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    /* Slightly larger */
+    height: 28px;
+    border: 1px solid var(--border-secondary);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.slash-command-item .item-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.slash-command-item .item-title {
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.slash-command-item .item-desc {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.8;
+}
+
+.slash-command-empty {
+    padding: 1rem;
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 0.9rem;
+}
+
+@keyframes slashMenuFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}

@@ -1,0 +1,238 @@
+.code-block-wrapper {
+    background: #0d1117;
+    /* GitHub Dark Dimmed */
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    margin: 1.5rem 0;
+    /* overflow: hidden; Removed to allow dropdown to overflow */
+    position: relative;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.code-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    background: #161b22;
+    padding: 0.25rem 0.5rem;
+    gap: 0.5rem;
+    /* Add spacing between items */
+    border-bottom: 1px solid #30363d;
+    position: relative;
+    border-top-left-radius: 7px;
+    /* Match wrapper border-radius - 1px border */
+    border-top-right-radius: 7px;
+}
+
+.code-block-lang-container {
+    position: relative;
+    z-index: 10;
+}
+
+.code-block-lang-trigger {
+    appearance: none;
+    background: transparent;
+    border: none;
+    color: #c9d1d9;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s;
+}
+
+.code-block-lang-trigger:hover,
+.code-block-lang-trigger.is-open {
+    background-color: #21262d;
+}
+
+.code-block-lang-trigger .chevron-icon {
+    opacity: 0.6;
+    transition: transform 0.2s;
+}
+
+.code-block-lang-trigger.is-open .chevron-icon {
+    transform: rotate(180deg);
+}
+
+.code-block-lang-dropdown {
+    position: absolute;
+    top: 100%;
+    /* right: 0; Previous alignment */
+    left: 0;
+    /* Align left edge to trigger, expand right */
+    margin-top: 4px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    min-width: 150px;
+    /* Use min-width instead of fixed width */
+    width: max-content;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 4px;
+    z-index: 100;
+}
+
+/* ... scrollbar styles ... */
+
+.code-block-actions {
+    margin-left: auto;
+    /* Push copy button to right */
+    display: flex;
+    gap: 0.25rem;
+}
+
+/* Custom Scrollbar for Dropdown */
+.code-block-lang-dropdown::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.code-block-lang-dropdown::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.code-block-lang-dropdown::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.code-block-lang-dropdown::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.lang-option {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    color: #c9d1d9;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.1s;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.lang-option:hover {
+    background-color: #30363d;
+}
+
+.lang-option.selected {
+    background-color: #238636;
+    color: white;
+}
+
+/* Merged into previous chunk */
+
+.copy-btn {
+    background: transparent;
+    border: none;
+    color: #8b949e;
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.copy-btn:hover {
+    background: #21262d;
+    color: #c9d1d9;
+}
+
+/* Highlight.js Theme Overrides for Tiptap structure */
+.code-block-wrapper pre {
+    margin: 0;
+    padding: 1rem;
+    overflow-x: auto;
+    background: transparent;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    border-bottom-left-radius: 7px;
+    border-bottom-right-radius: 7px;
+}
+
+.code-block-wrapper code {
+    background: transparent;
+    padding: 0;
+    color: #c9d1d9;
+    font-family: inherit;
+}
+
+/* Syntax Highlighting Colors (GitHub Dark) */
+.hljs-comment,
+.hljs-quote {
+    color: #8b949e;
+    font-style: italic;
+}
+
+.hljs-doctag,
+.hljs-keyword,
+.hljs-formula {
+    color: #ff7b72;
+}
+
+.hljs-section,
+.hljs-name,
+.hljs-selector-tag,
+.hljs-deletion,
+.hljs-subst {
+    color: #ff7b72;
+}
+
+.hljs-literal {
+    color: #79c0ff;
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-addition,
+.hljs-attribute,
+.hljs-meta .hljs-string {
+    color: #a5d6ff;
+}
+
+.hljs-attr,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-type,
+.hljs-selector-class,
+.hljs-selector-attr,
+.hljs-selector-pseudo,
+.hljs-number {
+    color: #79c0ff;
+}
+
+.hljs-symbol,
+.hljs-bullet,
+.hljs-link,
+.hljs-meta,
+.hljs-selector-id,
+.hljs-title {
+    color: #d2a8ff;
+}
+
+.hljs-built_in,
+.hljs-title.class_,
+.hljs-class .hljs-title {
+    color: #ffa657;
+}
+
+.hljs-emphasis {
+    font-style: italic;
+}
+
+.hljs-strong {
+    font-weight: bold;
+}
+
+.hljs-link {
+    text-decoration: underline;
+}

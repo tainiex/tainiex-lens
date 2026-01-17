@@ -1,0 +1,1327 @@
+/* NoteEditor.css */
+.note-editor-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: var(--bg-tertiary);
+    /* Removed border and radius as requested */
+    overflow: hidden;
+}
+
+.editor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-primary);
+    background-color: var(--bg-secondary);
+    flex-wrap: wrap;
+}
+
+.editor-toolbar button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.editor-toolbar button:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.editor-toolbar button.is-active {
+    background-color: var(--bg-active);
+    color: var(--accent-primary);
+}
+
+.editor-toolbar button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 24px;
+    background-color: var(--border-primary);
+    margin: 0 0.5rem;
+}
+
+
+
+/* Tiptap styles */
+.tiptap-editor-content {
+    outline: none;
+    min-height: 100%;
+}
+
+.tiptap-editor-content p.is-editor-empty:first-child::before {
+    color: var(--text-tertiary);
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+}
+
+.tiptap-editor-content h1 {
+    font-size: 2rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.2;
+}
+
+.tiptap-editor-content h2 {
+    font-size: 1.5rem;
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.tiptap-editor-content h3 {
+    font-size: 1.25rem;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.tiptap-editor-content p {
+    margin-bottom: 0.75rem;
+    line-height: 1.6;
+}
+
+.tiptap-editor-content ul,
+.tiptap-editor-content ol {
+    margin: 0.4rem 0;
+    padding-left: 1.5rem;
+}
+
+/* Task List Styles - FIXED: li elements do NOT have data-type="taskItem" */
+.tiptap-editor-content ul[data-type="taskList"] {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0.5rem 0 !important;
+}
+
+/* Nested task lists: align nested checkbox with parent text */
+.tiptap-editor-content ul[data-type="taskList"] li>div>ul[data-type="taskList"] {
+    padding-left: 0.2rem !important;
+    margin-top: 0.25rem !important;
+}
+
+/* Force horizontal layout on li (label and div are siblings) */
+.tiptap-editor-content ul[data-type="taskList"] li {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: 0.6rem !important;
+    margin-bottom: 0.25rem !important;
+}
+
+/* Label should be inline-flex and wrap checkbox tightly */
+.tiptap-editor-content ul[data-type="taskList"] li>label {
+    flex-shrink: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    padding-top: 0.2rem !important;
+    margin: 0 !important;
+    cursor: pointer;
+}
+
+/* Hide empty span after checkbox */
+.tiptap-editor-content ul[data-type="taskList"] li>label>span {
+    display: none !important;
+}
+
+/* Checkbox sizing */
+/* Image Styling */
+.tiptap-editor-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    display: block;
+    /* Ensure block behavior for handles */
+    margin: 1rem auto;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    /* Prepare for hover */
+}
+
+/* Item 4: Hover Effect */
+.tiptap-editor-content img:hover {
+    border-color: rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Item 2: Uploading State (Blob URLs) */
+.tiptap-editor-content img[src^="blob:"] {
+    opacity: 0.5;
+    filter: grayscale(1);
+    border-color: var(--primary-color, #007bff);
+    animation: image-beat 1.5s infinite;
+}
+
+@keyframes image-beat {
+    0% {
+        transform: scale(1);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: scale(0.98);
+        opacity: 0.7;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 0.5;
+    }
+}
+
+/* Item 1: Drop Cursor Styling */
+.tiptap-dropcursor {
+    background-color: var(--primary-color, #007bff) !important;
+    width: 2px !important;
+}
+
+.tiptap-editor-content ul[data-type="taskList"] li>label>input[type="checkbox"] {
+    flex-shrink: 0 !important;
+    margin: 0 !important;
+    cursor: pointer;
+    appearance: none;
+    background-color: transparent;
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 2px solid var(--text-tertiary);
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.2s;
+    display: block;
+}
+
+/* Content area - CRITICAL: must be flex item */
+.tiptap-editor-content ul[data-type="taskList"] li>div {
+    flex: 1 1 auto !important;
+    margin: 0 !important;
+    min-width: 0 !important;
+    /* DEBUG: uncomment to verify CSS is loading */
+    /* background: lightblue !important; */
+}
+
+/* ENSURE no conflicting display rules */
+.tiptap-editor-content ul[data-type="taskList"] li>div,
+.tiptap-editor-content ul[data-type="taskList"] li>label {
+    display: initial !important;
+    /* Reset any block display */
+}
+
+.tiptap-editor-content ul[data-type="taskList"] li>label {
+    display: inline-flex !important;
+    /* Reapply after reset */
+}
+
+/* Reset paragraph margins */
+.tiptap-editor-content ul[data-type="taskList"] li>div>p {
+    margin: 0 !important;
+    line-height: 1.5;
+}
+
+/* Hover state */
+.tiptap-editor-content ul[data-type="taskList"] li input[type="checkbox"]:hover {
+    border-color: var(--text-secondary);
+    background-color: var(--bg-hover);
+}
+
+
+.tiptap-editor-content ul[data-type="taskList"] li input[type="checkbox"]:checked {
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+
+.tiptap-editor-content ul[data-type="taskList"] li input[type="checkbox"]:checked::before {
+    content: '';
+    position: absolute;
+    width: 0.65rem;
+    height: 0.45rem;
+    border: 2px solid white;
+    border-top: none;
+    border-right: none;
+    transform: rotate(-45deg);
+    top: 0.2rem;
+    left: 0.2rem;
+}
+
+
+.tiptap-editor-content ul[data-type="taskList"] li[data-checked="true"]>div {
+    text-decoration: line-through;
+    color: var(--text-tertiary);
+    opacity: 0.8;
+    transition: all 0.2s;
+}
+
+.tiptap-editor-content li {
+    margin-bottom: 0.1rem;
+}
+
+.tiptap-editor-content code {
+    background-color: var(--bg-hover);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+/* Gapcursor */
+.tiptap-editor-content .ProseMirror-gapcursor {
+    display: none;
+    pointer-events: none;
+    position: absolute;
+}
+
+.tiptap-editor-content .ProseMirror-gapcursor:after {
+    content: "";
+    display: block;
+    position: absolute;
+    top: -2px;
+    width: 20px;
+    border-top: 1px solid var(--text-primary);
+    animation: ProseMirror-cursor-blink 1.1s steps(2, start) infinite;
+}
+
+@keyframes ProseMirror-cursor-blink {
+    to {
+        visibility: hidden;
+    }
+}
+
+.tiptap-editor-content .ProseMirror-focused .ProseMirror-gapcursor {
+    display: block;
+}
+
+.tiptap-editor-content pre {
+    background-color: var(--bg-primary);
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: monospace;
+    margin: 1rem 0;
+    border: 1px solid var(--border-primary);
+}
+
+.tiptap-editor-content pre code {
+    background-color: transparent;
+    padding: 0;
+}
+
+.tiptap-editor-content blockquote {
+    border-left: 3px solid var(--accent-primary);
+    margin: 1rem 0;
+    padding-left: 1rem;
+    color: var(--text-secondary);
+}
+
+.tiptap-editor-content table {
+    border-collapse: collapse;
+    width: auto;
+    min-width: 600px;
+    margin: 0;
+    font-size: 0.9rem;
+    border: 1px solid #a1a1aa;
+    table-layout: auto;
+}
+
+.tiptap-editor-content table p {
+    margin: 2px 0;
+    line-height: 1.4;
+}
+
+.tableWrapper {
+    overflow-x: auto;
+    margin: 0.5rem 0;
+    max-width: 100%;
+}
+
+.tiptap-editor-content th,
+.tiptap-editor-content td {
+    border: 1px solid #a1a1aa;
+    padding: 5px 8px;
+    line-height: 1.4;
+    text-align: left;
+    position: relative;
+    vertical-align: top;
+    word-break: keep-all;
+    /* Prevent CJK breaking */
+}
+
+.tiptap-editor-content th {
+    background-color: var(--bg-hover);
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    /* Keep headers single line */
+}
+
+/* Selected cells */
+.tiptap-editor-content .selectedCell:after {
+    z-index: 2;
+    position: absolute;
+    content: "";
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background: var(--accent-glow);
+    pointer-events: none;
+}
+
+.tiptap-editor-content .column-resize-handle {
+    position: absolute;
+    right: -2px;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: var(--accent-primary);
+    pointer-events: none;
+    cursor: col-resize;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.tiptap-editor-content th:hover .column-resize-handle,
+.tiptap-editor-content td:hover .column-resize-handle {
+    opacity: 1;
+}
+
+/* Prevent right-side resize handle from triggering horizontal scroll */
+.tiptap-editor-content th:last-child .column-resize-handle,
+.tiptap-editor-content td:last-child .column-resize-handle {
+    right: 0;
+}
+
+/* Bubble Menu Danger Action */
+.bubble-menu button.danger {
+    color: #ef4444;
+}
+
+.bubble-menu button.danger:hover {
+    background-color: #fee2e2;
+}
+
+.tiptap-editor-content hr {
+    border: none;
+    border-top: 1px solid var(--border-primary);
+    margin: 2rem 0;
+}
+
+/* Loading State */
+.editor-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    gap: 1rem;
+    color: var(--text-secondary);
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border-primary);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Toolbar Spacer */
+.toolbar-spacer {
+    flex: 1;
+}
+
+/* Presence Avatars */
+.presence-avatars {
+    display: flex;
+    align-items: center;
+    gap: -0.5rem;
+}
+
+.presence-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    border: 2px solid var(--bg-secondary);
+    margin-left: -8px;
+    transition: transform 0.2s;
+    cursor: default;
+}
+
+.presence-avatar:first-child {
+    margin-left: 0;
+}
+
+.presence-avatar:hover {
+    transform: scale(1.1);
+    z-index: 1;
+}
+
+.presence-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.presence-avatar.more {
+    background-color: var(--bg-hover);
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+}
+
+/* Sync Indicator - Used for internal saving status */
+.sync-indicator {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+.sync-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border-primary);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Syncing State */
+.editor-content-wrapper.syncing {
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+/* Collaboration Error */
+.collaboration-error {
+    position: absolute;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(231, 76, 60, 0.95);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+}
+
+.collaboration-error button {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.collaboration-error button:hover {
+    opacity: 1;
+}
+
+/* Mobile Menu Button */
+.mobile-menu-btn {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-btn {
+        display: block;
+    }
+}
+
+/* Debug Info (Dev Only) */
+.debug-info {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    font-family: monospace;
+    opacity: 0.6;
+}
+
+/* Bubble Menu (Floating) */
+.bubble-menu {
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-secondary);
+    padding: 0.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border-primary);
+    gap: 0.25rem;
+    animation: fadeIn 0.1s ease-out;
+}
+
+.bubble-menu button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 0.5rem;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.bubble-menu button:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.bubble-menu button.is-active {
+    background-color: var(--bg-active);
+    color: var(--accent-primary);
+}
+
+.bubble-menu-divider {
+    width: 1px;
+    height: 20px;
+    background-color: var(--border-primary);
+    margin: 0 0.25rem;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Position the container for absolute children */
+.note-editor-container {
+    position: relative;
+}
+
+/* Editor Header replaced by PageHeader */
+/* .editor-header removed */
+
+.breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-tertiary);
+    /* Flex 1 removed as resizing is handled by PageHeader.header-center */
+    width: 100%;
+    /* Fill center slot */
+    justify-content: flex-start;
+    /* Left align breadcrumbs */
+    overflow: hidden;
+}
+
+.breadcrumb-separator {
+    color: var(--text-quaternary);
+    flex-shrink: 0;
+}
+
+.breadcrumb-current {
+    color: var(--text-primary);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Hide breadcrumb prefix on mobile screens (matching 768px breakpoint) */
+@media (max-width: 768px) {
+    .breadcrumb-text {
+        display: block;
+        /* Show Private */
+    }
+
+    .breadcrumb-separator {
+        display: none;
+    }
+
+    .breadcrumb-current {
+        display: none;
+    }
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--accent-success);
+}
+
+.status-indicator.syncing .status-dot {
+    background-color: var(--accent-warning);
+}
+
+.header-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.header-icon-btn:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-secondary);
+}
+
+/* Editor Scroll Container */
+.editor-scroll-container {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Override existing wrapper to fit in scroll container */
+/* Override existing wrapper to fit in scroll container */
+.editor-content-wrapper {
+    flex: 1;
+    overflow-y: visible;
+    /* Let container handle scroll */
+    padding: 0 3rem 4rem 3rem;
+    /* Increased padding and bottom space */
+    width: 100%;
+    max-width: 850px;
+    margin: 0 auto;
+    /* Center the A4 page */
+    cursor: text;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure the actual editor instance inside wrapper takes full space */
+.editor-content-wrapper>div {
+    flex: 1;
+    width: 100%;
+}
+
+/* Title Section */
+.editor-title-section {
+    padding: 1.5rem 3rem 0 3rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 850px;
+    margin-left: auto;
+    margin-right: auto;
+    /* Center the A4 page */
+}
+
+
+
+.editor-title-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+    padding: 0;
+    resize: none;
+    outline: none;
+    font-family: inherit;
+    min-height: 1.2em;
+    overflow: hidden;
+    height: auto;
+}
+
+.editor-title-input::placeholder {
+    color: var(--text-quaternary);
+}
+
+/* Mobile adjustments to revert A4 style on small screens */
+@media (max-width: 768px) {
+    .editor-content-wrapper {
+        padding: 0 1.5rem 2rem 1.5rem;
+        max-width: 100%;
+    }
+
+    .editor-title-section {
+        padding: 1rem 1.5rem 0 1.5rem;
+        margin-bottom: 0.5rem;
+        max-width: 100%;
+    }
+}
+
+/* Override Toolbar to be cleaner/hidden if needed, or style it better */
+.editor-toolbar {
+    border-bottom: none;
+    padding: 0.5rem 5rem;
+    /* Align with text */
+    background-color: transparent;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    /* backdrop-filter: blur(8px); */
+}
+
+/* Traffic Light Connection Status */
+.connection-status-light {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+}
+
+.connection-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.connection-dot.connected {
+    background-color: #22c55e;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+}
+
+.connection-dot.connecting,
+.connection-dot.reconnecting {
+    background-color: #eab308;
+    animation: breathing 2s infinite ease-in-out;
+}
+
+.connection-dot.disconnected,
+.connection-dot.failed {
+    background-color: #ef4444;
+}
+
+@keyframes breathing {
+    0% {
+        opacity: 0.4;
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.2);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+        box-shadow: 0 0 10px 2px rgba(234, 179, 8, 0.4);
+    }
+
+    100% {
+        opacity: 0.4;
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.2);
+    }
+}
+
+
+.editor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-primary);
+    background-color: var(--bg-secondary);
+    flex-wrap: wrap;
+}
+
+.editor-toolbar button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.editor-toolbar button:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.editor-toolbar button.is-active {
+    background-color: var(--bg-active);
+    color: var(--accent-primary);
+}
+
+.editor-toolbar button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 24px;
+    background-color: var(--border-primary);
+    margin: 0 0.5rem;
+}
+
+
+
+/* Tiptap styles */
+.tiptap-editor-content {
+    outline: none;
+    min-height: 100%;
+    padding: 0 !important;
+}
+
+.tiptap-editor-content .ProseMirror {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.tiptap-editor-content p.is-editor-empty:first-child::before {
+    color: var(--text-tertiary);
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+}
+
+.tiptap-editor-content h1 {
+    font-size: 2rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.2;
+}
+
+.tiptap-editor-content h2 {
+    font-size: 1.5rem;
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.tiptap-editor-content h3 {
+    font-size: 1.25rem;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.tiptap-editor-content p {
+    margin-bottom: 0.75rem;
+    line-height: 1.6;
+}
+
+.tiptap-editor-content ul,
+.tiptap-editor-content ol {
+    margin: 0.75rem 0;
+    padding-left: 1.5rem;
+}
+
+.tiptap-editor-content li {
+    margin-bottom: 0.25rem;
+}
+
+.tiptap-editor-content code {
+    background-color: var(--bg-hover);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.tiptap-editor-content pre {
+    background-color: var(--bg-primary);
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: monospace;
+    margin: 1rem 0;
+    border: 1px solid var(--border-primary);
+}
+
+.tiptap-editor-content pre code {
+    background-color: transparent;
+    padding: 0;
+}
+
+.tiptap-editor-content blockquote {
+    border-left: 3px solid var(--accent-primary);
+    margin: 1rem 0;
+    padding-left: 1rem;
+    color: var(--text-secondary);
+}
+
+.tiptap-editor-content hr {
+    border: none;
+    border-top: 1px solid var(--border-primary);
+    margin: 2rem 0;
+}
+
+/* Loading State */
+.editor-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    gap: 1rem;
+    color: var(--text-secondary);
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border-primary);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Toolbar Spacer */
+.toolbar-spacer {
+    flex: 1;
+}
+
+/* Presence Avatars */
+.presence-avatars {
+    display: flex;
+    align-items: center;
+    gap: -0.5rem;
+}
+
+.presence-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    border: 2px solid var(--bg-secondary);
+    margin-left: -8px;
+    transition: transform 0.2s;
+    cursor: default;
+}
+
+.presence-avatar:first-child {
+    margin-left: 0;
+}
+
+.presence-avatar:hover {
+    transform: scale(1.1);
+    z-index: 1;
+}
+
+.presence-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.presence-avatar.more {
+    background-color: var(--bg-hover);
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+}
+
+/* Sync Indicator */
+.sync-indicator {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+.sync-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border-primary);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Syncing State */
+.editor-content-wrapper.syncing {
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+/* Collaboration Error */
+.collaboration-error {
+    position: absolute;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(231, 76, 60, 0.95);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+}
+
+.collaboration-error button {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.collaboration-error button:hover {
+    opacity: 1;
+}
+
+/* Mobile Menu Button */
+.mobile-menu-btn {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-btn {
+        display: block;
+    }
+}
+
+/* Debug Info (Dev Only) */
+.debug-info {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    font-family: monospace;
+    opacity: 0.6;
+}
+
+/* Bubble Menu (Floating) */
+.bubble-menu {
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-secondary);
+    padding: 0.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border-primary);
+    gap: 0.25rem;
+    animation: fadeIn 0.1s ease-out;
+}
+
+.bubble-menu button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 0.5rem;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.bubble-menu button:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.bubble-menu button.is-active {
+    background-color: var(--bg-active);
+    color: var(--accent-primary);
+}
+
+.bubble-menu-divider {
+    width: 1px;
+    height: 20px;
+    background-color: var(--border-primary);
+    margin: 0 0.25rem;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Position the container for absolute children */
+.note-editor-container {
+    position: relative;
+}
+
+/* Editor Header */
+.editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 3.5rem 0.75rem 1.5rem;
+    /* Added right padding for global indicator */
+    height: 52px;
+    border-bottom: 1px solid transparent;
+    /* Transparent border to maintain layout but clean look */
+}
+
+.header-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-tertiary);
+}
+
+.breadcrumb-separator {
+    color: var(--text-quaternary);
+}
+
+.breadcrumb-current {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--accent-success);
+}
+
+.status-indicator.syncing .status-dot {
+    background-color: var(--accent-warning);
+}
+
+/* .header-icon-btn removed - using PageHeader styles */
+
+/* Skeleton Loading Shell */
+.editor-content-shell {
+    width: 100%;
+    max-width: 850px;
+    margin: 0 auto;
+    padding: 0 3rem;
+    padding-top: 3rem;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Mobile adjustments for skeleton */
+@media (max-width: 768px) {
+    .editor-content-shell {
+        padding: 0 1.5rem 2rem 1.5rem;
+        padding-top: 2rem;
+    }
+}

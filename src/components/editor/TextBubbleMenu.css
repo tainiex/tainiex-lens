@@ -1,0 +1,88 @@
+.text-bubble-menu {
+    display: flex;
+    align-items: center;
+    background-color: #1e242e;
+    /* Darker bg */
+    padding: 0.25rem;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border: 1px solid #30363d;
+    gap: 0.25rem;
+    animation: fadeIn 0.1s ease-out;
+}
+
+.menu-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.text-bubble-menu button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 6px;
+    border: none;
+    background: transparent;
+    color: #c9d1d9;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.1s;
+}
+
+.text-bubble-menu button:hover {
+    background-color: #30363d;
+    color: #fff;
+}
+
+.text-bubble-menu button.is-active {
+    background-color: #f0f6fc;
+    color: #0d1117;
+    /* Inverted for active state */
+}
+
+.menu-divider {
+    width: 1px;
+    height: 20px;
+    background-color: #484f58;
+    margin: 0 4px;
+}
+
+/* Color Buttons */
+.color-btn {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    border-radius: 50% !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    padding: 0 !important;
+}
+
+.color-btn:hover {
+    transform: scale(1.1);
+}
+
+.color-btn.default {
+    background-color: #c9d1d9;
+}
+
+.color-btn.red {
+    background-color: #ef4444;
+}
+
+.color-btn.yellow {
+    background-color: #eab308;
+}
+
+.color-btn.green {
+    background-color: #22c55e;
+}
+
+.color-btn.blue {
+    background-color: #3b82f6;
+}

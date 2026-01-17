@@ -1,0 +1,31 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+dist
+build
+.next
+.expo
+android/build
+ios/build
+
+# Cache
+.cache
+.vite
+*.log
+
+# Lock files
+yarn.lock
+package-lock.json
+pnpm-lock.yaml
+
+# Generated files
+*.min.js
+*.min.css
+coverage
+
+# Config
+.env
+.env.local
+.env.*.local

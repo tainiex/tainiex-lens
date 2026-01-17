@@ -1,0 +1,454 @@
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f4f4f5;
+  /* Zinc-100 */
+  --bg-tertiary: #ffffff;
+  /* Inputs white on light bg often looks better, or slight off-white */
+  --bg-hover: #e8ebf0;
+  --bg-active: #e8ebf0;
+
+  --text-primary: #18181b;
+  /* Zinc-900 */
+  --text-secondary: #52525b;
+  /* Zinc-600 */
+  --text-tertiary: #71717a;
+  /* Zinc-500 */
+  --text-quaternary: #a1a1aa;
+  /* Zinc-400 - Light gray for placeholders */
+
+  --border-primary: rgba(0, 0, 0, 0.08);
+  --border-secondary: rgba(0, 0, 0, 0.1);
+
+  --accent-primary: #4f46e5;
+  --accent-glow: rgba(79, 70, 229, 0.3);
+
+  --bg-message-user: #f4f4f5;
+  --bg-message-user-border: rgba(0, 0, 0, 0.06);
+  --bg-message-ai: transparent;
+
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  /* Prevent body-level scrolling */
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Utility classes */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1.25rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  outline: none;
+}
+
+.btn-primary {
+  background-color: var(--accent-primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #4338ca;
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+.btn-secondary {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.btn-adaptive {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-secondary);
+}
+
+.btn-adaptive:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--border-primary);
+}
+
+/* Typewriter Cursor Effect */
+.typewriter-container.streaming>*:last-child::after,
+.typewriter-container.streaming:empty::after {
+  content: '▋';
+  display: inline-block;
+  margin-left: 4px;
+  color: var(--text-primary);
+  animation: blink 1s step-end infinite;
+  vertical-align: baseline;
+}
+
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Premium Loading Spinner */
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-left-color: var(--text-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-spinner.large {
+  width: 40px;
+  height: 40px;
+  border-width: 3px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Subtle Typing Indicator */
+.typing-dots {
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px;
+  align-items: center;
+  height: 24px;
+}
+
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--text-secondary);
+  border-radius: 50%;
+  animation: typingPulse 1.4s infinite ease-in-out both;
+}
+
+.typing-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes typingPulse {
+
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+
+  40% {
+    transform: scale(1);
+    opacity: 1;
+    color: var(--text-primary);
+  }
+}
+
+/* Top Loading Line */
+.loading-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: transparent;
+  z-index: 1000;
+  pointer-events: none;
+  overflow: hidden;
+  transition: opacity 0.5s ease-out;
+}
+
+.loading-line.hidden {
+  opacity: 0;
+}
+
+.loading-line::after {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, #8b5cf6 60%, #fff 100%);
+  box-shadow: 0 0 15px 2px rgba(139, 92, 246, 0.6), 0 0 5px 1px rgba(255, 255, 255, 0.4);
+  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.5));
+  border-radius: 0 2px 2px 0;
+  animation: meteorLine 1.5s infinite ease-in-out;
+}
+
+@keyframes meteorLine {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(300%);
+    /* Move far enough to exit pure containers */
+  }
+}
+
+.loading-line.finishing::after {
+  animation: meteorFinish 0.4s ease-out forwards;
+}
+
+@keyframes meteorFinish {
+  0% {
+    transform: translateX(-10%);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* Markdown Styles */
+.message-bubble {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.message-bubble p {
+  margin: 0 !important;
+  white-space: pre-wrap;
+}
+
+/* Precise spacing between block elements */
+.message-bubble p+p,
+.message-bubble p+ul,
+.message-bubble p+ol,
+.message-bubble p+pre,
+.message-bubble p+.mermaid-container,
+.message-bubble ul+p,
+.message-bubble ol+p,
+.message-bubble pre+p,
+.message-bubble .mermaid-container+p,
+.message-bubble table+p,
+.message-bubble p+table {
+  margin-top: 0.65em !important;
+}
+
+/* Strong / Bold - Robust for both themes */
+.message-bubble strong,
+.message-bubble b {
+  font-weight: 700;
+  color: var(--text-primary);
+  /* Add a bit of thickness to the font itself for emphasis without relying on color alone */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Lists - Minimal and clean */
+.message-bubble ul,
+.message-bubble ol {
+  margin: 0.4rem 0;
+  padding-left: 1.25rem;
+}
+
+.message-bubble li {
+  margin-bottom: 0.25rem;
+}
+
+.message-bubble li>p {
+  display: inline;
+  margin: 0 !important;
+}
+
+/* Empty paragraphs */
+.message-bubble p:empty {
+  display: none;
+}
+
+/* Inline Code (Quotation) */
+.message-bubble code {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+  padding: 0.15rem 0.3rem;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.9em;
+  border: 1px solid var(--border-primary);
+}
+
+/* Code Blocks */
+.message-bubble pre {
+  background-color: var(--bg-active);
+  padding: 0.85rem 1rem;
+  /* Slightly wider padding for syntax hl */
+  border-radius: 8px;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 700px;
+  margin: 0.75rem 0;
+  border: 1px solid var(--border-primary);
+}
+
+.brand-tai,
+.brand-ni {
+  color: #8b5cf6;
+  /* Modern Purple */
+}
+
+.brand-ex {
+  color: #1d4ed8;
+  /* Premium Dark Blue */
+  font-size: 0.7em;
+  /* Even smaller */
+}
+
+.brand-ai {
+  margin-left: 0.4rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.message-bubble pre::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.message-bubble pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.message-bubble pre::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 10px;
+}
+
+.message-bubble pre::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+.message-bubble pre code {
+  background-color: transparent !important;
+  color: var(--text-primary) !important;
+  border: none !important;
+  padding: 0 !important;
+  font-size: 0.85rem;
+}
+
+/* Links */
+.message-bubble a {
+  color: var(--accent-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Horizontal Rule */
+.message-bubble hr {
+  border: none;
+  border-top: 1px solid var(--border-primary);
+  margin: 1.5rem 0;
+}
+
+/* Tables */
+.message-bubble table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.25rem 0;
+  font-size: 0.9rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.message-bubble th,
+.message-bubble td {
+  border: 1px solid var(--border-primary);
+  padding: 10px 14px;
+  text-align: left;
+}
+
+.message-bubble th {
+  background-color: var(--bg-hover);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.message-bubble tr:nth-child(even) {
+  background-color: var(--bg-active);
+}
+
+/* Skeleton Loading */
+.skeleton {
+  background-color: var(--bg-hover);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+@keyframes skeleton-pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}

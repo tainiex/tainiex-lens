@@ -1,0 +1,53 @@
+name: Deploy to Firebase Hosting
+
+on:
+    push:
+        branches:
+            - main
+
+concurrency:
+    group: firebase-deploy-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    build_and_deploy:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: read
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Install Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: 'yarn'
+                  registry-url: 'https://npm.pkg.github.com'
+                  scope: '@tainiex'
+
+            - name: Install dependencies
+              run: yarn install
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+            - name: Build
+              run: yarn build
+              env:
+                  VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+                  VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+                  VITE_MICROSOFT_CLIENT_ID: ${{ secrets.VITE_MICROSOFT_CLIENT_ID }}
+                  VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+                  VITE_CLARITY_ID: ${{ secrets.VITE_CLARITY_ID }}
+
+            - name: Deploy to Firebase
+              uses: FirebaseExtended/action-hosting-deploy@v0
+              with:
+                  repoToken: '${{ secrets.GITHUB_TOKEN }}'
+                  firebaseServiceAccount: '${{ secrets.GCP_SA_KEY }}'
+                  channelId: live
+                  projectId: '${{ secrets.GCP_PROJECT_ID }}'
+                  entryPoint: .
+              env:
+                  FIREBASE_CLI_EXPERIMENTS: webframeworks

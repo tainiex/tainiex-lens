@@ -1,0 +1,1585 @@
+.app-dashboard {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+/* Sidebar */
+.app-sidebar {
+    width: 220px;
+    background-color: var(--bg-secondary);
+    border-right: 1px solid var(--border-primary);
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem 0 0;
+    flex-shrink: 0;
+    height: 100%;
+    overflow: hidden;
+    overflow: hidden;
+    /* Manage scrolling internally */
+}
+
+/* Light Mode Sidebar Override */
+[data-theme='light'] .app-sidebar {
+    background-color: #ffffff;
+    border-right: 1px solid var(--border-primary);
+}
+
+.sidebar-brand {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    padding: 0 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-shrink: 0;
+}
+
+.sidebar-brand img {
+    border-radius: 6px;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    padding: 0 1rem;
+}
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.4rem 0.6rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.sidebar-item:hover,
+.sidebar-item.active {
+    background: var(--bg-active);
+    color: var(--text-primary);
+}
+
+.sidebar-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: transparent !important;
+}
+
+.sidebar-item.disabled:hover {
+    background: transparent !important;
+    color: var(--text-secondary);
+}
+
+/* Main Chat Area */
+.dashboard-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    background-color: var(--bg-primary);
+    height: 100%;
+    overflow: hidden;
+}
+
+.chat-interface {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.chat-content-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    /* No max-width or padding here, this is the scroll viewport */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.chat-content-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-content-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-content-container::-webkit-scrollbar-thumb {
+    background: var(--bg-hover);
+    border-radius: 10px;
+}
+
+.chat-content-container::-webkit-scrollbar-thumb:hover {
+    background: var(--bg-active);
+}
+
+.chat-input-container {
+    width: 100%;
+    flex-shrink: 0;
+    padding: 0 2rem 1rem;
+}
+
+.chat-width-limiter {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0 2rem 1rem;
+}
+
+.section-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+}
+
+.chat-interface-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 3.5rem 0.75rem 2rem;
+    /* Added right padding for global indicator */
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--border-primary);
+    flex-shrink: 0;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.chat-messages {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-bottom: 2rem;
+    padding-top: 2rem;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    /* Overflow handled by parent */
+}
+
+.message {
+    display: flex;
+    gap: 1rem;
+}
+
+.message.user {
+    flex-direction: row-reverse;
+}
+
+.message-avatar {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    background-color: var(--accent-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 0.85rem;
+    border: 1px solid var(--border-primary);
+}
+
+.message-bubble {
+    background-color: var(--bg-message-ai);
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    max-width: 100%;
+    line-height: 1.5;
+    font-size: 0.95rem;
+    width: fit-content;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+.message-bubble p,
+.message-bubble ul,
+.message-bubble ol {
+    margin: 0.4rem 0;
+}
+
+.message-bubble p:first-child,
+.message-bubble ul:first-child,
+.message-bubble ol:first-child {
+    margin-top: 0;
+}
+
+.message-bubble p:last-child,
+.message-bubble ul:last-child,
+.message-bubble ol:last-child {
+    margin-bottom: 0;
+}
+
+.message-bubble ul,
+.message-bubble ol {
+    padding-left: 1.5rem;
+}
+
+.message-bubble li {
+    margin: 0.2rem 0;
+    /* Reduce list item spacing */
+}
+
+.message.user .message-bubble {
+    background: var(--bg-message-user);
+    color: var(--text-primary);
+    border: 1px solid var(--bg-message-user-border);
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.08);
+    max-width: 85%;
+    width: fit-content;
+}
+
+.chat-input-area {
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    border-radius: 12px;
+    padding: 0.6rem 1rem;
+    display: flex;
+    align-items: flex-end;
+    /* Align to bottom as it expands */
+    gap: 0.75rem;
+    margin-top: 0;
+    flex-shrink: 0;
+    width: 100%;
+    max-width: 900px;
+    align-self: center;
+    margin: 0 auto;
+}
+
+.chat-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 1rem;
+    outline: none;
+    resize: none;
+    line-height: 1.5;
+    padding: 4px 0;
+    font-family: inherit;
+}
+
+.chat-input::-webkit-scrollbar {
+    width: 4px;
+}
+
+.chat-input::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-input::-webkit-scrollbar-thumb {
+    background: var(--bg-hover);
+    border-radius: 4px;
+}
+
+.input-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.icon-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+}
+
+.icon-btn:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.sidebar-history {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding-left: 0;
+    /* Clear old padding */
+    padding-right: 0;
+    /* Allow inner list to scroll */
+}
+
+.history-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.history-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.history-list::-webkit-scrollbar-thumb {
+    background: var(--bg-hover);
+    border-radius: 10px;
+}
+
+.history-item {
+    flex-shrink: 0;
+    margin: 0 1rem 0 0;
+}
+
+.history-item:hover {
+    background-color: var(--bg-hover);
+}
+
+.history-item.active {
+    background: var(--bg-active);
+    border-left: 2px solid var(--accent-primary);
+}
+
+/* Default text color for history items */
+.history-item-text {
+    color: var(--text-secondary);
+}
+
+.history-item:hover .history-item-text {
+    color: var(--text-primary);
+}
+
+.history-item.active .history-item-text {
+    color: var(--text-primary);
+    font-weight: 600 !important;
+}
+
+.session-actions {
+    background: var(--bg-secondary);
+    /* Fallback */
+    /* Use a gradient mask or simply background color that matches the item bg */
+}
+
+/* When item is active, actions bg matches active bg */
+.history-item.active .session-actions {
+    background: transparent;
+    box-shadow: none;
+}
+
+.history-item-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--accent-primary);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    line-height: 1.5;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    outline: none;
+    font-family: inherit;
+}
+
+/* When item is hovered but not active */
+.history-item:not(.active):hover .session-actions {
+    background: transparent;
+    box-shadow: none;
+}
+
+/* Default state for actions (hidden/transparent background matching list bg) */
+.history-item .session-actions {
+    background: transparent;
+    box-shadow: none;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.history-item:hover .session-actions,
+.session-actions.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Sidebar item styled version (for notes) */
+.sidebar-item-styled .session-actions {
+    background: transparent;
+    box-shadow: none;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.sidebar-item-styled:hover .session-actions,
+.sidebar-item-styled .session-actions.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.sidebar-item-styled.active .session-actions {
+    background: transparent;
+    box-shadow: none;
+}
+
+.sidebar-item-styled:not(.active):hover .session-actions {
+    background: transparent;
+    box-shadow: none;
+}
+
+/* Model Selector Styles */
+.model-selector-container {
+    position: relative;
+    user-select: none;
+}
+
+.model-selector-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 6px 14px;
+    background: var(--bg-tertiary);
+    /* Changed from bg-hover to ensure visibility/contrast */
+    border: 1px solid var(--border-primary);
+    border-radius: 20px;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    height: 32px;
+    max-width: 160px;
+    /* Fixed max width */
+}
+
+.model-selector-trigger:hover:not(:disabled) {
+    background: var(--bg-active);
+    border-color: var(--border-secondary);
+}
+
+.model-selector-trigger.open {
+    background: var(--bg-active);
+    border-color: var(--accent-primary);
+}
+
+.selected-model-name {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.model-selector-dropdown {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    width: 280px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    border-radius: 16px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    overflow: hidden;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-header {
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.model-options-list {
+    padding: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.model-option-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.model-option-item:hover {
+    background: var(--bg-hover);
+}
+
+.model-option-item.active {
+    background: rgba(66, 133, 244, 0.1);
+}
+
+.model-option-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.model-option-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.model-option-description {
+    font-size: 0.8rem;
+    color: #a1a1aa;
+    line-height: 1.4;
+}
+
+.model-option-check {
+    color: var(--accent-primary);
+    display: flex;
+    align-items: center;
+}
+
+/* User Profile Menu */
+/* Welcome Screen */
+.welcome-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-start;
+    padding: 0 1rem;
+    margin-bottom: -1.75rem;
+    /* Aggressively pull down to counteract parent padding (2rem) */
+    margin-top: auto;
+    animation: fadeIn 0.5s ease-out;
+    width: 100%;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* New Chat Button */
+.new-chat-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.new-chat-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+    .new-chat-text {
+        display: none;
+    }
+
+    .new-chat-btn {
+        padding: 6px;
+    }
+}
+
+.welcome-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+    letter-spacing: -0.01em;
+}
+
+.welcome-subtitle {
+    font-size: 1rem;
+    color: var(--text-tertiary);
+    font-weight: 400;
+    margin: 0;
+}
+
+.sidebar-footer {
+    flex-shrink: 0;
+    padding: 0 12px;
+    /* 12px footer + 8px profile padding = 20px gutter */
+}
+
+.user-profile {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+    border-radius: 6px;
+    padding: 8px;
+    /* 8px results in 20px icon offset */
+    /* Ensure no extra margin interfering with bottom */
+    margin-bottom: 0;
+}
+
+.user-profile:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.profile-menu {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    width: 100%;
+    margin-bottom: 0.5rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    z-index: 100;
+}
+
+.profile-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.8rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+}
+
+.profile-menu-item:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.profile-menu-item.danger:hover {
+    color: #ef4444;
+}
+
+/* Theme Toggle Switch */
+/* Theme Toggle Switch */
+/* Theme Toggle Switch */
+/* Theme Toggle Switch */
+.theme-toggle-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: var(--bg-hover);
+    border-radius: 999px;
+    padding: 2px;
+    width: 100%;
+    cursor: auto;
+    border: 1px solid var(--border-primary);
+}
+
+.theme-toggle-option {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    padding: 2px 0;
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+    transition: color 0.3s ease;
+    border-radius: 999px;
+}
+
+.theme-toggle-option.active {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.theme-toggle-option:hover:not(.active) {
+    color: var(--text-primary);
+}
+
+/* Sliding active background */
+/* Sliding active background */
+.theme-slide {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: calc(50% - 2px);
+    height: calc(100% - 4px);
+    background: var(--bg-secondary);
+    border-radius: 999px;
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    z-index: 1;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Light mode position (left) */
+.theme-toggle-row[data-theme='light'] .theme-slide {
+    transform: translateX(0);
+}
+
+/* Dark mode position (right) */
+.theme-toggle-row[data-theme='dark'] .theme-slide {
+    transform: translateX(100%);
+}
+
+/* Mobile Responsive Styles */
+.mobile-menu-btn,
+.mobile-close-btn {
+    display: none;
+    background: transparent;
+    border: none;
+    color: #a1a1aa;
+    cursor: pointer;
+    padding: 4px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.mobile-menu-btn:hover,
+.mobile-close-btn:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+
+    /* Hide three-dot menu on mobile (use long-press instead) */
+    .session-actions {
+        display: none !important;
+    }
+
+    /* Larger menu for mobile touch targets */
+    .session-menu-dropdown {
+        min-width: 160px !important;
+        border-radius: 12px !important;
+    }
+
+    .session-menu-dropdown .menu-item {
+        padding: 14px 16px !important;
+        font-size: 0.95rem !important;
+    }
+
+    .session-menu-dropdown .menu-item svg {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    .app-sidebar {
+        position: fixed;
+        left: -100%;
+        top: 0;
+        z-index: 1100;
+        width: 260px;
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 20px 0 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .app-dashboard.sidebar-open .app-sidebar {
+        left: 0;
+    }
+
+    /* Overlay */
+    .mobile-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(2px);
+        z-index: 1050;
+        animation: fadeIn 0.2s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    .mobile-menu-btn,
+    .mobile-close-btn {
+        display: flex;
+    }
+
+    .chat-interface-header {
+        padding: 0.75rem 1rem;
+    }
+
+    .chat-input-container {
+        padding: 0 0.5rem 1rem;
+    }
+
+    .chat-width-limiter {
+        padding: 0 0.5rem 1rem;
+    }
+
+    .message-bubble {
+        max-width: 100%;
+        font-size: 0.9rem;
+    }
+
+    .message {
+        gap: 0.75rem;
+    }
+
+    /* Fixed: Removed mobile padding-left override */
+
+    .chat-input-area {
+        padding: 0.6rem 0.8rem;
+        gap: 0.5rem;
+    }
+
+    .welcome-container {
+        margin-left: 0;
+        padding-left: 0.3rem;
+        /* Reduced to match smaller container padding */
+    }
+}
+
+/* Loading & Typing Animations */
+.loading-dots {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 6px 0;
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    background-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: dotPulse 1.4s infinite ease-in-out;
+}
+
+.dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes dotPulse {
+
+    0%,
+    80%,
+    100% {
+        transform: scale(0.8);
+        opacity: 0.4;
+    }
+
+    40% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+}
+
+.pulse-text {
+    animation: textPulse 2s infinite ease-in-out;
+    color: var(--accent-primary);
+    font-weight: 500;
+}
+
+@keyframes textPulse {
+
+    0%,
+    100% {
+        opacity: 0.5;
+        transform: scale(0.98);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.typing-indicator {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    padding: 8px 0;
+}
+
+.typing-dot {
+    width: 5px;
+    height: 5px;
+    background-color: var(--text-secondary);
+    border-radius: 50%;
+    animation: typing 0.8s infinite alternate;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing {
+    from {
+        transform: translateY(0px);
+        opacity: 0.4;
+    }
+
+    to {
+        transform: translateY(-5px);
+        opacity: 1;
+    }
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.modal-content {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    animation: scaleIn 0.15s ease-out;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.modal-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+.modal-description {
+    font-size: 0.9rem;
+    color: #a1a1aa;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.btn-modal {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.btn-cancel {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-primary);
+}
+
+.btn-cancel:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+
+/* Typewriter Cursor */
+.typewriter-container.streaming> :last-child::after {
+    content: '▋';
+    display: inline-block;
+    vertical-align: baseline;
+    animation: blink 1s step-end infinite;
+    margin-left: 4px;
+    color: #3b82f6;
+    /* Blue cursor */
+    line-height: 1;
+    font-size: 0.9em;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+}
+
+.btn-delete:hover {
+    background: #dc2626;
+}
+
+/* ==========================================================================
+   New Sidebar Styles (Reference Design)
+   ========================================================================== */
+
+/* Segmented Control Tabs */
+.sidebar-tabs-container {
+    padding: 0 1rem 1rem;
+}
+
+.sidebar-segmented-control {
+    display: flex;
+    background-color: var(--bg-tertiary);
+    padding: 2px;
+    /* Reduced from 4px to allow closer alignment */
+    border-radius: 8px;
+    position: relative;
+    border: 1px solid var(--border-primary);
+}
+
+[data-theme='light'] .sidebar-segmented-control {
+    background-color: var(--bg-secondary);
+    /* Gray container */
+    border: none;
+}
+
+.sidebar-tab {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 6px 8px;
+    /* 12px(container) + 0(control start) + 8px(tab) = 20px icon offset */
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    /* Changed from center to allow icon alignment */
+    gap: 8px;
+    transition: all 0.2s ease;
+    position: relative;
+    z-index: 1;
+}
+
+.sidebar-tab:hover {
+    color: var(--text-primary);
+}
+
+.sidebar-tab.active {
+    background-color: var(--bg-primary);
+    /* Card-like background */
+    color: var(--accent-primary);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Sidebar Search Row (Notes) */
+/* Sidebar Search Row (Notes) */
+.sidebar-search-row {
+    padding: 0 1rem 0.5rem;
+    display: flex;
+    /* Aligns width with segmented control */
+}
+
+/* Unified Container for Search + Add Button */
+.sidebar-unified-search {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    background: var(--bg-primary);
+    /* Contrast against bg-secondary sidebar */
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    position: relative;
+    padding-left: 32px;
+    /* Space for search icon */
+    padding-right: 4px;
+    /* Space for button padding */
+    transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.sidebar-unified-search:focus-within {
+    border-color: var(--accent-primary);
+}
+
+/* Transparent Input */
+.sidebar-search-input-transparent {
+    flex: 1;
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 8px 0;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    outline: none;
+    min-width: 0;
+}
+
+/* Add Button integrated inside */
+.sidebar-add-btn-unified {
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: none;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-left: 4px;
+}
+
+.sidebar-add-btn-unified:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+
+
+/* Icon (reusing existing class but adjusted position valid context) */
+.sidebar-search-icon {
+    position: absolute;
+    left: 10px;
+    /* 10px(row) + 10px = 20px offset */
+    /* 8px(row) + 12px = 20px offset */
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-tertiary);
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    pointer-events: none;
+}
+
+/* Grouped List Styles */
+.sidebar-group-header {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 1rem 1rem 0.5rem;
+    padding-top: 0.5rem;
+}
+
+/* Styled Sidebar Item */
+.sidebar-item-styled {
+    display: flex;
+    align-items: flex-start;
+    /* Top align for title/preview layout */
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.15s ease;
+    border-left: 3px solid transparent;
+    /* Indicator strip */
+    margin-bottom: 2px;
+    /* Prevent text selection and tap highlight on mobile */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.sidebar-item-styled:hover {
+    background-color: var(--bg-hover);
+}
+
+.sidebar-item-styled.active {
+    background-color: rgba(var(--accent-rgb), 0.08);
+    /* Needs --accent-rgb, fallback logic usually better */
+    background-color: var(--bg-hover);
+    /* Fallback to hover style if variable missing, or specific active bg */
+    background: linear-gradient(to right, var(--bg-active), transparent);
+    border-left-color: var(--accent-primary);
+}
+
+/* Active indicator handled by border-left, but specific class can add more dot if needed */
+/* ... (existing styles) ... */
+
+/* Mobile Header Visibility */
+.mobile-header {
+    display: none !important;
+    /* Force hide on desktop */
+}
+
+@media (max-width: 768px) {
+    .mobile-header {
+        display: flex !important;
+        /* Force show on mobile */
+    }
+}
+
+.item-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.item-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.item-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+.sidebar-item-styled.active .item-title {
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.item-time {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.item-preview {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+    opacity: 0.8;
+}
+
+/* Input inside item styling */
+.history-item-input {
+    width: 100%;
+    background: var(--bg-primary);
+    border: 1px solid var(--accent-primary);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 0.9rem;
+    outline: none;
+    color: var(--text-primary);
+}
+
+/* Tree View Specific Styles */
+
+.sidebar-tree-item-container {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Base row style for a tree item */
+.sidebar-tree-row {
+    display: flex;
+    align-items: center;
+    padding: 3px 6px;
+    margin: 1px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+    color: var(--text-secondary);
+    min-height: 30px;
+    position: relative;
+    user-select: none;
+}
+
+.sidebar-tree-row:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.sidebar-tree-row.active {
+    background-color: var(--bg-active);
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.tree-chevron-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    margin-right: 2px;
+    color: var(--text-tertiary);
+    transition: all 0.2s;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.tree-chevron-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--text-secondary);
+}
+
+[data-theme='dark'] .tree-chevron-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.tree-item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+    color: var(--text-secondary);
+    opacity: 0.8;
+    flex-shrink: 0;
+}
+
+.sidebar-tree-row.active .tree-item-icon {
+    color: var(--text-primary);
+    opacity: 1;
+}
+
+.sidebar-tree-children {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Tree Icon Swapping Logic */
+.tree-icon-slot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 20px;
+    height: 20px;
+    margin-right: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.tree-icon-slot:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme='dark'] .tree-icon-slot:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.icon-doc,
+.icon-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    height: 100%;
+}
+
+/* Default state: Show Doc, Hide Chevron */
+.icon-chevron {
+    display: none;
+}
+
+/* Swap state: When row hovered AND has children */
+/* We need a parent class on the row to indicate has-children */
+.sidebar-tree-row.has-children:hover .icon-doc {
+    display: none;
+}
+
+.sidebar-tree-row.has-children:hover .icon-chevron {
+    display: flex;
+}
+
+/* Optional: Keep chevron visible if expanded? 
+   User request: "When mouse hover... replace". 
+/* Strict interpretation: Only on hover.
+   But if I stick to strict, visually it might be confusing if expanded.
+*/
+
+/* [FIX] Mobile Visibility: Always show chevron if has children */
+@media (max-width: 768px) {
+    .sidebar-tree-row.has-children .icon-doc {
+        display: none;
+    }
+
+    .sidebar-tree-row.has-children .icon-chevron {
+        display: flex;
+    }
+}
+
+I will add a rule to also show chevron if expanded,
+as it's standard.
+ Actually,
+let's try STRICT first as user requested "Default not show... hover replace".
+ */
+
+/* Fix Alignment: Ensure list container is flush with sidebar edge */
+.sidebar-history {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+/* Ensure search row aligns with items */
+.sidebar-search-row {
+    padding-left: 10px;
+    /* Match tabs container */
+    padding-right: 10px;
+}
+
+/* Tree Item Alignment */
+/* The items already have internal padding via style={{ paddingLeft: ... }} */
+/* We just need to ensure the container itself doesn't add extra offsets */
+
+/* Action Buttons Styling */
+.tree-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+/* Show actions on row hover */
+.sidebar-tree-row:hover .tree-actions {
+    opacity: 1;
+}
+
+/* Override default icon-btn hover background for tree actions */
+.tree-action-btn {
+    background: transparent !important;
+    color: var(--text-secondary);
+    padding: 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+    border: none;
+    /* Reset button border */
+}
+
+.tree-action-btn:hover {
+    color: var(--text-primary);
+    background: transparent !important;
+    /* Explicitly remove bg */
+}
+
+/* Specific styling for the + button if needed */
+.tree-action-btn.add-child {}
+
+/* Align Header and Tabs with widened content (0.5rem horizontal padding) */
+.sidebar-brand {
+    padding: 0 1.25rem !important;
+    /* Align logo to 20px gutter */
+}
+
+.sidebar-tabs-container {
+    padding: 0 10px 0.6rem !important;
+    /* 10px(container) + 2px(control padding) + 8px(tab padding) = 20px */
+}
+
+/* Fix Hover Background Alignment: Add margin to match header padding */
+.sidebar-tree-row {
+    margin: 1px 0.5rem !important;
+    /* 8px left margin */
+    width: auto;
+}
+
+/* Tree Actions Overlay (Hover Effect) */
+.tree-actions {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: none;
+    align-items: center;
+    background: linear-gradient(to right, transparent, var(--bg-hover) 40%);
+    padding-left: 24px;
+    padding-right: 4px;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    z-index: 2;
+}
+
+.sidebar-tree-row:hover .tree-actions,
+.sidebar-tree-row:focus-within .tree-actions {
+    display: flex;
+}
+
+.sidebar-tree-row.active .tree-actions {
+    background: linear-gradient(to right, transparent, var(--bg-active) 40%);
+}

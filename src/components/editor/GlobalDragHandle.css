@@ -1,0 +1,80 @@
+.global-drag-handle {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    border-radius: 4px;
+    color: var(--text-tertiary);
+    transition: background-color 0.1s;
+}
+
+.global-drag-handle:hover,
+.global-drag-handle:active {
+    background-color: var(--bg-hover);
+    color: var(--text-secondary);
+}
+
+.drag-handle-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+}
+
+.global-drag-handle:hover .drag-handle-icon {
+    opacity: 1;
+}
+
+/* Tippy Menu Styles (Inline reused if simpler, or custom class) */
+.drag-handle-menu {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    padding: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 140px;
+}
+
+.drag-handle-menu .menu-item {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.1s;
+    font-family: inherit;
+}
+
+.drag-handle-menu .menu-item:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.drag-handle-menu .menu-item.danger {
+    color: #ef4444;
+}
+
+.drag-handle-menu .menu-item.danger:hover {
+    background-color: #fee2e2;
+}
+
+.drag-handle-menu .menu-item.disabled {
+    opacity: 0.5;
+    cursor: default;
+    font-size: 0.75rem;
+    font-style: italic;
+}
+
+.drag-handle-menu .menu-item.disabled:hover {
+    background: none;
+    color: var(--text-secondary);
+}
+
+.menu-item-divider {
+    height: 1px;
+    background-color: var(--border-primary);
+    margin: 4px 0;
+}

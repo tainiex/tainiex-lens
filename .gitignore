@@ -1,0 +1,57 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+node_modules/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.npmrc
+.continue/
+.env
+.env.local
+.env.*.local
+.env.production
+.llm/
+
+# Exclude android/ios generated directories
+# apps/mobile/android/ -- Do NOT ignore the whole folder, we need native code!
+
+# Security: Ignore keystores and key properties
+**/*.keystore
+**/key.properties
+
+
+# Claude Code local configuration
+.claude/
+
+# Build artifacts
+apps/web/dist/
+
+# Temporary files
+*.waitForPreviousTools
+tmpclaude-*-cwd
+
+# Expo
+.expo/
+mobile_legacy/
+
+# Root shim for Windows/Metro build fix
+/index.js

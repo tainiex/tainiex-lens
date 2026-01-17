@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/logo.ico" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
+  <title>Tainiex AI Memory & Knowledge Infrastructure</title>
+</head>
+
+<script>
+  (function () {
+    try {
+      var savedTheme = localStorage.getItem('theme');
+      var theme = (savedTheme === 'dark' || savedTheme === 'light') ? savedTheme : 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch (e) {
+      console.error('Failed to set initial theme', e);
+    }
+  })();
+</script>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>

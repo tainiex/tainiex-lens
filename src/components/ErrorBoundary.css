@@ -1,0 +1,186 @@
+/* ErrorBoundary 样式 */
+.error-boundary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+}
+
+.error-boundary-content {
+  background: white;
+  border-radius: 12px;
+  padding: 40px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  max-width: 500px;
+  width: 100%;
+}
+
+.error-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+.error-title {
+  color: #333;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+}
+
+.error-message {
+  color: #666;
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0 0 32px 0;
+}
+
+.error-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.error-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 100px;
+}
+
+.error-button-primary {
+  background: #007bff;
+  color: white;
+}
+
+.error-button-primary:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+}
+
+.error-button-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.error-button-secondary:hover {
+  background: #545b62;
+  transform: translateY(-1px);
+}
+
+.error-button-tertiary {
+  background: transparent;
+  color: #007bff;
+  border: 1px solid #007bff;
+}
+
+.error-button-tertiary:hover {
+  background: #007bff;
+  color: white;
+}
+
+.error-details {
+  margin-top: 24px;
+  text-align: left;
+}
+
+.error-details summary {
+  cursor: pointer;
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.error-details summary:hover {
+  background: #e9ecef;
+}
+
+.error-stack {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 6px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #333;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+}
+
+.error-stack h4 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.error-stack pre {
+  margin: 0 0 16px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: white;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .error-boundary {
+    padding: 10px;
+    min-height: calc(100vh - 20px);
+  }
+  
+  .error-boundary-content {
+    padding: 24px;
+  }
+  
+  .error-icon {
+    font-size: 36px;
+  }
+  
+  .error-title {
+    font-size: 20px;
+  }
+  
+  .error-message {
+    font-size: 14px;
+  }
+  
+  .error-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .error-button {
+    width: 100%;
+  }
+}
+
+/* 小屏幕适配 */
+@media (max-width: 480px) {
+  .error-boundary-content {
+    padding: 20px;
+  }
+  
+  .error-title {
+    font-size: 18px;
+  }
+  
+  .error-message {
+    font-size: 13px;
+  }
+}
