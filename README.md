@@ -2,6 +2,35 @@
 
 A modern collaborative note-taking and chat application built with React and Vite, featuring real-time collaboration powered by Y.js CRDT and WebSocket communication.
 
+## Logging
+
+This project uses a centralized logger at `src/shared/utils/logger.ts`.
+
+### Log Level
+
+Log level is controlled by the Vite env var `VITE_LOG_LEVEL`:
+
+- `debug` | `log` | `warn` | `error`
+
+**Defaults:**
+
+- **Development**: `debug`
+- **Production**: `warn` (default)
+
+This means `debug`/`log` output is suppressed in production by default, while `warn`/`error` remain visible.
+
+### Example `.env` setup
+
+```bash
+# Development (verbose)
+VITE_LOG_LEVEL=debug
+
+# Production (default behavior)
+VITE_LOG_LEVEL=warn
+```
+
+> Tip: Route ad-hoc diagnostics through `logger.debug(...)` instead of `console.log(...)` so they respect the global log level and production defaults.
+
 ## Architecture Overview
 
 This is a **Pure Frontend Application** structured as a standard Vite project.

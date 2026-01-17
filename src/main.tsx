@@ -6,6 +6,9 @@ import './index.css';
 import 'katex/dist/katex.min.css';
 import App from './App';
 
+// Force-load logger at startup so its dev banner always prints.
+import '@/shared/utils/logger';
+
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { MsalProvider } from '@azure/msal-react';
 import { msalInstance } from './utils/msalConfig';

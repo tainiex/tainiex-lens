@@ -1,5 +1,5 @@
 import { Editor } from '@tiptap/react';
-import { refreshSignedUrl } from '@/shared';
+import { refreshSignedUrl, logger } from '@/shared';
 
 const REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes before expiry
 const REFRESH_IN_PROGRESS = new Map<string, Promise<string>>();
@@ -32,13 +32,13 @@ export async function refreshExpiringImages(editor: Editor | null): Promise<void
         });
 
         if (refreshPromises.length > 0) {
-            console.log(`[ImageRefresher] Refreshing ${refreshPromises.length} expiring URLs`);
+            logger.debug(`[ImageRefresher] Refreshing ${refreshPromises.length} expiring URLs`);
             await Promise.allSettled(refreshPromises);
         }
     } catch (error) {
         // Editor might be destroyed during traversal
         if (!editor.isDestroyed) {
-            console.error('[ImageRefresher] Error during image refresh:', error);
+            logger.error('[ImageRefresher] Error during image refresh:', error);
         }
     }
 }
@@ -66,7 +66,7 @@ async function refreshImageUrl(
             const response = await refreshSignedUrl(path);
             return response.url;
         } catch (error) {
-            console.error(`[ImageRefresher] Failed to refresh ${path}:`, error);
+            logger.error(`[ImageRefresher] Failed to refresh ${path}:`, error);
             throw error;
         } finally {
             REFRESH_IN_PROGRESS.delete(path);
@@ -79,7 +79,7 @@ async function refreshImageUrl(
         const response = await refreshSignedUrl(path);
         updateImageNode(editor, pos, node, response.url, response.expiresAt);
     } catch (error) {
-        console.error('[ImageRefresher] Refresh failed:', error);
+        logger.error('[ImageRefresher] Refresh failed:', error);
     }
 }
 
@@ -96,7 +96,7 @@ function updateImageNode(
 ): void {
     // Check if editor is still valid
     if (editor.isDestroyed) {
-        console.warn('[ImageRefresher] Editor destroyed, skipping image update');
+        logger.warn('[ImageRefresher] Editor destroyed, skipping image update');
         return;
     }
 
@@ -108,6 +108,6 @@ function updateImageNode(
         });
         editor.view.dispatch(tr);
     } catch (error) {
-        console.error('[ImageRefresher] Failed to update image node:', error);
+        logger.error('[ImageRefresher] Failed to update image node:', error);
     }
 }

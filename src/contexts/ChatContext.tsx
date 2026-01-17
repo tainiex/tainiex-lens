@@ -18,6 +18,10 @@ interface ChatContextValue {
     selectedModel: string;
     isLoading: boolean;
     isStreaming: boolean;
+    isHistoryReady: boolean;
+
+    // Skeleton Gate (Mode B): only show skeleton if switch is slow
+    shouldShowSkeleton: boolean;
 
     // Connection State
     isConnected: boolean;
@@ -78,8 +82,7 @@ export function ChatProvider({
     initialSkipFetch,
 }: ChatProviderProps) {
     useEffect(() => {
-        // console.log('[ChatProvider] Mounted', { initialSessionId, initialSkipFetch });
-        // return () => console.log('[ChatProvider] Unmounted');
+        // Intentionally left blank (no side effects on mount)
     }, []);
 
     const [currentSessionId, setCurrentSessionIdState] = useState<string | null>(initialSessionId);
@@ -119,6 +122,26 @@ export function ChatProvider({
     const [isLoading, setIsLoading] = useState(false);
     const [isStreaming, setIsStreaming] = useState(false);
 
+    // Indicates whether the current session's history has been hydrated into `messages`.
+    // Used to prevent skeleton -> blank -> content flashes during session switching.
+    //
+    // IMPORTANT: Initialize from navigation state so empty sessions using `skipFetch` can
+    // still dismiss skeleton even when `initialMessages` is an empty array.
+    const [isHistoryReady, setIsHistoryReady] = useState(() => !!initialSkipFetch);
+
+    // Mode B: delayed skeleton gate (avoid flashing skeleton on fast switches)
+    // - On session change, wait `SKELETON_DELAY_MS`
+    // - If history still isn't ready by then, show skeleton
+    const SKELETON_DELAY_MS = 120;
+    const [shouldShowSkeleton, setShouldShowSkeleton] = useState(false);
+    const skeletonDelayTimerRef = useRef<number | null>(null);
+
+    // Avoid stale closures inside timers by reading the latest readiness from a ref.
+    const isHistoryReadyRef = useRef(isHistoryReady);
+    useEffect(() => {
+        isHistoryReadyRef.current = isHistoryReady;
+    }, [isHistoryReady]);
+
     const setCurrentSessionId = (
         id: string | null,
         options?: { skipFetch?: boolean; initialMessages?: Partial<IChatMessage>[] }
@@ -142,18 +165,33 @@ export function ChatProvider({
         setMessages(prev => [...prev, msg]);
     };
 
-    // [FIX] Clear messages when session changes, unless we are skipping fetch (New Chat -> Created)
-    // This prevents ghosting of old messages while preserving new chat context.
+    // Session switching:
+    // - We intentionally DO NOT clear messages here.
+    // - `useChat` is the single owner of the hydration lifecycle (fetch/skipFetch/merge).
+    // Clearing here can introduce an "empty frame" between skeleton removal and message hydration,
+    // which causes visible white flashes.
     const prevSessionIdRef = useRef<string | null>(initialSessionId);
     useEffect(() => {
         const prevId = prevSessionIdRef.current;
         if (initialSessionId !== prevId) {
-            if (initialSessionId && !initialSkipFetch) {
-                setMessages([]);
+            // New session selected: history is not ready until useChat hydrates messages.
+            setIsHistoryReady(false);
+
+            // Mode B: delay skeleton so fast switches don't flash
+            setShouldShowSkeleton(false);
+            if (skeletonDelayTimerRef.current) {
+                window.clearTimeout(skeletonDelayTimerRef.current);
+                skeletonDelayTimerRef.current = null;
             }
+            skeletonDelayTimerRef.current = window.setTimeout(() => {
+                // Only show skeleton if still not ready after the delay
+                setShouldShowSkeleton(isHistoryReadyRef.current ? false : true);
+            }, SKELETON_DELAY_MS);
+
+            // Do not call setMessages([]) here; let useChat handle message lifecycle.
             prevSessionIdRef.current = initialSessionId;
         }
-    }, [initialSessionId, initialSkipFetch]);
+    }, [initialSessionId]);
 
     const updateLastMessage = (content: string) => {
         setMessages(prev => {
@@ -171,28 +209,18 @@ export function ChatProvider({
         }
     };
 
-    // [OPTIMIZATION] Intercept session ID change to trigger IMMEDIATE loading state.
-    // This prevents "Flash of Old Content" or "White Screen" between click and useEffect fetch.
+    // [OPTIMIZATION] Intercept session ID change to manage session switching.
+    // Note: Loading state is now managed by useChat hook to avoid duplicate setIsLoading calls.
+    // Message clearing is handled by the useEffect above to ensure consistent timing.
     const handleSetCurrentSessionId = useCallback(
         (
             id: string | null,
             options?: { skipFetch?: boolean; initialMessages?: Partial<IChatMessage>[] }
         ) => {
-            if (id !== currentSessionId) {
-                // If switching to a valid session, start loading IMMEDIATELY (Frame 0)
-                // BUT only if we are NOT skipping fetch (e.g. creating new session with optimistic data)
-                if (id && !options?.skipFetch) {
-                    setIsLoading(true);
-                }
-                // Clear messages to prevent seeing old session data during switch
-                if (!options?.initialMessages) {
-                    setMessages([]);
-                }
-            }
             setCurrentSessionId(id);
             // Handle options if needed (passed to useChat logic via effects or refs?)
             if (options?.skipFetch) {
-                // If skipping fetch, maybe don't set loading?
+                // If skipping fetch, ensure loading is off
                 if (id) setIsLoading(false);
             }
         },
@@ -221,6 +249,7 @@ export function ChatProvider({
         selectedModel,
         setIsLoading,
         setIsStreaming,
+        setIsHistoryReady,
         onSessionCreated, // Pass through
         onSessionUpdate: handleSessionUpdateWrapper, // Intercept to update local title
 
@@ -232,6 +261,25 @@ export function ChatProvider({
         },
         initialSkipFetch,
     });
+
+    // When navigation provides skipFetch, we can consider history ready immediately.
+    // This must work even if `initialMessages` is an empty array (empty session).
+    useEffect(() => {
+        if (initialSkipFetch) {
+            setIsHistoryReady(true);
+        }
+    }, [initialSkipFetch]);
+
+    // Whenever history becomes ready, skeleton should be off and any pending delay cancelled.
+    useEffect(() => {
+        if (isHistoryReady) {
+            setShouldShowSkeleton(false);
+            if (skeletonDelayTimerRef.current) {
+                window.clearTimeout(skeletonDelayTimerRef.current);
+                skeletonDelayTimerRef.current = null;
+            }
+        }
+    }, [isHistoryReady]);
 
     // Check if we need to skip fetch based on navigation state
     // Effect handles initialMessages sync. useChat handles fetching.
@@ -256,6 +304,13 @@ export function ChatProvider({
         selectedModel,
         isLoading,
         isStreaming,
+        isHistoryReady,
+
+        // Mode B skeleton gate: parent UI should show skeleton if either:
+        // - it's a slow switch (shouldShowSkeleton), OR
+        // - the hook reports actual loading
+        shouldShowSkeleton: shouldShowSkeleton || isLoading,
+
         isConnected,
         wsError,
         setCurrentSessionId: handleSetCurrentSessionId,

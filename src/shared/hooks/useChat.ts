@@ -28,6 +28,7 @@ interface UseChatProps {
     selectedModel: string;
     setIsLoading: (loading: boolean) => void;
     setIsStreaming: (streaming: boolean) => void;
+    setIsHistoryReady?: (ready: boolean) => void;
     onSessionCreated?: () => void;
     onSessionUpdate?: (title?: string) => void;
     enableAutoScroll: () => void;
@@ -42,6 +43,7 @@ export function useChat({
     selectedModel,
     setIsLoading,
     setIsStreaming,
+    setIsHistoryReady,
     onSessionCreated,
     onSessionUpdate,
     enableAutoScroll,
@@ -73,37 +75,82 @@ export function useChat({
         logger.debug('[useChat] currentSessionId changed:', currentSessionId);
         currentSessionIdRef.current = currentSessionId;
 
+        logger.debug('[SkeletonDebug][useChat][session-change]', {
+            currentSessionId,
+            shouldSkipHistoryFetch: shouldSkipHistoryFetchRef.current,
+            lastFetchedSessionId: lastFetchedSessionIdRef.current,
+            ts: performance.now(),
+        });
+
+        // New session selection: history is not ready until we hydrate messages for this session.
+        setIsHistoryReady?.(false);
+
         // Fetch history when session ID changes
         const loadHistory = async () => {
             if (shouldSkipHistoryFetchRef.current) {
                 logger.debug('[useChat] Skipping history fetch for session:', currentSessionId);
+
+                logger.debug('[SkeletonDebug][useChat][skip-fetch]', {
+                    currentSessionId,
+                    ts: performance.now(),
+                });
+
                 shouldSkipHistoryFetchRef.current = false;
                 // Important: Mark as fetched so we don't fetch again if effect re-runs
                 lastFetchedSessionIdRef.current = currentSessionId;
                 // Ensure loading is off if we skip fetch (assuming data is already provided)
                 setIsLoading(false);
+
+                // Messages should already be provided by navigation state; mark ready immediately.
+                setIsHistoryReady?.(true);
                 return;
             }
 
             if (!currentSessionId) {
                 logger.debug('[useChat] No session ID, clearing messages');
+
+                logger.debug('[SkeletonDebug][useChat][no-session]', {
+                    currentSessionId,
+                    ts: performance.now(),
+                });
+
                 setMessages([]);
                 setHasMore(false);
                 setNextCursor(null);
                 lastFetchedSessionIdRef.current = null;
                 setIsLoading(false); // Ensure loading is off
+
+                // No session means no history to hydrate.
+                setIsHistoryReady?.(true);
                 return;
             }
 
             // Deduplicate requests for the same session
             if (currentSessionId === lastFetchedSessionIdRef.current) {
                 logger.debug('[useChat] Session already fetched, skipping:', currentSessionId);
+
+                logger.debug('[SkeletonDebug][useChat][dedupe-skip]', {
+                    currentSessionId,
+                    lastFetchedSessionId: lastFetchedSessionIdRef.current,
+                    ts: performance.now(),
+                });
+
                 setIsLoading(false); // Ensure loading is off
+
+                // If we already fetched this session, consider it ready.
+                setIsHistoryReady?.(true);
                 return;
             }
             lastFetchedSessionIdRef.current = currentSessionId;
 
             logger.debug('[useChat] Starting fetch for session:', currentSessionId);
+
+            logger.debug('[SkeletonDebug][useChat][fetch:start]', {
+                currentSessionId,
+                pageSize,
+                ts: performance.now(),
+            });
+
             setIsLoading(true);
             try {
                 const url = `/api/chat/sessions/${currentSessionId}/messages?limit=${pageSize}`;
@@ -134,6 +181,14 @@ export function useChat({
 
                 logger.debug(`[useChat] Parsed ${msgs.length} messages, hasMore: ${newHasMore}`);
 
+                logger.debug('[SkeletonDebug][useChat][fetch:parsed]', {
+                    currentSessionId,
+                    msgsLen: msgs.length,
+                    hasMore: newHasMore,
+                    nextCursor: newNextCursor,
+                    ts: performance.now(),
+                });
+
                 setHasMore(newHasMore);
                 setNextCursor(newNextCursor);
 
@@ -141,6 +196,15 @@ export function useChat({
                     // Critical Fix: Merge fetched history with local optimistic messages
                     // This prevents loadHistory from wiping out messages that are currently being sent (starting with temp_)
                     const tempMsgs = prev.filter(m => m.id && String(m.id).startsWith('temp_'));
+
+                    logger.debug('[SkeletonDebug][useChat][setMessages:merge]', {
+                        currentSessionId,
+                        prevLen: prev.length,
+                        tempLen: tempMsgs.length,
+                        fetchedLen: msgs.length,
+                        resultLen: msgs.length + tempMsgs.length,
+                        ts: performance.now(),
+                    });
 
                     if (tempMsgs.length > 0) {
                         logger.debug(
@@ -151,13 +215,47 @@ export function useChat({
                     return [...msgs, ...tempMsgs];
                 });
 
+                // Mark ready on next frame so React has a chance to commit the hydrated messages.
+                // IMPORTANT: This must also become true when the session has 0 messages, otherwise
+                // the skeleton will never dismiss for empty sessions.
+                requestAnimationFrame(() => {
+                    logger.debug('[SkeletonDebug][useChat][historyReady:raf(after-setMessages)]', {
+                        currentSessionId,
+                        ts: performance.now(),
+                    });
+                    setIsHistoryReady?.(true);
+                });
+
                 // Allow UI to settle then scroll
+                // NOTE: For empty sessions this is still safe; it just keeps layout consistent.
                 setTimeout(enableAutoScroll, 100);
             } catch (error) {
                 logger.error('[useChat] Load history error:', error);
+
+                logger.debug('[SkeletonDebug][useChat][fetch:error]', {
+                    currentSessionId,
+                    error,
+                    ts: performance.now(),
+                });
             } finally {
                 logger.debug('[useChat] Fetch finished, turning off loading');
+
+                logger.debug('[SkeletonDebug][useChat][fetch:finally]', {
+                    currentSessionId,
+                    ts: performance.now(),
+                });
+
                 setIsLoading(false);
+
+                // Safety net: ensure history-ready is eventually true even if the request fails
+                // or if React batching delays the RAF above.
+                requestAnimationFrame(() => {
+                    logger.debug('[SkeletonDebug][useChat][historyReady:raf(finally)]', {
+                        currentSessionId,
+                        ts: performance.now(),
+                    });
+                    setIsHistoryReady?.(true);
+                });
             }
         };
 

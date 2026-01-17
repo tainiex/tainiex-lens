@@ -49,8 +49,7 @@ class SocketService {
      * Initialize and connect the socket
      */
     public async connect(force: boolean = false): Promise<void> {
-        // Direct console log to verify entry, bypassing logger
-        console.log(`[SocketService] connect() called with force=${force}`);
+        logger.debug(`[SocketService] connect() called with force=${force}`);
 
         if (!force && (this.chatSocket?.connected || this.collaborationSocket?.connected)) {
             logger.debug('[SocketService] Already connected or partially connected.');
@@ -120,10 +119,10 @@ class SocketService {
 
             // 4. Manually connect if not connected
             if (this.chatSocket && !this.chatSocket.connected) {
-                // Debug Spy: Use console.log for raw visibility
+                // Debug Spy: route through centralized logger so it respects global log level
                 this.chatSocket.onAny((event, ...args) => {
                     if (event.includes('chat') || event.includes('stream')) {
-                        console.log(`[SocketSpy] ${event}`, JSON.stringify(args).slice(0, 100));
+                        logger.debug(`[SocketSpy] ${event}`, JSON.stringify(args).slice(0, 100));
                     }
                 });
 

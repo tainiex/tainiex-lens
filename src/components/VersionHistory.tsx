@@ -12,6 +12,7 @@ import {
     rollbackBlock,
     INoteSnapshot,
     IBlockVersion,
+    logger,
 } from '@/shared';
 import './VersionHistory.css';
 
@@ -46,7 +47,7 @@ const VersionHistory = ({ noteId, blockId, onRollback, onClose }: VersionHistory
                     setSnapshots(snapshotsList);
                 }
             } catch (err) {
-                console.error('Failed to load version history:', err);
+                logger.error('Failed to load version history:', err);
                 setError('加载版本历史失败');
             } finally {
                 setIsLoading(false);
@@ -72,7 +73,7 @@ const VersionHistory = ({ noteId, blockId, onRollback, onClose }: VersionHistory
             onRollback?.();
             onClose?.();
         } catch (err) {
-            console.error('Rollback failed:', err);
+            logger.error('Rollback failed:', err);
             setError('回滚失败，请重试');
         } finally {
             setIsRollingBack(false);

@@ -12,7 +12,7 @@ import Notes from './pages/Notes';
 
 import './App.css';
 
-import { socketService, apiClient } from '@/shared';
+import { socketService, apiClient, logger } from '@/shared';
 
 // [FIX] Configure SocketService and ApiClient synchronously before App mounts
 // This prevents the race condition where AppLayout checks auth before client is ready.
@@ -25,22 +25,22 @@ function App() {
     useEffect(() => {
         // Function to attempt socket connection
         const attemptConnection = (force: boolean = false) => {
-            console.log(`[App] Attempting socket connection (force=${force})...`);
+            logger.debug(`[App] Attempting socket connection (force=${force})...`);
             // Check if we are in a WebView and expecting a token injection
             // If window.APP_AuthToken is defined, use it.
             // If we are in standard web, proceed as normal (cookie/localStorage).
             if ((window as any).APP_AuthToken) {
-                console.log('[App] Found window.APP_AuthToken, setting it to apiClient...');
+                logger.debug('[App] Found window.APP_AuthToken, setting it to apiClient...');
                 apiClient.setAuthToken((window as any).APP_AuthToken);
             } else {
-                console.log('[App] No window.APP_AuthToken found. Using existing persistence.');
+                logger.debug('[App] No window.APP_AuthToken found. Using existing persistence.');
             }
             socketService.connect(force);
         };
 
         // If 'APP_AUTH_TOKEN_READY' fires, it means we are in WebView and token just arrived.
         const handleTokenReady = () => {
-            console.log('[App] Received APP_AUTH_TOKEN_READY event! Socket reconnecting...');
+            logger.debug('[App] Received APP_AUTH_TOKEN_READY event! Socket reconnecting...');
 
             // Critical: Force disconnect existing socket so it reconnects with the NEW token
             socketService.disconnect();

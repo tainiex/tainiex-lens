@@ -4,7 +4,7 @@ import NoteEditor from '../components/NoteEditor';
 import PageHeader from '../components/PageHeader';
 import { AppLayoutContextType } from '../layouts/AppLayout';
 import './AppDashboard.css';
-import { INote, apiClient } from '@/shared';
+import { INote, apiClient, logger } from '@/shared';
 
 const Notes = () => {
     const params = useParams();
@@ -62,7 +62,7 @@ const Notes = () => {
                         // 404 or error
                     }
                 })
-                .catch(err => console.error(err))
+                .catch(err => logger.error('[Notes] Failed to fetch note:', err))
                 .finally(() => setIsFetchingNote(false));
         }
     }, [noteId, activeNote, fetchedNote]);

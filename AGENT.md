@@ -2,6 +2,24 @@
 
 > Long-term memory & constraints for LLMs/Agents/Copilots working on Tainiex Lens
 
+## Logging (Global Log Level)
+
+Location: `src/shared/utils/logger.ts`
+
+**Design**
+
+- Use the shared `logger` for all debug/trace-style diagnostics. Avoid ad-hoc `console.log` in application code.
+- Logging is controlled by a single global level via Vite env var: `VITE_LOG_LEVEL`
+    - Allowed values: `debug` | `log` | `warn` | `error`
+- **Default behavior**
+    - **Development**: defaults to `debug`
+    - **Production**: defaults to `warn` (debug/log are suppressed)
+- Use `logger.debug(...)` for noisy instrumentation (e.g., skeleton timing diagnostics) so it never ships as console noise in production unless explicitly configured.
+
+**Notes**
+
+- If you need to change verbosity, set `VITE_LOG_LEVEL` in your environment (e.g. `.env.development` / build pipeline).
+
 ## Principle
 
 - You should detect the OS type before using any tools to ensure you use the correct one (PowerShell, Bash, Zsh, etc.).

@@ -332,7 +332,7 @@ const TiptapEditor = ({
                                 }
                             })
                             .catch(err => {
-                                console.error('Failed to upload pasted image', err);
+                                logger.error('Failed to upload pasted image', err);
                                 alert('Failed to upload image: ' + err.message);
                                 // Remove failed node
                                 let tr = view.state.tr;
@@ -407,7 +407,7 @@ const TiptapEditor = ({
                                 }
                             })
                             .catch(err => {
-                                console.error('Failed to upload dropped image', err);
+                                logger.error('Failed to upload dropped image', err);
                                 alert('Failed to upload image: ' + err.message);
                                 // Remove failed node
                                 let tr = view.state.tr;
@@ -464,7 +464,7 @@ const TiptapEditor = ({
                                     return true;
                                 }
 
-                                console.log('[DragDrop] Moving node from', fromPos, 'to', toPos);
+                                logger.debug('[DragDrop] Moving node from', fromPos, 'to', toPos);
 
                                 // Determine insert position based on drag direction
                                 let insertPos: number;
@@ -482,7 +482,7 @@ const TiptapEditor = ({
                                     tr.insert(insertPos, node);
                                 }
 
-                                console.log('[DragDrop] Inserted at position', insertPos);
+                                logger.debug('[DragDrop] Inserted at position', insertPos);
 
                                 // Set Selection to new pos (safely)
                                 try {
@@ -491,7 +491,7 @@ const TiptapEditor = ({
                                         tr.setSelection(NodeSelection.create(tr.doc, insertPos));
                                     }
                                 } catch (e) {
-                                    console.warn('[DragDrop] Failed to create NodeSelection:', e);
+                                    logger.warn('[DragDrop] Failed to create NodeSelection:', e);
                                 }
 
                                 view.dispatch(tr);
@@ -570,7 +570,7 @@ const TiptapEditor = ({
                         }
                     })
                     .catch(err => {
-                        console.error('Failed to upload image from slash command', err);
+                        logger.error('Failed to upload image from slash command', err);
                         alert('Failed to upload image: ' + err.message);
 
                         // Remove the failed image node
@@ -586,9 +586,7 @@ const TiptapEditor = ({
                                 found = true;
                             }
                         });
-                        if (found) {
-                            editor.view.dispatch(transaction);
-                        }
+                        if (found) editor.view.dispatch(transaction);
                     });
             }
         };
@@ -616,7 +614,7 @@ const TiptapEditor = ({
         // 初始检查
         refreshExpiringImages(editor).catch(err => {
             if (isMounted) {
-                console.error('[NoteEditor] Initial image refresh failed:', err);
+                logger.error('[NoteEditor] Initial image refresh failed:', err);
             }
         });
 
@@ -626,7 +624,7 @@ const TiptapEditor = ({
                 if (isMounted && editor && !editor.isDestroyed) {
                     refreshExpiringImages(editor).catch(err => {
                         if (isMounted) {
-                            console.error('[NoteEditor] Periodic image refresh failed:', err);
+                            logger.error('[NoteEditor] Periodic image refresh failed:', err);
                         }
                     });
                 }
@@ -684,7 +682,7 @@ const TiptapEditor = ({
                                     return;
                                 }
 
-                                console.log(
+                                logger.debug(
                                     '[DragDrop React] Moving node from',
                                     fromPos,
                                     'to',
@@ -707,7 +705,7 @@ const TiptapEditor = ({
                                     tr.insert(insertPos, node);
                                 }
 
-                                console.log('[DragDrop React] Inserted at position', insertPos);
+                                logger.debug('[DragDrop React] Inserted at position', insertPos);
 
                                 // Set Selection to new pos (safely)
                                 try {
@@ -716,7 +714,7 @@ const TiptapEditor = ({
                                         tr.setSelection(NodeSelection.create(tr.doc, insertPos));
                                     }
                                 } catch (e) {
-                                    console.warn(
+                                    logger.warn(
                                         '[DragDrop React] Failed to create NodeSelection:',
                                         e
                                     );
@@ -1013,7 +1011,7 @@ const NoteEditor = React.memo(
             // Mark as sent immediately after handing to socket?
             // Yes, "Sent to Transport".
             lastSentTimeRef.current = Date.now();
-            
+
             // Debounce the switch back to "Saved" to avoid flickering
             if (savingTimeoutRef.current) clearTimeout(savingTimeoutRef.current);
             savingTimeoutRef.current = setTimeout(() => {
@@ -1274,10 +1272,10 @@ const NoteEditor = React.memo(
             <span>同步中...</span>
           </div>
         )} */}
-                    {/* User asked to remove prompt/toasts, but this is a subtle indicator at bottom right. 
-            The requirement said "Remove connection tips, use green/yellow light". 
-            I'll interpret that as removing the NetworkStatusBar mostly. 
-            I'll comment out the bottom sync indicator too since we have it in the header now. 
+                    {/* User asked to remove prompt/toasts, but this is a subtle indicator at bottom right.
+            The requirement said "Remove connection tips, use green/yellow light".
+            I'll interpret that as removing the NetworkStatusBar mostly.
+            I'll comment out the bottom sync indicator too since we have it in the header now.
         */}
 
                     {/* 协作限制提示 */}

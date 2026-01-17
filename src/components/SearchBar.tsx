@@ -7,7 +7,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { search, ISearchResult, BlockType } from '@/shared';
+import { search, ISearchResult, BlockType, logger } from '@/shared';
 import './SearchBar.css';
 
 interface SearchBarProps {
@@ -42,7 +42,7 @@ const SearchBar = ({ className = '', onResultClick }: SearchBarProps) => {
             setIsOpen(searchResults.length > 0);
             setSelectedIndex(-1);
         } catch (error) {
-            console.error('Search failed:', error);
+            logger.error('Search failed:', error);
             setResults([]);
         } finally {
             setIsLoading(false);

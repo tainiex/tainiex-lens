@@ -1,12 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { logger } from '@/shared/utils/logger';
 
 interface SmoothLoaderProps {
     isLoading: boolean;
     skeleton: React.ReactNode;
     children: React.ReactNode;
     minDuration?: number; // Minimum time to show skeleton in ms
-    transitionDuration?: number; // Fade out duration in ms
-    className?: string; // Container class
+    transitionDuration?: number; // Not used in new implementation
+    className?: string;
     style?: React.CSSProperties;
 }
 
@@ -19,95 +20,96 @@ const SmoothLoader = ({
     className = '',
     style,
 }: SmoothLoaderProps) => {
-    // Phase: 'idle' (showing content) | 'loading' (showing skeleton) | 'fading' (skeleton fade out)
-    const [phase, setPhase] = useState<'idle' | 'loading' | 'fading'>(
-        isLoading ? 'loading' : 'idle'
-    );
-
-    // Track when loading started to enforce minDuration
-    const startTimeRef = useRef<number | null>(isLoading ? Date.now() : null);
+    // We rely on the parent to provide a correct, stable `isLoading` gate (e.g. `shouldShowSkeleton`).
+    // This component only enforces a minimum visible duration BEFORE allowing skeleton to hide.
+    //
+    // IMPORTANT: the "hold" needs to be state (not ref), otherwise React won't re-render when the
+    // min-duration timer completes, which can cause missing skeleton or text flashes.
+    const startTimeRef = useRef<number | null>(null);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [canHide, setCanHide] = useState(true);
 
     useEffect(() => {
+        // Keep transitionDuration param for backward compatibility (currently unused)
+        void transitionDuration;
+
+        logger.debug('[SkeletonDebug][SmoothLoader][effect:start]', {
+            isLoading,
+            canHide,
+            minDuration,
+            hasStartTime: !!startTimeRef.current,
+            ts: performance.now(),
+        });
+
         if (isLoading) {
-            // Start Loading
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             startTimeRef.current = Date.now();
-            setPhase('loading');
-        } else {
-            // Stop Loading
-            // If we are currently 'idle' (because initial load was false), and isLoading becomes false (stay false), do nothing.
-            // But if we were 'loading' or 'fading', we check minDuration.
+            setCanHide(false);
 
-            // However, if we went from true -> false.
-            // Check if we ever started.
-            if (startTimeRef.current) {
-                const elapsed = Date.now() - startTimeRef.current;
-                const remaining = Math.max(0, minDuration - elapsed);
+            logger.debug('[SkeletonDebug][SmoothLoader][loading:start]', {
+                startTime: startTimeRef.current,
+                ts: performance.now(),
+            });
 
+            return () => {
                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
-                timeoutRef.current = setTimeout(() => {
-                    // Use double requestAnimationFrame to ensure the browser has fully painted
-                    // the underlying content (which is now updated via props) before we
-                    // start fading out the skeleton overlay.
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                            setPhase('fading');
+            };
+        }
 
-                            setTimeout(() => {
-                                setPhase('idle');
-                                startTimeRef.current = null;
-                            }, transitionDuration);
-                        });
-                    });
-                }, remaining);
-            } else {
-                setPhase('idle');
-            }
+        // If loading ends, enforce minDuration by blocking hide until time passes.
+        if (startTimeRef.current) {
+            const elapsed = Date.now() - startTimeRef.current;
+            const remaining = Math.max(0, minDuration - elapsed);
+
+            logger.debug('[SkeletonDebug][SmoothLoader][loading:stop-request]', {
+                elapsed,
+                remaining,
+                minDuration,
+                ts: performance.now(),
+            });
+
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            timeoutRef.current = setTimeout(() => {
+                logger.debug('[SkeletonDebug][SmoothLoader][minDuration:met]', {
+                    elapsed: Date.now() - (startTimeRef.current || Date.now()),
+                    ts: performance.now(),
+                });
+
+                startTimeRef.current = null;
+                setCanHide(true);
+            }, remaining);
+        } else {
+            // No known start time -> allow hide immediately
+            setCanHide(true);
         }
 
         return () => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
-    }, [isLoading, minDuration, transitionDuration]);
+    }, [isLoading, minDuration, transitionDuration, canHide]);
+
+    // External gate decides visibility; we keep skeleton visible while we cannot hide yet.
+    const shouldRenderSkeleton = isLoading || !canHide;
 
     return (
         <div
             className={`smooth-loader-container ${className}`}
             style={{ position: 'relative', width: '100%', height: '100%', ...style }}
         >
-            {/* Real Content: Always rendered, but maybe hidden or underneath? 
-                Actually nice to render it so it's ready.
-                If phase is 'idle', opacity 1. 
-                If phase is 'loading', opacity 0 (or hidden).
-                If phase is 'fading', opacity 0 -> 1? 
-                
-                Strategy: Cross-fade.
-                Skeleton is absolute on top? Or content is replaced?
-                If we use absolute positioning, layout might jump.
-                Better to conditionally render if we can match dimensions, but skeletons usually hardcoded size.
-                
-                Let's stick to standard replacement for lists.
-                Content opacity 0 when loading.
-             */}
-
             <div
                 className="content-wrapper"
                 style={{
-                    // [OPTIMIZATION] Always keep content visible (opacity 1) but underneath the skeleton.
-                    // The skeleton wrapper has an opaque background (bg-primary) so it covers the content.
-                    // when skeleton fades out, content is revealed instantly without any white gap.
-                    opacity: 1,
                     width: '100%',
                     height: '100%',
                     display: 'flex',
                     flexDirection: 'column',
+                    backgroundColor: 'var(--bg-primary)',
                 }}
             >
                 {children}
             </div>
 
-            {(phase === 'loading' || phase === 'fading') && (
+            {shouldRenderSkeleton && (
                 <div
                     className="skeleton-wrapper"
                     style={{
@@ -116,11 +118,8 @@ const SmoothLoader = ({
                         left: 0,
                         width: '100%',
                         height: '100%',
-                        opacity: phase === 'fading' ? 0 : 1,
-                        transition: `opacity ${transitionDuration}ms ease-out`,
                         zIndex: 10,
-                        backgroundColor: 'var(--bg-primary)', // Ensure background covers content
-                        pointerEvents: 'none', // Allow clicks pass through if fading? No, usually block.
+                        backgroundColor: 'var(--bg-primary)',
                     }}
                 >
                     {skeleton}

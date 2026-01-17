@@ -6,6 +6,7 @@
  */
 
 import imageCompression from 'browser-image-compression';
+import { logger } from '@/shared/utils/logger';
 
 /**
  * 压缩配置
@@ -50,14 +51,16 @@ function shouldCompress(file: File): boolean {
 export async function compressImage(file: File): Promise<File> {
     // 检查是否需要压缩
     if (!shouldCompress(file)) {
-        console.log(
+        logger.debug(
             `[ImageCompression] Skipping compression for ${file.name} (${formatFileSize(file.size)})`
         );
         return file;
     }
 
     const originalSize = file.size;
-    console.log(`[ImageCompression] Compressing ${file.name} (${formatFileSize(originalSize)})...`);
+    logger.debug(
+        `[ImageCompression] Compressing ${file.name} (${formatFileSize(originalSize)})...`
+    );
 
     try {
         // 根据文件类型调整压缩选项
@@ -79,19 +82,19 @@ export async function compressImage(file: File): Promise<File> {
         const compressedSize = compressedFile.size;
         const compressionRatio = ((1 - compressedSize / originalSize) * 100).toFixed(1);
 
-        console.log(
+        logger.debug(
             `[ImageCompression] Compressed ${file.name}: ${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)} (${compressionRatio}% reduction)`
         );
 
         // 如果压缩后反而变大了（可能发生在小文件上），返回原文件
         if (compressedSize >= originalSize) {
-            console.log(`[ImageCompression] Compressed file is larger, using original`);
+            logger.debug(`[ImageCompression] Compressed file is larger, using original`);
             return file;
         }
 
         return compressedFile;
     } catch (error) {
-        console.error('[ImageCompression] Compression failed:', error);
+        logger.error('[ImageCompression] Compression failed:', error);
         // 压缩失败时返回原文件
         return file;
     }
