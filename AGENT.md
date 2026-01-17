@@ -160,6 +160,89 @@ To access `@tainiex/shared-atlas` from GitHub Package Registry:
 
 ---
 
+## Chat Skeleton Screen Optimization
+
+### Problem Context
+
+During chat session switching, users experienced two critical UX issues:
+
+1. **White flash**: Skeleton → Disappears → White screen → Content appears
+2. **Position jumping**: Skeleton appeared at different vertical positions
+
+### Solution Architecture
+
+#### 1. Delayed Skeleton Gate (120ms)
+
+**Purpose**: Avoid skeleton flashing on fast session switches.
+
+```typescript
+// ChatContext.tsx
+const SKELETON_DELAY_MS = 120;
+
+// On session change:
+- Set isHistoryReady = false
+- Start 120ms timer
+- If data arrives < 120ms → No skeleton, direct switch
+- If data arrives > 120ms → Show skeleton
+```
+
+**Benefits**:
+
+- Fast API responses (< 120ms): Zero skeleton, instant switch
+- Slow responses (> 120ms): Skeleton prevents blank screen
+
+#### 2. isHistoryReady State
+
+**Purpose**: Track precise data readiness state.
+
+- **Dedicated state** instead of reusing `isLoading`
+- Set by `useChat` hook when messages are hydrated
+- Supports `skipFetch` scenarios (empty sessions)
+
+#### 3. No Message Clearing
+
+**Critical Fix**: ChatContext **no longer calls** `setMessages([])` on session change.
+
+**Why**:
+
+- Clearing creates "empty frame" → White flash
+- `useChat` naturally replaces messages when data arrives
+- Keeps old messages visible until new data loads → Smooth transition
+
+#### 4. Layout Consistency
+
+**Skeleton layout** matches actual message list:
+
+```typescript
+flex: 1,
+minHeight: 0,              // Dynamic height, not fixed
+justifyContent: 'flex-end', // Bottom-aligned (chat style)
+padding: '1rem',            // Matches message padding
+```
+
+### Implementation Files
+
+- **ChatContext.tsx**: `isHistoryReady`, `shouldShowSkeleton`, delayed gate logic
+- **SmoothLoader.tsx**: Simplified `canHide` state (removed phase state machine)
+- **ChatMessages.tsx**: Uses `shouldShowSkeleton`, bottom-aligned skeleton
+
+### Debug Logging
+
+Skeleton timing diagnostics use `logger.debug('[SkeletonDebug]...')` tags.
+
+**View logs**:
+
+```bash
+VITE_LOG_LEVEL=debug yarn dev
+```
+
+Look for:
+
+- `[SkeletonDebug][ChatMessages]`: Render-time states
+- `[SkeletonDebug][SmoothLoader]`: minDuration timing
+
+---
+
 ## Y.js Architecture
 
 ### YDocManager Service

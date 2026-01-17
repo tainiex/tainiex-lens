@@ -129,6 +129,7 @@ VITE_CLARITY_ID=your_clarity_id
 - **Real-time Collaboration**: Multiple users can edit documents simultaneously using Y.js CRDT.
 - **Rich Text Editing**: TipTap editor with Markdown support, slash commands, and code highlighting.
 - **Chat System**: Real-time messaging with Socket.IO.
+- **Optimized UX**: Intelligent skeleton screen with 120ms delayed gate prevents flashing on fast session switches.
 - **Secure Authentication**: HttpOnly cookie-based authentication.
 
 ## Contributing
