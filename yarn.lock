@@ -741,10 +741,10 @@
   resolved "https://registry.yarnpkg.com/@standard-schema/spec/-/spec-1.1.0.tgz#a79b55dbaf8604812f52d140b2c9ab41bc150bb8"
   integrity sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==
 
-"@tainiex/shared-atlas@0.0.24":
-  version "0.0.24"
-  resolved "https://npm.pkg.github.com/download/@tainiex/shared-atlas/0.0.24/4e1b50f5a724686c417894bb1183a3e1fc6bda02#4e1b50f5a724686c417894bb1183a3e1fc6bda02"
-  integrity sha512-th+Az3ApqWfys+PEzGncB2IqLvpNZ2we5crDbBF/nTsEGE6FQ/DtNuS5asqWUZhCYjpV0+VC/PUC7ujk3Xpg4A==
+"@tainiex/shared-atlas@0.0.30":
+  version "0.0.30"
+  resolved "https://npm.pkg.github.com/download/@tainiex/shared-atlas/0.0.30/11ed1d9bede380f0f44b853401b4d8c880f4bf5a#11ed1d9bede380f0f44b853401b4d8c880f4bf5a"
+  integrity sha512-DhQ9WT0XIDLDv55MZgg1zQHdNlxDuYi8Xooq3XQYJWs22mnODyT/qBgWam73R+NefmP+Z1DM1x3FOvXoBgEfHw==
   dependencies:
     class-transformer "^0.5.1"
     class-validator "^0.14.3"
