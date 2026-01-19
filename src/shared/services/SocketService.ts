@@ -3,6 +3,7 @@ import { apiClient } from '../utils/apiClient';
 import { logger } from '../utils/logger';
 import { ChatSocket, ClientToServerEvents, ServerToClientEvents } from '../types/socket';
 import { CollaborationSocket } from '../types/collaboration';
+import { WebSocketErrorCode } from '@tainiex/shared-atlas';
 
 /**
  * SocketService Singleton
@@ -119,13 +120,6 @@ class SocketService {
 
             // 4. Manually connect if not connected
             if (this.chatSocket && !this.chatSocket.connected) {
-                // Debug Spy: route through centralized logger so it respects global log level
-                this.chatSocket.onAny((event, ...args) => {
-                    if (event.includes('chat') || event.includes('stream')) {
-                        logger.debug(`[SocketSpy] ${event}`, JSON.stringify(args).slice(0, 100));
-                    }
-                });
-
                 logger.debug('[SocketService] ChatSocket not connected, calling connect()...');
                 this.chatSocket.connect();
             } else {
@@ -276,6 +270,7 @@ class SocketService {
     private setupSocketEvents(socket: Socket | null, name: string) {
         if (!socket) return;
 
+        // 1. Connection Lifecycle
         socket.on('connect', () => {
             logger.log(`[SocketService] ${name} Socket Connected! ID: ${socket.id}`);
             // Sentry breadcrumb removed
@@ -299,8 +294,75 @@ class SocketService {
             }
         });
 
+        // 2. Auth Lifecycle & Token Renewal
+        socket.on('auth:token-expiring', async (data: { expiresIn: number }) => {
+            logger.warn(
+                `[SocketService] ${name} Token expiring in ${data.expiresIn}s. Refreshing...`
+            );
+
+            try {
+                // Refresh via HTTP
+                const success = await apiClient.refreshToken();
+                if (success) {
+                    const newToken = apiClient.accessToken;
+                    if (newToken) {
+                        // Update Socket Auth for future reconnections
+                        socket.auth = { token: newToken };
+                        // Notify Server
+                        socket.emit('auth:token-refreshed', { newToken });
+                        logger.debug(`[SocketService] ${name} Sent auth:token-refreshed.`);
+                    }
+                } else {
+                    logger.error(
+                        `[SocketService] ${name} Refresh failed during active connection.`
+                    );
+                }
+            } catch (err) {
+                logger.error(`[SocketService] ${name} Error handling token expiry:`, err);
+            }
+        });
+
+        socket.on('auth:token-renewed', () => {
+            logger.log(`[SocketService] ${name} Token successfully renewed on server linkage`);
+        });
+
+        // 3. Structured Error Handling
+        socket.on('error', (error: any) => {
+            // Check if it matches our structure
+            if (error && error.category) {
+                logger.error(`[SocketService] ${name} Structured Error:`, error);
+
+                if (error.category === 'AUTH') {
+                    // 4011: Invalid Token, 4012: Expired
+                    if (error.code === 4011 || error.code === 4012) {
+                        logger.warn(`[SocketService] ${name} Auth error, attempting refresh...`);
+                        apiClient.refreshToken().then(ok => {
+                            if (ok && !this.forcedDisconnect && !socket.connected) {
+                                socket.connect();
+                            }
+                        });
+                    }
+                }
+            } else {
+                // Fallback for string errors or other types
+                logger.error(`[SocketService] ${name} Socket Error:`, error);
+            }
+        });
+
+        // 4. Connection Error (Lower level)
         socket.on('connect_error', (err: any) => {
             logger.warn(`[SocketService] ${name} Connect Error: ${err.message}`);
+
+            // Rate limit check
+            if (err.message && err.message.includes('Rate limit')) {
+                logger.error(`[SocketService] ${name} Rate limited! Stopping retries.`);
+                // We should probably NOT close if we want automatic backoff, but 'aggressively blocks' implies we should wait.
+                // Socket.io standard reconnection handles delays, but if we want to stop:
+                // socket.close();
+                // For now, let's just log it and maybe standard backoff handles it.
+                return;
+            }
+
             if (
                 err.message &&
                 (err.message.includes('401') || err.message.includes('Unauthorized'))
@@ -310,6 +372,20 @@ class SocketService {
                         socket.connect();
                     }
                 });
+            }
+        });
+
+        // 5. Reliability & ACK
+        socket.onAny((event, ...args) => {
+            // Debug Spy
+            if (event.includes('chat') || event.includes('stream')) {
+                logger.debug(`[SocketSpy] ${event}`, JSON.stringify(args).slice(0, 100));
+            }
+
+            // ACK Check
+            const data = args[0];
+            if (data && typeof data === 'object' && data.messageId) {
+                socket.emit('message:ack', { messageId: data.messageId });
             }
         });
     }

@@ -113,7 +113,7 @@ class ApiClient {
     /**
      * Improved token refresh logic with proper concurrency handling (deduplication)
      */
-    private async refreshToken(notificationCallback?: (error: ApiError) => void): Promise<boolean> {
+    public async refreshToken(notificationCallback?: (error: ApiError) => void): Promise<boolean> {
         // If a refresh is already in progress, return the existing promise
         if (this.refreshPromise) {
             logger.debug('[ApiClient] Joining existing token refresh request...');
