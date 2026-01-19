@@ -18,6 +18,7 @@ const Login = () => {
     const [pendingProvider, setPendingProvider] = useState<'google' | 'microsoft' | null>(null);
 
     useEffect(() => {
+        logger.debug('[Login] Component mounted/effect triggered');
         const checkSession = async () => {
             try {
                 const res = await apiClient.get('/api/profile', {

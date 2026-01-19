@@ -13,6 +13,7 @@ class ApiClient {
     private refreshPromise: Promise<boolean> | null = null;
     private config: { baseUrl: string; authType?: 'cookie' | 'header' } | null = null;
     public accessToken: string | null = null; // Made public for debugging
+    private lastRefreshFailureTime: number = 0; // Cooldown tracker
 
     public configure(config: { baseUrl: string; authType?: 'cookie' | 'header' }) {
         this.config = config;
@@ -120,6 +121,12 @@ class ApiClient {
             return this.refreshPromise;
         }
 
+        // COOLDOWN CHECK: If we failed recently, don't spam the server
+        if (Date.now() - this.lastRefreshFailureTime < 5000) {
+            logger.warn('[ApiClient] Refresh cooldown active, skipping request.');
+            return false;
+        }
+
         logger.debug('[ApiClient] Starting new token refresh request...');
         this.refreshPromise = (async () => {
             try {
@@ -136,6 +143,7 @@ class ApiClient {
                     return true;
                 } else {
                     logger.warn('[ApiClient] Refresh failed with status:', response.status);
+                    this.lastRefreshFailureTime = Date.now();
                     if (notificationCallback) {
                         const apiError = this.handleError(response, 'refreshToken');
                         notificationCallback(apiError);
@@ -144,6 +152,7 @@ class ApiClient {
                 }
             } catch (error) {
                 logger.error('[ApiClient] Refresh error:', error);
+                this.lastRefreshFailureTime = Date.now();
                 if (notificationCallback) {
                     const wrappedError =
                         error instanceof Error ? error : new Error('Refresh request failed');
