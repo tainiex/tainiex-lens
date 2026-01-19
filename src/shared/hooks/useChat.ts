@@ -66,6 +66,7 @@ export function useChat({
     const currentSessionIdRef = useRef(currentSessionId);
     const shouldSkipHistoryFetchRef = useRef(initialSkipFetch);
     const lastFetchedSessionIdRef = useRef<string | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     const [hasMore, setHasMore] = useState(false);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -74,6 +75,13 @@ export function useChat({
     useEffect(() => {
         logger.debug('[useChat] currentSessionId changed:', currentSessionId);
         currentSessionIdRef.current = currentSessionId;
+
+        // Abort previous fetch if still in progress
+        if (abortControllerRef.current) {
+            logger.debug('[useChat] Aborting previous fetch');
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
 
         logger.debug('[SkeletonDebug][useChat][session-change]', {
             currentSessionId,
@@ -143,6 +151,10 @@ export function useChat({
             }
             lastFetchedSessionIdRef.current = currentSessionId;
 
+            // Create new abort controller for this fetch
+            const abortController = new AbortController();
+            abortControllerRef.current = abortController;
+
             logger.debug('[useChat] Starting fetch for session:', currentSessionId);
 
             logger.debug('[SkeletonDebug][useChat][fetch:start]', {
@@ -155,7 +167,16 @@ export function useChat({
             try {
                 const url = `/api/chat/sessions/${currentSessionId}/messages?limit=${pageSize}`;
                 logger.debug('[useChat] Requesting URL:', url);
-                const res = await apiClient.get(url);
+                const res = await apiClient.get(url, {
+                    signal: abortController.signal,
+                });
+
+                // Check if aborted before processing
+                if (abortController.signal.aborted) {
+                    logger.debug('[useChat] Fetch was aborted, skipping processing');
+                    return;
+                }
+
                 logger.debug('[useChat] API Response status:', res.status);
 
                 if (!res.ok) throw new Error(`Failed to load messages: ${res.status}`);
@@ -195,7 +216,13 @@ export function useChat({
                 setMessages(prev => {
                     // Critical Fix: Merge fetched history with local optimistic messages
                     // This prevents loadHistory from wiping out messages that are currently being sent (starting with temp_)
-                    const tempMsgs = prev.filter(m => m.id && String(m.id).startsWith('temp_'));
+                    // IMPORTANT: Only preserve temp messages that belong to the CURRENT session
+                    const tempMsgs = prev.filter(
+                        m =>
+                            m.id &&
+                            String(m.id).startsWith('temp_') &&
+                            m.sessionId === currentSessionId
+                    );
 
                     logger.debug('[SkeletonDebug][useChat][setMessages:merge]', {
                         currentSessionId,
@@ -208,7 +235,7 @@ export function useChat({
 
                     if (tempMsgs.length > 0) {
                         logger.debug(
-                            `[useChat] Preserving ${tempMsgs.length} optimistic messages during merge`
+                            `[useChat] Preserving ${tempMsgs.length} optimistic messages for session ${currentSessionId}`
                         );
                     }
 
@@ -230,6 +257,12 @@ export function useChat({
                 // NOTE: For empty sessions this is still safe; it just keeps layout consistent.
                 setTimeout(enableAutoScroll, 100);
             } catch (error) {
+                // Ignore abort errors
+                if (error instanceof Error && error.name === 'AbortError') {
+                    logger.debug('[useChat] Fetch aborted');
+                    return;
+                }
+
                 logger.error('[useChat] Load history error:', error);
 
                 logger.debug('[SkeletonDebug][useChat][fetch:error]', {
@@ -238,6 +271,11 @@ export function useChat({
                     ts: performance.now(),
                 });
             } finally {
+                // Clear abort controller ref if this is still the current one
+                if (abortControllerRef.current === abortController) {
+                    abortControllerRef.current = null;
+                }
+
                 logger.debug('[useChat] Fetch finished, turning off loading');
 
                 logger.debug('[SkeletonDebug][useChat][fetch:finally]', {
@@ -361,6 +399,7 @@ export function useChat({
                 // Prepare optimistic messages immediately (needed for navigation state)
                 const userMessage: Partial<IChatMessage> = {
                     id: `temp_${Date.now()}`,
+                    sessionId: sessionId ?? undefined, // ADD: Tag with session ID for filtering
                     role: ChatRole.USER,
                     content: msgToSend,
                     parentId, // Store parentId locally for complete history structure if needed
@@ -368,6 +407,7 @@ export function useChat({
                 const assistantMsgId = `temp_ai_${Date.now()}`;
                 const assistantMessage: Partial<IChatMessage> = {
                     id: assistantMsgId,
+                    sessionId: sessionId ?? undefined, // ADD: Tag with session ID for filtering
                     role: ChatRole.ASSISTANT,
                     content: '',
                     parentId: userMessage.id, // Assistant message is child of user message
@@ -382,6 +422,11 @@ export function useChat({
                     if (!sessionRes.ok) throw new Error('Failed to create session');
                     const sessionData = await sessionRes.json();
                     sessionId = sessionData.id;
+
+                    // UPDATE temp messages with real session ID
+                    userMessage.sessionId = sessionId;
+                    assistantMessage.sessionId = sessionId;
+
                     // Prevent the upcoming prop update from triggering a history fetch
                     shouldSkipHistoryFetchRef.current = true;
 

@@ -177,6 +177,22 @@ export function ChatProvider({
             // New session selected: history is not ready until useChat hydrates messages.
             setIsHistoryReady(false);
 
+            // CRITICAL FIX: Clear messages immediately to prevent ghosting
+            // Only preserve temp messages that belong to the new session (if any)
+            setMessages(prev => {
+                if (initialSessionId) {
+                    // Keep only temp messages for the new session
+                    return prev.filter(
+                        m =>
+                            m.sessionId === initialSessionId &&
+                            m.id &&
+                            String(m.id).startsWith('temp_')
+                    );
+                }
+                // If clearing session (going to empty state), clear everything
+                return [];
+            });
+
             // Mode B: delay skeleton so fast switches don't flash
             setShouldShowSkeleton(false);
             if (skeletonDelayTimerRef.current) {
@@ -188,7 +204,6 @@ export function ChatProvider({
                 setShouldShowSkeleton(isHistoryReadyRef.current ? false : true);
             }, SKELETON_DELAY_MS);
 
-            // Do not call setMessages([]) here; let useChat handle message lifecycle.
             prevSessionIdRef.current = initialSessionId;
         }
     }, [initialSessionId]);
