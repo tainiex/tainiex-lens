@@ -237,6 +237,15 @@ class ApiClient {
 
                 return response;
             } catch (error) {
+                // Check if this is an intentional abort (e.g., session switch)
+                if (error instanceof Error && error.name === 'AbortError') {
+                    const abortReason = (error as any).cause?.message || error.message;
+                    if (abortReason?.includes('Session switched')) {
+                        logger.debug('[ApiClient] Request aborted due to session switch');
+                        throw error;
+                    }
+                }
+
                 logger.error('[ApiClient] Fetch threw error:', error);
                 throw error;
             }

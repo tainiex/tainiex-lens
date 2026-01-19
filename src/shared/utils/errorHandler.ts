@@ -3,7 +3,7 @@ import * as Sentry from '@sentry/react';
 import { logger } from './logger';
 
 // Error Type Schema
-const ErrorTypeSchema = z.enum(['NETWORK', 'AUTH', 'VALIDATION', 'SERVER', 'UNKNOWN']);
+const ErrorTypeSchema = z.enum(['NETWORK', 'AUTH', 'VALIDATION', 'SERVER', 'CANCELLED', 'UNKNOWN']);
 export type ErrorType = z.infer<typeof ErrorTypeSchema>;
 
 // API Error Schema
@@ -127,8 +127,31 @@ export class ErrorHandler {
             };
         }
 
-        // Handle timeout errors
-        if (error?.name === 'AbortError' || error?.message?.includes('timeout')) {
+        // Handle timeout errors and aborts
+        if (error?.name === 'AbortError') {
+            // Check if this was an intentional abort (e.g., session switch)
+            const abortReason = (error as any).cause?.message || error?.message;
+            if (abortReason?.includes('Session switched')) {
+                return {
+                    type: 'CANCELLED',
+                    message: 'Request cancelled',
+                    originalError: error,
+                    retryable: false,
+                    context,
+                };
+            }
+
+            // Real timeout or unknown abort
+            return {
+                type: 'NETWORK',
+                message: 'Request timeout, please retry',
+                originalError: error,
+                retryable: true,
+                context,
+            };
+        }
+
+        if (error?.message?.includes('timeout')) {
             return {
                 type: 'NETWORK',
                 message: error.message?.includes('Stream timeout')
@@ -177,6 +200,8 @@ export class ErrorHandler {
                 return 'Please check your input';
             case 'SERVER':
                 return 'Retry later or contact support';
+            case 'CANCELLED':
+                return null; // No action needed for cancelled requests
             default:
                 return null;
         }
@@ -195,6 +220,12 @@ export class ErrorHandler {
             context: contextInfo,
             timestamp: new Date().toISOString(),
         };
+
+        // Don't log cancelled requests as errors
+        if (error.type === 'CANCELLED') {
+            logger.debug('Request cancelled:', errorInfo);
+            return;
+        }
 
         if (error.type === 'SERVER' || error.type === 'NETWORK') {
             logger.warn('API Error:', errorInfo, error.originalError);
@@ -247,6 +278,8 @@ export class ErrorHandler {
                 return 'warning';
             case 'SERVER':
                 return 'error';
+            case 'CANCELLED':
+                return 'info';
             default:
                 return 'error';
         }

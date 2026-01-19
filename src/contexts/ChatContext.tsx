@@ -199,10 +199,16 @@ export function ChatProvider({
                 window.clearTimeout(skeletonDelayTimerRef.current);
                 skeletonDelayTimerRef.current = null;
             }
-            skeletonDelayTimerRef.current = window.setTimeout(() => {
-                // Only show skeleton if still not ready after the delay
-                setShouldShowSkeleton(isHistoryReadyRef.current ? false : true);
-            }, SKELETON_DELAY_MS);
+
+            // For null sessions (new chat), mark as ready immediately - no skeleton needed
+            if (initialSessionId === null) {
+                setIsHistoryReady(true);
+            } else {
+                skeletonDelayTimerRef.current = window.setTimeout(() => {
+                    // Only show skeleton if still not ready after the delay
+                    setShouldShowSkeleton(isHistoryReadyRef.current ? false : true);
+                }, SKELETON_DELAY_MS);
+            }
 
             prevSessionIdRef.current = initialSessionId;
         }

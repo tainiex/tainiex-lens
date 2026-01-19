@@ -78,8 +78,8 @@ export function useChat({
 
         // Abort previous fetch if still in progress
         if (abortControllerRef.current) {
-            logger.debug('[useChat] Aborting previous fetch');
-            abortControllerRef.current.abort();
+            logger.debug('[useChat] Aborting previous fetch due to session switch');
+            abortControllerRef.current.abort(new Error('Session switched'));
             abortControllerRef.current = null;
         }
 
