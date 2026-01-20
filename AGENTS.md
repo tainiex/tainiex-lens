@@ -38,8 +38,8 @@ Location: `src/shared/utils/logger.ts`
     - `src/shared/`: Shared Logic (API, Socket, Types) - formerly `packages/shared-lens`
 - **Version**: v0.2.0 (Pure Frontend Refactor)
 - **Quick Start**:
-    - **Install**: `yarn install`
-    - **Dev**: `yarn dev` (localhost:2000)
+    - **Install**: `pnpm install`
+    - **Dev**: `pnpm dev` (localhost:2000)
 
 ### Tech Stack
 
@@ -47,7 +47,7 @@ Location: `src/shared/utils/logger.ts`
 | ------------------------- | ------- | ----------------------------------------- |
 | **React**                 | 18.3.1  | Web UI                                    |
 | **Vite**                  | 7.2.4   | Web Bundler                               |
-| **Yarn**                  | 1.22.x  | Package Manager                           |
+| **pnpm**                  | 10.x    | Package Manager                           |
 | **@tainiex/shared-atlas** | 0.0.19  | **Single Source of Truth** for DTOs/Types |
 
 **Developer Rules**
@@ -90,7 +90,7 @@ c:\Users\Cselerity\Codes\tainiex-lens\
 ### Prerequisites
 
 - **Node.js**: v20+
-- **Yarn**: `npm install -g yarn`
+- **pnpm**: `npm install -g pnpm`
 - **GitHub PAT**: `read:packages` scope required for `@tainiex` registry.
 
 ### Configuration Steps
@@ -108,13 +108,13 @@ Ensure your environment provides the auth token.
 #### Step 2: Install
 
 ```bash
-yarn install
+pnpm install
 ```
 
 #### Step 3: Run
 
 ```bash
-yarn dev
+pnpm dev
 ```
 
 ---
@@ -233,7 +233,7 @@ Skeleton timing diagnostics use `logger.debug('[SkeletonDebug]...')` tags.
 **View logs**:
 
 ```bash
-VITE_LOG_LEVEL=debug yarn dev
+VITE_LOG_LEVEL=debug pnpm dev
 ```
 
 Look for:

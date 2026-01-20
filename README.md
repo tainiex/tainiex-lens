@@ -62,7 +62,7 @@ tainiex-lens/
 ### Prerequisites
 
 - Node.js >= 20.x
-- Yarn 1.22.x
+- pnpm >= 10.x
 - **Shared Atlas**: `@tainiex/shared-atlas` (Private) is the authoritative source for all Data Transfer Objects (DTOs) and API interfaces.
 
 ### Installation
@@ -79,14 +79,14 @@ tainiex-lens/
 
 2. **Install Dependencies**:
     ```bash
-    yarn install
+    pnpm install
     ```
 
 ### Development
 
 ```bash
 # Start development server
-yarn dev
+pnpm dev
 ```
 
 Access the app at `http://localhost:2000`
@@ -95,10 +95,10 @@ Access the app at `http://localhost:2000`
 
 ```bash
 # Build production bundle
-yarn build
+pnpm build
 
 # Preview production build
-yarn preview
+pnpm preview
 ```
 
 ## Project Structure

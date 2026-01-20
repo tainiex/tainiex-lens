@@ -19,21 +19,26 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 10
+
             - name: Install Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: 20
-                  cache: 'yarn'
+                  cache: 'pnpm'
                   registry-url: 'https://npm.pkg.github.com'
                   scope: '@tainiex'
 
             - name: Install dependencies
-              run: yarn install
+              run: pnpm install
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.GH_TOKEN }}
 
             - name: Build
-              run: yarn build
+              run: pnpm build
               env:
                   VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
                   VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
