@@ -78,7 +78,7 @@ export function ChatProvider({
     initialMessages = [],
     onSessionIdChange,
     onSessionCreated,
-    // onSessionUpdate, // Currently unused
+    onSessionUpdate,
     initialSkipFetch,
 }: ChatProviderProps) {
     useEffect(() => {
@@ -227,6 +227,8 @@ export function ChatProvider({
     const handleSessionUpdateWrapper = (title?: string) => {
         if (title && currentSessionId) {
             setCurrentSession(prev => ({ ...prev, id: currentSessionId, title }));
+            // [FIX] Notify parent layout about title update (for Sidebar list)
+            onSessionUpdate?.(title);
         }
     };
 

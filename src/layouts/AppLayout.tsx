@@ -219,13 +219,33 @@ const AppLayout = () => {
     }, [navigate]);
 
     // --- Handlers ---
+    // Immediate local title update (without API call, for backend-pushed title updates)
+    const handleUpdateSessionTitle = useCallback(
+        (id: string, title: string) => {
+            setSessions(prev =>
+                prev.map(s =>
+                    s.id === id ? { ...s, title, updatedAt: new Date().toISOString() } : s
+                )
+            );
+        },
+        [setSessions]
+    );
+
     const handleSessionCreated = useCallback(() => {
         fetchSessions({ background: true });
     }, [fetchSessions]);
 
-    const handleSessionUpdate = useCallback(() => {
-        fetchSessions({ background: true });
-    }, [fetchSessions]);
+    const handleSessionUpdate = useCallback(
+        (title?: string) => {
+            // [FIX] Immediate local update for Sidebar list
+            if (title && !isNotesPath && currentActiveId) {
+                handleUpdateSessionTitle(currentActiveId, title);
+            }
+            // Still fetch in background to sync sorting etc.
+            fetchSessions({ background: true });
+        },
+        [fetchSessions, handleUpdateSessionTitle, isNotesPath, currentActiveId]
+    );
     const handleSessionSelect = useCallback(
         (
             id: string | null,
@@ -298,18 +318,6 @@ const AppLayout = () => {
             } catch (error) {
                 logger.error('Failed to rename session', error);
             }
-        },
-        [setSessions]
-    );
-
-    // Immediate local title update (without API call, for backend-pushed title updates)
-    const handleUpdateSessionTitle = useCallback(
-        (id: string, title: string) => {
-            setSessions(prev =>
-                prev.map(s =>
-                    s.id === id ? { ...s, title, updatedAt: new Date().toISOString() } : s
-                )
-            );
         },
         [setSessions]
     );
