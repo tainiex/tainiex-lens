@@ -244,9 +244,83 @@ Look for:
 ---
 
 ## Y.js Architecture
+export const yDocManager = YDocManager.getInstance();
 
-### YDocManager Service
+---
 
-Location: `src/shared/services/YDocManager.ts`
+## Testing Strategy
 
-**Purpose**: Manages Y.js CRDT document synchronization for collaborative editing.
+### Test Framework
+
+Location: See `TESTS.md` for detailed documentation.
+
+**Framework**: Vitest 4.0.16
+- Native Vite integration
+- Fast execution (10-20x faster than Jest)
+- Compatible with Jest API
+- ESM native support
+
+### Test Organization
+
+```
+src/
+├── shared/
+│   ├── utils/
+│   │   ├── apiClient.ts
+│   │   └── apiClient.test.ts      ← Tests co-located with source
+│   ├── services/
+│   │   ├── YDocManager.ts
+│   │   └── YDocManager.test.ts
+│   └── hooks/
+│       ├── useChat.ts
+│       └── useChat.test.ts
+└── test-utils/                    ← Test utilities
+    ├── index.ts                   (Custom render, mock factories)
+    └── mocks.ts                   (Mock data generators)
+```
+
+### Coverage Goals
+
+| Module       | Target Coverage | Reason                            |
+| ------------ | --------------- | --------------------------------- |
+| **Utils**    | > 80%           | Pure functions, core logic        |
+| **Services** | > 75%           | Business logic layer              |
+| **Hooks**    | > 70%           | State management                  |
+| **Components** | > 60%         | UI components                     |
+
+### Running Tests
+
+```bash
+# Run all tests
+pnpm test
+
+# Watch mode
+pnpm test:watch
+
+# Coverage report
+pnpm test:coverage
+
+# UI mode
+pnpm test:ui
+```
+
+### Mock Strategy
+
+- **Utils**: Test with real implementations where possible
+- **Services**: Mock external dependencies (API, Socket, Y.js)
+- **Hooks**: Use `@testing-library/react` renderHook
+- **Components**: Use custom `renderWithProviders` from test-utils
+
+### Current Coverage
+
+✅ **Completed**:
+- Utils: logger, base64, dateGrouping, validation, errorHandler
+- Services: YDocManager (Y.js document management)
+- Test infrastructure complete
+
+🔄 **In Progress**:
+- Services: SocketService, chatService, notesService
+- Hooks: useChat, useChatSocket, useMessageHistory
+- Components: ErrorBoundary, ModelSelector, NetworkStatusBar
+
+For complete testing guide, see `TESTS.md`.

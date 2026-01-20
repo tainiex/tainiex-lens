@@ -139,3 +139,33 @@ VITE_CLARITY_ID=your_clarity_id
 3. Push and create a pull request.
 
 This project follows **Conventional Commits**.
+
+## Testing
+
+本项目使用 Vitest 作为测试框架。详细的测试指南请参考 [TESTS.md](./TESTS.md)。
+
+### 运行测试
+
+```bash
+# 运行所有测试
+pnpm test
+
+# Watch 模式
+pnpm test:watch
+
+# 生成覆盖率报告
+pnpm test:coverage
+
+# 使用 UI 模式
+pnpm test:ui
+```
+
+### 测试覆盖率
+
+当前测试覆盖情况：
+- ✅ Utils: 高覆盖率 (logger, base64, dateGrouping, validation, errorHandler)
+- ✅ Services: 核心服务已测试 (YDocManager)
+- 🔄 Hooks 和 Components: 持续扩展中
+
+详细测试策略和最佳实践请查看 [TESTS.md](./TESTS.md)。
+
