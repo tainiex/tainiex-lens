@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { groupItemsByDate } from './dateGrouping';
+import { groupItemsByDate } from '@/shared/utils/dateGrouping';
 
 describe('groupItemsByDate', () => {
     it('should group items from last 7 days as "Recent 7 Days"', () => {

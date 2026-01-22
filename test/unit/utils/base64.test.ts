@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { base64Utils } from './base64';
+import { base64Utils } from '@/shared/utils/base64';
 
 describe('base64Utils', () => {
     describe('encode', () => {

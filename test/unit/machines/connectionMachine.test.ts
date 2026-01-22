@@ -4,7 +4,7 @@ import { connectionMachine } from '@/shared/machines/connectionMachine';
 import { socketService } from '@/shared/services/SocketService';
 
 // Mock socketService
-vi.mock('../services/SocketService', () => ({
+vi.mock('@/shared/services/SocketService', () => ({
     socketService: {
         getChatSocket: vi.fn(() => ({ connected: false })),
         subscribe: vi.fn(() => () => {}),
@@ -13,7 +13,7 @@ vi.mock('../services/SocketService', () => ({
 }));
 
 // Mock logger
-vi.mock('../utils/logger', () => ({
+vi.mock('@/shared/utils/logger', () => ({
     logger: {
         log: vi.fn(),
         warn: vi.fn(),

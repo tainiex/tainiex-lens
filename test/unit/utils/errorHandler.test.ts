@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ErrorHandler, ApiError } from './errorHandler';
+import { ErrorHandler, ApiError } from '@/shared/utils/errorHandler';
 import * as Sentry from '@sentry/react';
 
 vi.mock('@sentry/react', () => ({

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMockSocket } from '@/test-utils/mocks';
+import { createMockSocket } from '../../utils/mocks';
 
 // Mock the Socket.IO client
 vi.mock('socket.io-client', () => ({

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
-import { validateData, ValidationError } from './validation';
+import { validateData, ValidationError } from '@/shared/utils/validation';
 
 describe('validateData', () => {
     const UserSchema = z.object({

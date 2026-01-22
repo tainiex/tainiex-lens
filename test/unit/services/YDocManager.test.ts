@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Y from 'yjs';
-import { yDocManager } from './YDocManager';
-import { base64Utils } from '../utils/base64';
-import type { YjsSyncPayload, YjsUpdatePayload } from '../types/collaboration';
+import { yDocManager } from '@/shared/services/YDocManager';
+import { base64Utils } from '@/shared/utils/base64';
+import type { YjsSyncPayload, YjsUpdatePayload } from '@/shared/types/collaboration';
 
 describe('YDocManager', () => {
-    let sendUpdateCallback: ReturnType<typeof vi.fn>;
+    let sendUpdateCallback: ReturnType<typeof vi.fn<(noteId: string, update: string) => void>>;
 
     beforeEach(() => {
-        sendUpdateCallback = vi.fn();
+        sendUpdateCallback = vi.fn<(noteId: string, update: string) => void>();
         yDocManager.setSendUpdateCallback(sendUpdateCallback);
     });
 
