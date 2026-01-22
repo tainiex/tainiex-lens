@@ -40,7 +40,7 @@ export function createMockSocket(): Partial<Socket> {
         _trigger: (event: string, ...args: any[]) => {
             const handlers = eventHandlers.get(event);
             if (handlers) {
-                handlers.forEach((handler) => handler(...args));
+                handlers.forEach(handler => handler(...args));
             }
         },
     } as any;
@@ -116,12 +116,12 @@ export function createMockNote(overrides: Partial<any> = {}) {
  * Create a delayed promise for testing async behavior
  */
 export function delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
  * Wait for next tick
  */
 export function nextTick(): Promise<void> {
-    return new Promise((resolve) => queueMicrotask(resolve));
+    return new Promise(resolve => queueMicrotask(resolve));
 }

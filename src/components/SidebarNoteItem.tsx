@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { INote } from '../types/collaboration';
+import { INote } from '../shared/types/collaboration';
 import { apiClient, logger } from '@/shared';
 
 interface SidebarNoteItemProps {

@@ -208,7 +208,14 @@ export interface IUploadResponse {
 }
 
 export interface CollaborationConnectionState {
-    status: 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
+    status:
+        | 'initializing'
+        | 'disconnected'
+        | 'connecting'
+        | 'connected'
+        | 'reconnecting'
+        | 'offline'
+        | 'failed';
     noteId: string | null;
     error?: string;
 }

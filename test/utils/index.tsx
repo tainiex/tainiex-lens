@@ -21,9 +21,9 @@ export function renderWithProviders(
 
     const Wrapper = ({ children }: { children: React.ReactNode }) => {
         if (withRouter) {
-            return <BrowserRouter>{ children } </BrowserRouter>;
+            return <BrowserRouter>{children} </BrowserRouter>;
         }
-        return <>{ children } </>;
+        return <>{children} </>;
     };
 
     return render(ui, { wrapper: Wrapper, ...renderOptions });
@@ -72,7 +72,7 @@ export function mockYDocManager() {
         getOrCreate: vi.fn(),
         applyInitialSync: vi.fn(),
         applyRemoteUpdate: vi.fn(),
-        subscribe: vi.fn(() => () => { }),
+        subscribe: vi.fn(() => () => {}),
         setSendUpdateCallback: vi.fn(),
     };
 }

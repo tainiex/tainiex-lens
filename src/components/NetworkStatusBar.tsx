@@ -5,8 +5,7 @@
  * 显示 WebSocket 连接状态：连接中 / 已连接 / 已断开 / 重试中
  */
 
-import { useEffect, useState } from 'react';
-import type { CollaborationConnectionState } from '../types/collaboration';
+import type { CollaborationConnectionState } from '../shared/types/collaboration';
 import { useSocketContext } from '../contexts/SocketContext';
 import './NetworkStatusBar.css';
 
@@ -30,10 +29,17 @@ const NetworkStatusBar = ({
     // User requested "Remove connected/disconnected popups".
     // We will make it a permanent small indicator that just changes color/icon.
 
-    const { status, error } = connectionState;
+    const { status } = connectionState;
+
+    // 穷尽性检查辅助函数
+    // Exhaustiveness check helper
+    const assertNever = (value: never): never => {
+        throw new Error(`Unhandled status value: ${value}`);
+    };
 
     const getStatusConfig = () => {
         switch (status) {
+            case 'initializing':
             case 'connecting':
                 return {
                     icon: <div className="status-dot-pulse warning"></div>,
@@ -47,20 +53,29 @@ const NetworkStatusBar = ({
                     className: 'connected',
                 };
             case 'reconnecting':
+                return {
+                    icon: <div className="status-dot-pulse warning"></div>,
+                    title: 'Reconnecting...',
+                    className: 'reconnecting',
+                };
             case 'disconnected':
             case 'failed':
                 return {
                     icon: <div className="status-dot-pulse warning"></div>,
-                    title: 'Connecting...',
-                    className: 'reconnecting',
+                    title: 'Disconnected',
+                    className: 'disconnected',
+                };
+            case 'offline':
+                return {
+                    icon: <div className="status-dot-static danger"></div>,
+                    title: 'No Internet Connection',
+                    className: 'offline',
                 };
 
             default:
-                return {
-                    icon: <div className="status-dot-static gray"></div>,
-                    title: 'Unknown',
-                    className: 'disconnected',
-                };
+                // 穷尽性检查 - 如果添加新状态而忘记处理，TypeScript 会在编译时报错
+                // Exhaustiveness check - TypeScript will error at compile time if new state is added but not handled
+                return assertNever(status);
         }
     };
 

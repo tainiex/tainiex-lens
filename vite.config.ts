@@ -74,15 +74,16 @@ export default defineConfig({
         globals: true,
         environment: 'jsdom',
         setupFiles: ['./vitest.setup.ts'],
+        include: ['test/**/*.test.{ts,tsx}', 'src/**/*.test.{ts,tsx}'], // 支持两种位置
         coverage: {
             provider: 'v8',
             reporter: ['text', 'json', 'html'],
             exclude: [
                 'node_modules/',
                 'dist/',
+                'test/**', // 排除所有测试文件
                 '**/*.test.{ts,tsx}',
                 '**/*.spec.{ts,tsx}',
-                'src/test-utils/',
                 'vitest.setup.ts',
             ],
         },

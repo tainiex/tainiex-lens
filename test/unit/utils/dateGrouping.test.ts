@@ -38,8 +38,8 @@ describe('groupItemsByDate', () => {
 
         expect(grouped['Recent 7 Days']).toHaveLength(2);
         expect(grouped['Earlier']).toHaveLength(2);
-        expect(grouped['Recent 7 Days'].map((i) => i.id)).toEqual(['1', '2']);
-        expect(grouped['Earlier'].map((i) => i.id)).toEqual(['3', '4']);
+        expect(grouped['Recent 7 Days'].map(i => i.id)).toEqual(['1', '2']);
+        expect(grouped['Earlier'].map(i => i.id)).toEqual(['3', '4']);
     });
 
     it('should handle empty array', () => {
@@ -58,4 +58,3 @@ describe('groupItemsByDate', () => {
         expect(grouped['Earlier']).toHaveLength(1);
     });
 });
-

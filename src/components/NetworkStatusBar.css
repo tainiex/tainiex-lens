@@ -60,7 +60,8 @@
 
 .status-dot-pulse.warning {
   background-color: #f1c40f;
-  animation: pulse-yellow 2s infinite;
+  /* 使用闪烁动画替代 pulse 动画 - Use blink animation instead of pulse */
+  animation: blink-yellow 1.4s ease-in-out infinite;
 }
 
 .status-dot-static.danger {
@@ -157,5 +158,15 @@
   .status-dot-static {
     width: 8px;
     height: 8px;
+  }
+}
+/* 黄灯闪烁动画 - Yellow blink animation */
+@keyframes blink-yellow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
   }
 }

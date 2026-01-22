@@ -13,7 +13,10 @@ describe('ErrorHandler', () => {
 
     describe('parseError', () => {
         it('should parse 401 Response as AUTH error', () => {
-            const response = new Response('Unauthorized', { status: 401, statusText: 'Unauthorized' });
+            const response = new Response('Unauthorized', {
+                status: 401,
+                statusText: 'Unauthorized',
+            });
             const error = ErrorHandler.parseError(response);
 
             expect(error.type).toBe('AUTH');
@@ -154,7 +157,7 @@ describe('ErrorHandler', () => {
 
     describe('logError', () => {
         it('should not log CANCELLED errors as errors', () => {
-            const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => { });
+            const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
             const error: ApiError = { type: 'CANCELLED', message: 'test', retryable: false };
 
             ErrorHandler.logError(error);
@@ -174,7 +177,10 @@ describe('ErrorHandler', () => {
 
             ErrorHandler.logError(error, 'API Call');
 
-            expect(Sentry.captureException).toHaveBeenCalledWith(error.originalError, expect.any(Object));
+            expect(Sentry.captureException).toHaveBeenCalledWith(
+                error.originalError,
+                expect.any(Object)
+            );
         });
     });
 });
