@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { INote } from '../shared/types/collaboration';
 import { apiClient, logger } from '@/shared';
+import './SidebarNoteItem.css';
 
 interface SidebarNoteItemProps {
     note: INote;

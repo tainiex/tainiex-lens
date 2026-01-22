@@ -56,48 +56,67 @@ class ErrorBoundary extends Component<Props, State> {
                 return this.props.fallback;
             }
 
+            const isProduction = import.meta.env.PROD;
+
             // Default Error UI
             return (
                 <div className="error-boundary">
                     <div className="error-boundary-content">
-                        <div className="error-icon">⚠️</div>
-                        <h2 className="error-title">Something went wrong</h2>
+                        <div className="error-icon">
+                            <svg
+                                width="64"
+                                height="64"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                        </div>
+                        <h2 className="error-title">出现了一些问题</h2>
                         <p className="error-message">
-                            Sorry, an error occurred. Please try refreshing the page or going back.
+                            {isProduction
+                                ? '抱歉，页面加载时遇到错误。请尝试刷新页面或返回上一页。'
+                                : '开发模式：应用程序遇到错误。请查看下方的错误详情。'}
                         </p>
                         <div className="error-actions">
                             <button
                                 className="error-button error-button-primary"
                                 onClick={this.handleRetry}
                             >
-                                Retry
+                                重试
                             </button>
                             <button
                                 className="error-button error-button-secondary"
                                 onClick={this.handleReload}
                             >
-                                Refresh Page
+                                刷新页面
                             </button>
                             <button
                                 className="error-button error-button-tertiary"
                                 onClick={() => window.history.back()}
                             >
-                                Go Back
+                                返回
                             </button>
                         </div>
 
-                        {/* Show error details in development */}
-                        {process.env.NODE_ENV === 'development' && this.state.error && (
+                        {/* Show error details only in development */}
+                        {!isProduction && this.state.error && (
                             <details className="error-details">
-                                <summary>Error Details (Dev Mode)</summary>
+                                <summary>错误详情（开发模式）</summary>
                                 <div className="error-stack">
-                                    <h4>Error Message:</h4>
+                                    <h4>错误信息：</h4>
                                     <pre>{this.state.error.message}</pre>
-                                    <h4>Stack Trace:</h4>
+                                    <h4>堆栈跟踪：</h4>
                                     <pre>{this.state.error.stack}</pre>
                                     {this.state.errorInfo && (
                                         <>
-                                            <h4>Component Stack:</h4>
+                                            <h4>组件堆栈：</h4>
                                             <pre>{this.state.errorInfo.componentStack}</pre>
                                         </>
                                     )}
