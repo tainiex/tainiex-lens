@@ -74,10 +74,14 @@ export function useChat({
 
     useEffect(() => {
         logger.debug('[useChat] currentSessionId changed:', currentSessionId);
+
+        // Check if session ID actually changed
+        const sessionChanged = currentSessionId !== currentSessionIdRef.current;
         currentSessionIdRef.current = currentSessionId;
 
-        // Abort previous fetch if still in progress
-        if (abortControllerRef.current) {
+        // Abort previous fetch ONLY if session actually changed
+        // This prevents unnecessary abort during React StrictMode double-invocation
+        if (sessionChanged && abortControllerRef.current) {
             logger.debug('[useChat] Aborting previous fetch due to session switch');
             abortControllerRef.current.abort(new Error('Session switched'));
             abortControllerRef.current = null;
@@ -85,6 +89,7 @@ export function useChat({
 
         logger.debug('[SkeletonDebug][useChat][session-change]', {
             currentSessionId,
+            sessionChanged,
             shouldSkipHistoryFetch: shouldSkipHistoryFetchRef.current,
             lastFetchedSessionId: lastFetchedSessionIdRef.current,
             ts: performance.now(),
