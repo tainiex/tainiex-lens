@@ -20,6 +20,7 @@ const SidebarNoteList = ({
     onCreateNote,
     onDeleteNote,
     onRenameNote,
+    isLoading,
 }: SidebarNoteListProps) => {
     const [noteSearch, setNoteSearch] = useState('');
     const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -95,7 +96,42 @@ const SidebarNoteList = ({
 
             {/* NOTES LIST CONTENT in sidebar-history */}
             <div className="history-list" style={{ flex: 1, overflowY: 'auto' }}>
-                {notes.length === 0 ? (
+                {isLoading ? (
+                    // Loading skeleton
+                    <div style={{ padding: '0.5rem' }}>
+                        {[1, 2, 3, 4].map(i => (
+                            <div
+                                key={i}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '6px 12px',
+                                    marginBottom: '4px',
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        width: '14px',
+                                        height: '14px',
+                                        borderRadius: '2px',
+                                        background: 'var(--bg-tertiary)',
+                                        animation: 'skeleton-pulse 1.5s ease-in-out infinite',
+                                    }}
+                                />
+                                <div
+                                    style={{
+                                        flex: 1,
+                                        height: '14px',
+                                        borderRadius: '4px',
+                                        background: 'var(--bg-tertiary)',
+                                        animation: 'skeleton-pulse 1.5s ease-in-out infinite',
+                                    }}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                ) : notes.length === 0 ? (
                     <div
                         style={{
                             padding: '1rem',

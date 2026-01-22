@@ -56,10 +56,6 @@
     justify-content: center;
     color: var(--text-tertiary);
     transition: transform 0.2s ease;
-    position: absolute;
-    left: -2px;
-    top: 50%;
-    transform: translateY(-50%);
 }
 
 /* Item Title */
