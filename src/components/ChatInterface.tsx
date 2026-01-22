@@ -1,5 +1,5 @@
 import { IUser } from '@tainiex/shared-atlas';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { logger, useMessageHistory, useChatScroll } from '@/shared';
 import { useChatContext } from '../contexts/ChatContext';
 import ChatHeader from './ChatHeader';
@@ -47,6 +47,7 @@ function ChatInterfaceContent({ user, onMenuClick }: ChatInterfaceProps) {
         scrollToBottom,
         handleScroll,
         enableAutoScroll,
+        requestPushUp,
     } = useChatScroll({
         messages,
         isLoading,
@@ -65,15 +66,16 @@ function ChatInterfaceContent({ user, onMenuClick }: ChatInterfaceProps) {
         }
     }, [scrollRef]);
 
-    // Listen for scroll requests from Context (triggered by send)
-    useEffect(() => {
-        const handleScrollRequest = () => {
-            enableAutoScroll();
-            scrollToBottom();
-        };
-        window.addEventListener('chat-scroll-request', handleScrollRequest);
-        return () => window.removeEventListener('chat-scroll-request', handleScrollRequest);
-    }, [enableAutoScroll, scrollToBottom]);
+    // [FIX] Removed chat-scroll-request listener to prevent scrollToBottom conflict with Push-Up effect.
+    // The push-up effect (handled by ChatMessages -> triggerPushUp) now manages the scroll on send.
+    // useEffect(() => {
+    //     const handleScrollRequest = () => {
+    //         enableAutoScroll();
+    //         scrollToBottom();
+    //     };
+    //     window.addEventListener('chat-scroll-request', handleScrollRequest);
+    //     return () => window.removeEventListener('chat-scroll-request', handleScrollRequest);
+    // }, [enableAutoScroll, scrollToBottom]);
 
     const { syncMessages } = useMessageHistory({
         // Re-instantiate to access syncMessages if needed or just remove
@@ -94,6 +96,14 @@ function ChatInterfaceContent({ user, onMenuClick }: ChatInterfaceProps) {
         wasConnectedRef.current = isConnected;
     }, [isConnected, currentSessionId, syncMessages]);
 
+    // Callback for when ChatMessages is ready to trigger push-up
+    const handlePushUpReady = useCallback(
+        (messageId?: string) => {
+            requestPushUp(messageId);
+        },
+        [requestPushUp]
+    );
+
     return (
         <div className="chat-interface" style={{ position: 'relative' }}>
             <ChatHeader
@@ -108,6 +118,7 @@ function ChatInterfaceContent({ user, onMenuClick }: ChatInterfaceProps) {
                 scrollContainerRef={scrollRef}
                 messagesListRef={messagesListRef}
                 handleScroll={handleScroll}
+                onPushUpReady={handlePushUpReady}
             />
             <ChatInput
                 onSend={handleSend}

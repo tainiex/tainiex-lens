@@ -12,6 +12,8 @@ interface UseChatScrollProps {
     fetchHistory: (before?: string) => void;
 }
 
+type RequestPushUpFn = (messageId: string | undefined) => void;
+
 export function useChatScroll({
     messages,
     isLoading,
@@ -25,94 +27,152 @@ export function useChatScroll({
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const messagesListRef = useRef<HTMLDivElement>(null);
     const isInitialLoad = useRef(true);
-    const isAutoScrollEnabled = useRef(true);
+    const isAutoScrollEnabled = useRef(false);
+
+    // push-up state
+    const pendingPushUpIdRef = useRef<string | undefined>(undefined);
+
+    // Push up by messageId (called explicitly by parent via requestPushUp)
+    const triggerPushUpById = useCallback(() => {
+        if (!scrollContainerRef.current) return;
+
+        const container = scrollContainerRef.current;
+        const messageId = pendingPushUpIdRef.current;
+        if (!messageId) return;
+
+        // Disable auto-scroll immediately
+        isAutoScrollEnabled.current = false;
+
+        const doScroll = (id: string) => {
+            if (!scrollContainerRef.current) return;
+            const targetEl = scrollContainerRef.current.querySelector(
+                `[data-message-id="${CSS.escape(String(id))}"]`
+            ) as HTMLElement | null;
+            if (!targetEl) {
+                return;
+            }
+            const HEADER_OFFSET = 70;
+            const GAP = 24;
+            const targetScrollTop = targetEl.offsetTop - HEADER_OFFSET - GAP;
+
+            scrollContainerRef.current.scrollTo({
+                top: Math.max(0, targetScrollTop),
+                behavior: 'smooth',
+            });
+        };
+
+        // immediate
+        doScroll(messageId);
+        // delayed correction to counter SmoothLoader高度变化
+        setTimeout(() => doScroll(messageId), 400);
+
+        // Clear pending id after action
+        pendingPushUpIdRef.current = undefined;
+    }, []);
+
+    const requestPushUp: RequestPushUpFn = useCallback((messageId?: string) => {
+        pendingPushUpIdRef.current = messageId;
+    }, []);
 
     const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
         if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollTo({
-                top: scrollContainerRef.current.scrollHeight,
-                behavior,
-            });
+            const container = scrollContainerRef.current;
+
+            // Find the last message and scroll to show its bottom
+            const messageElements = container.querySelectorAll('.message');
+            const lastMessage = messageElements[messageElements.length - 1] as HTMLElement;
+
+            if (lastMessage) {
+                const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                const targetScroll = messageBottom - container.clientHeight;
+
+                container.scrollTo({
+                    top: Math.max(0, targetScroll),
+                    behavior,
+                });
+            } else {
+                // Fallback if no messages found
+                container.scrollTo({
+                    top: container.scrollHeight,
+                    behavior,
+                });
+            }
         }
     }, []);
 
-    // Auto-scroll during message updates (streaming)
-    useEffect(() => {
-        if (isLoading && isAutoScrollEnabled.current) {
-            scrollToBottom();
-        }
-    }, [messages, isLoading, scrollToBottom]);
-
-    // Perform scroll adjustment after messages are rendered
+    // Reactively handle scrolling logic
     useLayoutEffect(() => {
         if (!scrollContainerRef.current) return;
 
         if (messages.length === 0) {
-            // Reset scroll to top when messages are cleared (e.g. switching sessions)
-            // This ensures the Skeleton (which is at the top) is visible.
             scrollContainerRef.current.scrollTop = 0;
             return;
         }
 
+        // 1. Initial Load: Stick to bottom
         if (isInitialLoad.current && messages.length > 0) {
-            scrollToBottom();
-            isInitialLoad.current = false;
-        } else if (scrollHeightBeforeRef.current > 0) {
+            const container = scrollContainerRef.current;
+            container.scrollTop = container.scrollHeight;
+            // We do NOT set isInitialLoad.current = false here immediately.
+            // We let the ResizeObserver handle subsequent layout shifts (e.g. SmoothLoader, images)
+            // It will be disabled by the first user scroll interaction (handled in handleScroll).
+            return;
+        }
+
+        // 2. Pagination Restore
+        if (scrollHeightBeforeRef.current > 0) {
             const container = scrollContainerRef.current;
             const newScrollHeight = container.scrollHeight;
             container.scrollTop = newScrollHeight - scrollHeightBeforeRef.current;
-            scrollHeightBeforeRef.current = 0; // Reset
+            scrollHeightBeforeRef.current = 0;
+            return;
         }
-    }, [messages, scrollToBottom, scrollHeightBeforeRef]);
 
-    // Manage visual viewport for mobile keyboards
+        // 3. Push Up (Triggered by user send)
+        if (pendingPushUpIdRef.current) {
+            // Try to find element immediately
+            triggerPushUpById();
+        }
+    }, [messages, scrollHeightBeforeRef, triggerPushUpById]);
+
+    // Industrial Grade: Use ResizeObserver to maintain scroll position during layout shifts
     useEffect(() => {
-        const viewport = window.visualViewport;
-        if (!viewport) return;
-
-        const handleViewportChange = () => {
-            if (scrollContainerRef.current) {
-                scrollToBottom();
-            }
-
-            const chatInterface = document.querySelector('.chat-interface') as HTMLElement;
-            if (chatInterface) {
-                chatInterface.style.height = `${viewport.height}px`;
-                chatInterface.style.bottom = '0';
-                window.scrollTo(0, 0);
-            }
-        };
-
-        viewport.addEventListener('resize', handleViewportChange);
-        viewport.addEventListener('scroll', handleViewportChange);
-
-        return () => {
-            viewport.removeEventListener('resize', handleViewportChange);
-            viewport.removeEventListener('scroll', handleViewportChange);
-        };
-    }, [scrollToBottom]);
-
-    // PRECISE AUTO-SCROLL: Use ResizeObserver to track message list growth
-    useEffect(() => {
-        if (!messagesListRef.current) return;
+        if (!messagesListRef.current || !scrollContainerRef.current) return;
 
         const observer = new ResizeObserver(() => {
-            if (isStreaming && isAutoScrollEnabled.current) {
-                scrollToBottom();
+            const container = scrollContainerRef.current;
+            if (!container) return;
+
+            // Scenario A: Initial Load - Force stick to bottom until user interacts
+            if (isInitialLoad.current) {
+                container.scrollTop = container.scrollHeight;
+                return;
+            }
+
+            // Scenario B: Push Up Correction - Re-apply if layout shifts occurred after trigger
+            if (pendingPushUpIdRef.current) {
+                triggerPushUpById();
             }
         });
 
         observer.observe(messagesListRef.current);
         return () => observer.disconnect();
-    }, [isStreaming, scrollToBottom]);
+    }, [triggerPushUpById]);
+
+    // Disabled viewport-based and resize-observer auto scroll to avoid unexpected jumps
+    // useEffect(() => { ... }, [scrollToBottom]);
+    // useEffect(() => { ... }, [isStreaming, scrollToBottom]);
 
     const handleScroll = useCallback(() => {
         if (!scrollContainerRef.current) return;
 
         const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-
-        // Detect manual scroll: if user scrolls up from the bottom (with 50px buffer)
         const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
+
+        // If user manually scrolls UP away from bottom, disable initial load sticking
+        if (isInitialLoad.current && !isAtBottom) {
+            isInitialLoad.current = false;
+        }
 
         if (isLoading) {
             isAutoScrollEnabled.current = isAtBottom;
@@ -120,7 +180,6 @@ export function useChatScroll({
 
         if (isFetchingMore || !hasMore || !nextCursor) return;
 
-        // Trigger load more when user scrolls to the top (within threshold)
         if (scrollTop < 50) {
             fetchHistory(nextCursor);
         }
@@ -143,5 +202,6 @@ export function useChatScroll({
         resetScrollState,
         enableAutoScroll,
         isAutoScrollEnabled,
+        requestPushUp,
     };
 }

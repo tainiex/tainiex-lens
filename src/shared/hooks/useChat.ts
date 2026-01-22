@@ -32,6 +32,7 @@ interface UseChatProps {
     onSessionCreated?: () => void;
     onSessionUpdate?: (title?: string) => void;
     enableAutoScroll: () => void;
+    requestPushUp?: (messageId?: string) => void;
     initialSkipFetch?: boolean;
     pageSize?: number;
 }
@@ -47,6 +48,7 @@ export function useChat({
     onSessionCreated,
     onSessionUpdate,
     enableAutoScroll,
+    requestPushUp,
     initialSkipFetch = false,
     pageSize = 20,
 }: UseChatProps) {
@@ -402,20 +404,21 @@ export function useChat({
 
             try {
                 // Prepare optimistic messages immediately (needed for navigation state)
+                const userMessageId = `temp_${Date.now()}`;
                 const userMessage: Partial<IChatMessage> = {
-                    id: `temp_${Date.now()}`,
-                    sessionId: sessionId ?? undefined, // ADD: Tag with session ID for filtering
+                    id: userMessageId,
+                    sessionId: sessionId ?? undefined,
                     role: ChatRole.USER,
                     content: msgToSend,
-                    parentId, // Store parentId locally for complete history structure if needed
+                    parentId,
                 };
                 const assistantMsgId = `temp_ai_${Date.now()}`;
                 const assistantMessage: Partial<IChatMessage> = {
                     id: assistantMsgId,
-                    sessionId: sessionId ?? undefined, // ADD: Tag with session ID for filtering
+                    sessionId: sessionId ?? undefined,
                     role: ChatRole.ASSISTANT,
                     content: '',
-                    parentId: userMessage.id, // Assistant message is child of user message
+                    parentId: userMessage.id,
                 };
                 const optimisticMessages = [userMessage, assistantMessage];
 
@@ -432,10 +435,8 @@ export function useChat({
                     userMessage.sessionId = sessionId;
                     assistantMessage.sessionId = sessionId;
 
-                    // Prevent the upcoming prop update from triggering a history fetch
                     shouldSkipHistoryFetchRef.current = true;
 
-                    // Navigate with explicit messages to prevent flash if remounting
                     setCurrentSessionId(sessionId, {
                         skipFetch: true,
                         initialMessages: optimisticMessages,
@@ -443,21 +444,27 @@ export function useChat({
                     onSessionCreated?.();
                 }
 
+                // Ensure we have a valid sessionId before proceeding
+                if (!sessionId) {
+                    throw new Error('Session ID missing after creation');
+                }
+                const sessionIdStr = sessionId as string;
+
                 // 2. Add local user message (with a temporary ID prefix)
-                // If we navigated (remounted), this setMessages updates the unmounting component state (harmless)
-                // The new component will init with optimisticMessages passed via navigation state.
-                // If we did NOT navigate (or reused component), this updates the current state correctly.
                 setMessages(prev => [
                     ...prev.filter(m => m.id !== 'welcome'),
                     ...optimisticMessages,
                 ]);
 
+                // Trigger push-up only for this user message
+                requestPushUp?.(userMessageId);
+
                 // 3. Send message via WebSocket
                 await wsSendMessage({
-                    sessionId: sessionId!,
+                    sessionId: sessionIdStr,
                     content: msgToSend,
                     model: selectedModel,
-                    parentId, // Pass optional parentId to backend
+                    parentId,
                 });
             } catch (error) {
                 logger.error('Chat error:', error);
@@ -492,6 +499,7 @@ export function useChat({
         isConnected,
         wsError,
         handleSend,
+        requestPushUp,
         shouldSkipHistoryFetchRef,
         currentMessage,
         setCurrentMessage,
