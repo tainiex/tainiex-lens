@@ -138,7 +138,9 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    padding: 0 2rem 1rem;
+    padding: 0 2rem 0;
+    min-height: 100%;
+    /* Allow nested messages to fill full height */
 }
 
 .section-title {
@@ -169,12 +171,13 @@
     flex-direction: column;
     gap: 1.5rem;
     padding-top: 2rem;
-    padding-bottom: 4rem; /* 保持适量常驻底部空间，避免贴底太紧 */
+    padding-bottom: 0;
     width: 100%;
     max-width: 900px;
     margin: 0 auto;
     /* Overflow handled by parent */
-    /* Removed flex: 1 to allow content-based height expansion */
+    min-height: 100%;
+    /* Ensure messages container fills parent to allow bottom alignment */
     justify-content: flex-start;
 }
 
@@ -1342,242 +1345,7 @@
 }
 
 /* Tree View Specific Styles */
-
 .sidebar-tree-item-container {
     display: flex;
     flex-direction: column;
-}
-
-/* Base row style for a tree item */
-.sidebar-tree-row {
-    display: flex;
-    align-items: center;
-    padding: 3px 6px;
-    margin: 1px 0;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.1s ease;
-    color: var(--text-secondary);
-    min-height: 30px;
-    position: relative;
-    user-select: none;
-}
-
-.sidebar-tree-row:hover {
-    background-color: var(--bg-hover);
-    color: var(--text-primary);
-}
-
-.sidebar-tree-row.active {
-    background-color: var(--bg-active);
-    color: var(--text-primary);
-    font-weight: 500;
-}
-
-.tree-chevron-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    margin-right: 2px;
-    color: var(--text-tertiary);
-    transition: all 0.2s;
-    cursor: pointer;
-    flex-shrink: 0;
-}
-
-.tree-chevron-btn:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-    color: var(--text-secondary);
-}
-
-[data-theme='dark'] .tree-chevron-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.tree-item-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 6px;
-    color: var(--text-secondary);
-    opacity: 0.8;
-    flex-shrink: 0;
-}
-
-.sidebar-tree-row.active .tree-item-icon {
-    color: var(--text-primary);
-    opacity: 1;
-}
-
-.sidebar-tree-children {
-    display: flex;
-    flex-direction: column;
-}
-
-/* Tree Icon Swapping Logic */
-.tree-icon-slot {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 20px;
-    height: 20px;
-    margin-right: 6px;
-    cursor: pointer;
-    flex-shrink: 0;
-    color: var(--text-secondary);
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-
-.tree-icon-slot:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-}
-
-[data-theme='dark'] .tree-icon-slot:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.icon-doc,
-.icon-chevron {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
-    height: 100%;
-}
-
-/* Default state: Show Doc, Hide Chevron */
-.icon-chevron {
-    display: none;
-}
-
-/* Swap state: When row hovered AND has children */
-/* We need a parent class on the row to indicate has-children */
-.sidebar-tree-row.has-children:hover .icon-doc {
-    display: none;
-}
-
-.sidebar-tree-row.has-children:hover .icon-chevron {
-    display: flex;
-}
-
-/* Optional: Keep chevron visible if expanded? 
-   User request: "When mouse hover... replace". 
-/* Strict interpretation: Only on hover.
-   But if I stick to strict, visually it might be confusing if expanded.
-*/
-
-/* [FIX] Mobile Visibility: Always show chevron if has children */
-@media (max-width: 768px) {
-    .sidebar-tree-row.has-children .icon-doc {
-        display: none;
-    }
-
-    .sidebar-tree-row.has-children .icon-chevron {
-        display: flex;
-    }
-}
-
-*/
-
-/* Fix Alignment: Ensure list container is flush with sidebar edge */
-.sidebar-history {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-}
-
-/* Ensure search row aligns with items */
-.sidebar-search-row {
-    padding-left: 10px;
-    /* Match tabs container */
-    padding-right: 10px;
-}
-
-/* Tree Item Alignment */
-/* The items already have internal padding via style={{ paddingLeft: ... }} */
-/* We just need to ensure the container itself doesn't add extra offsets */
-
-/* Action Buttons Styling */
-.tree-actions {
-    margin-left: auto;
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-/* Show actions on row hover */
-.sidebar-tree-row:hover .tree-actions {
-    opacity: 1;
-}
-
-/* Override default icon-btn hover background for tree actions */
-.tree-action-btn {
-    background: transparent !important;
-    color: var(--text-secondary);
-    padding: 2px;
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.2s;
-    border: none;
-    /* Reset button border */
-}
-
-.tree-action-btn:hover {
-    color: var(--text-primary);
-    background: transparent !important;
-    /* Explicitly remove bg */
-}
-
-/* Specific styling for the + button if needed */
-.tree-action-btn.add-child {}
-
-/* Align Header and Tabs with widened content (0.5rem horizontal padding) */
-.sidebar-brand {
-    padding: 0 1.25rem !important;
-    /* Align logo to 20px gutter */
-}
-
-.sidebar-tabs-container {
-    padding: 0 10px 0.6rem !important;
-    /* 10px(container) + 2px(control padding) + 8px(tab padding) = 20px */
-}
-
-/* Fix Hover Background Alignment: Add margin to match header padding */
-.sidebar-tree-row {
-    margin: 1px 0.5rem !important;
-    /* 8px left margin */
-    width: auto;
-}
-
-/* Tree Actions Overlay (Hover Effect) */
-.tree-actions {
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    display: none;
-    align-items: center;
-    background: linear-gradient(to right, transparent, var(--bg-hover) 40%);
-    padding-left: 24px;
-    padding-right: 4px;
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
-    z-index: 2;
-}
-
-.sidebar-tree-row:hover .tree-actions,
-.sidebar-tree-row:focus-within .tree-actions {
-    display: flex;
-}
-
-.sidebar-tree-row.active .tree-actions {
-    background: linear-gradient(to right, transparent, var(--bg-active) 40%);
 }

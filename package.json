@@ -8,13 +8,17 @@
         "start:dev": "vite",
         "build": "vite build",
         "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "type-check": "tsc --noEmit",
         "test": "vitest",
+        "test:run": "vitest run",
         "test:ui": "vitest --ui",
         "test:coverage": "vitest --coverage",
         "test:watch": "vitest --watch",
         "preview": "vite preview",
         "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
         "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+        "validate": "pnpm type-check && pnpm lint && pnpm test:run",
         "prepare": "husky",
         "postinstall": "patch-package"
     },
@@ -112,6 +116,7 @@
     },
     "lint-staged": {
         "*.{ts,tsx,js,jsx}": [
+            "eslint --fix",
             "prettier --write"
         ],
         "*.{json,md,yml,yaml}": [

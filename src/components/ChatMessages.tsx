@@ -51,8 +51,6 @@ interface ChatMessagesProps {
     scrollContainerRef: React.RefObject<HTMLDivElement | null>;
     messagesListRef: React.RefObject<HTMLDivElement | null>;
     handleScroll: () => void;
-    onPushUpReady?: (messageId?: string) => void;
-    pushUpSpacerEnabled?: boolean;
 }
 
 const formatMessageTime = (dateStr: string | undefined): string => {
@@ -88,8 +86,6 @@ const ChatMessages = ({
     scrollContainerRef,
     messagesListRef,
     handleScroll,
-    onPushUpReady,
-    pushUpSpacerEnabled,
 }: ChatMessagesProps) => {
     // Use `user` to avoid unused-prop TS error (some builds enable noUnusedParameters)
     void user;
@@ -101,30 +97,6 @@ const ChatMessages = ({
         isHistoryReady,
         shouldShowSkeleton,
     } = useChatContext();
-
-    const prevMessagesLengthRef = React.useRef(messages.length);
-    const prevSessionIdRef = React.useRef(currentSessionId);
-
-    // Reset tracking when switching sessions
-    React.useEffect(() => {
-        if (currentSessionId !== prevSessionIdRef.current) {
-            prevSessionIdRef.current = currentSessionId;
-        }
-    }, [currentSessionId]);
-
-    React.useEffect(() => {
-        // Detect when a new user message is added
-        if (messages.length > prevMessagesLengthRef.current) {
-            // Check newly added messages for a user message
-            const newMessages = messages.slice(prevMessagesLengthRef.current);
-            const newUser = [...newMessages].reverse().find(m => m.role === 'user');
-            if (newUser && onPushUpReady) {
-                const mid = newUser.id ? String(newUser.id) : undefined;
-                onPushUpReady(mid);
-            }
-        }
-        prevMessagesLengthRef.current = messages.length;
-    }, [messages, onPushUpReady]);
 
     useEffect(() => {
         // High-signal timeline log for reproducing "skeleton -> blank -> content" flashes without video
@@ -230,11 +202,12 @@ const ChatMessages = ({
                         isLoading={shouldShowSkeleton}
                         skeleton={skeletonContent}
                         // Ensure overlay and content share the same sizing rules (prevents vertical jumps)
+                        // Use marginTop: auto to bottom-align content when short, instead of flex spacer
                         style={{
-                            flex: 1,
                             minHeight: 0,
                             display: 'flex',
                             flexDirection: 'column',
+                            marginTop: 'auto',
                         }}
                         minDuration={400}
                         transitionDuration={0}
@@ -438,16 +411,6 @@ const ChatMessages = ({
                             ))
                         )}
                     </SmoothLoader>
-                    {pushUpSpacerEnabled && (
-                        <div
-                            style={{
-                                height: '60vh',
-                                flexShrink: 0,
-                                pointerEvents: 'none',
-                            }}
-                            aria-hidden="true"
-                        />
-                    )}
                 </div>
             </div>
         </div>

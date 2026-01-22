@@ -1,9 +1,8 @@
-import { io, Socket, Manager } from 'socket.io-client';
-import { apiClient } from '../utils/apiClient';
+import { Socket, Manager } from 'socket.io-client';
+import { ChatSocket } from '../types/socket';
 import { logger } from '../utils/logger';
-import { ChatSocket, ClientToServerEvents, ServerToClientEvents } from '../types/socket';
-import { CollaborationSocket } from '../types/collaboration';
-import { WebSocketErrorCode } from '@tainiex/shared-atlas';
+import { apiClient } from '../utils/apiClient';
+import type { CollaborationSocket } from '../types/collaboration';
 
 /**
  * SocketService Singleton

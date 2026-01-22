@@ -3,7 +3,7 @@
  * 纯粹的 View Model，负责连接 React 组件与 YDocManager
  */
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { yDocManager } from '../services/YDocManager';
 import type { YjsSyncPayload, YjsUpdatePayload } from '../types/collaboration';
 import { base64Utils } from '../utils/base64';
@@ -39,7 +39,7 @@ export function useYjsDocument({
     // [NOTE] This is a bit of a hack. Ideally Manager talks to SocketService directly.
     // But for now, we route it: Manager -> Hook -> onLocalUpdate -> Component -> SocketHook -> Emit
     useEffect(() => {
-        yDocManager.setSendUpdateCallback((targetNoteId, update) => {
+        yDocManager.setSendUpdateCallback((_targetNoteId, update) => {
             // Only trigger if this hook is responsible for THIS note
             // (Though Manager is global, so this callback is global replacement)
             // We just need to make sure onLocalUpdate is valid.

@@ -6,10 +6,8 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import * as Sentry from '@sentry/react';
 import * as Y from 'yjs';
 import { logger } from '../utils/logger';
-import { apiClient } from '../utils/apiClient';
 import { socketService } from '../services/SocketService';
 import { base64Utils } from '../utils/base64';
 import type {
@@ -55,8 +53,6 @@ export function useCollaborationSocket(
 
     // Use state to expose the socket instance coming from service
     const [socket, setSocket] = useState<CollaborationSocket | null>(null);
-
-    const listenersRef = useRef<{ [key: string]: (...args: any[]) => void }>({});
 
     // Keep socketRef for internal logic to access without dependency
     const socketRef = useRef<CollaborationSocket | null>(null);

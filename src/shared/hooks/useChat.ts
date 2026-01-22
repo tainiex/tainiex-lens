@@ -431,9 +431,9 @@ export function useChat({
                     const sessionData = await sessionRes.json();
                     sessionId = sessionData.id;
 
-                    // UPDATE temp messages with real session ID
-                    userMessage.sessionId = sessionId;
-                    assistantMessage.sessionId = sessionId;
+                    // UPDATE temp messages with real session ID (convert null to undefined)
+                    userMessage.sessionId = sessionId ?? undefined;
+                    assistantMessage.sessionId = sessionId ?? undefined;
 
                     shouldSkipHistoryFetchRef.current = true;
 
@@ -457,7 +457,9 @@ export function useChat({
                 ]);
 
                 // Trigger push-up only for this user message
-                requestPushUp?.(userMessageId);
+                if (requestPushUp) {
+                    requestPushUp(userMessageId);
+                }
 
                 // 3. Send message via WebSocket
                 await wsSendMessage({

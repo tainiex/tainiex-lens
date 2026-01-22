@@ -6,12 +6,12 @@ import PageHeader from './PageHeader';
 interface ChatHeaderProps {
     onMenuClick?: () => void;
     /* removed models prop */
-    isConnected: boolean;
-    wsError: string | null;
+    isConnected?: boolean;
+    wsError?: string | null;
     onReconnect?: () => void;
 }
 
-const ChatHeader = ({ onMenuClick, isConnected, wsError, onReconnect }: ChatHeaderProps) => {
+const ChatHeader = ({ onMenuClick }: ChatHeaderProps) => {
     const { currentSessionId, currentSession, setCurrentSessionId } = useChatContext();
 
     const sessionTitle = currentSession?.title || (currentSessionId ? 'Chat' : 'New Chat');

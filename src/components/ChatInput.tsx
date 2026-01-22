@@ -5,7 +5,6 @@ import { useChatContext } from '../contexts/ChatContext';
 interface ChatInputProps {
     onSend: (message: string) => void;
     isConnected: boolean;
-    scrollToBottom: () => void;
     models: (string | { name: string })[];
     selectedModel: string;
     onSelectModel: (model: string) => void;
@@ -14,7 +13,6 @@ interface ChatInputProps {
 const ChatInput = ({
     onSend,
     isConnected,
-    scrollToBottom,
     models,
     selectedModel,
     onSelectModel,

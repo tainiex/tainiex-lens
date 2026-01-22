@@ -1,12 +1,6 @@
 import { apiClient } from '../utils/apiClient';
 import { logger } from '../utils/logger';
-import type {
-    ChatSession,
-    ChatMessage,
-    CreateSessionRequest,
-    UpdateSessionRequest,
-    AIModel,
-} from '../types/chat';
+import type { ChatSession, ChatMessage, CreateSessionRequest, AIModel } from '../types/chat';
 
 /**
  * Get user chat sessions

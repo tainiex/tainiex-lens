@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { INote } from '../shared/types/collaboration';
 import { apiClient, logger } from '@/shared';
 
@@ -30,7 +29,6 @@ const SidebarNoteItem: React.FC<SidebarNoteItemProps> = ({
     onRenameSubmit,
     onEditCancel,
 }) => {
-    const navigate = useNavigate();
     const [isExpanded, setIsExpanded] = useState(false);
     const [isLoadingChildren, setIsLoadingChildren] = useState(false);
     const [children, setChildren] = useState<INote[]>(note.children || []);

@@ -1,5 +1,5 @@
 import { IUser } from '@tainiex/shared-atlas';
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { logger, useMessageHistory, useChatScroll } from '@/shared';
 import { useChatContext } from '../contexts/ChatContext';
 import ChatHeader from './ChatHeader';
@@ -44,10 +44,7 @@ function ChatInterfaceContent({ user, onMenuClick }: ChatInterfaceProps) {
     const {
         scrollContainerRef: scrollRef,
         messagesListRef,
-        scrollToBottom,
         handleScroll,
-        enableAutoScroll,
-        requestPushUp,
     } = useChatScroll({
         messages,
         isLoading,
@@ -56,7 +53,7 @@ function ChatInterfaceContent({ user, onMenuClick }: ChatInterfaceProps) {
         hasMore,
         nextCursor,
         scrollHeightBeforeRef,
-        fetchHistory, // [FIX] Connect fetchHistory
+        fetchHistory,
     });
 
     // Sync the refs
@@ -96,14 +93,6 @@ function ChatInterfaceContent({ user, onMenuClick }: ChatInterfaceProps) {
         wasConnectedRef.current = isConnected;
     }, [isConnected, currentSessionId, syncMessages]);
 
-    // Callback for when ChatMessages is ready to trigger push-up
-    const handlePushUpReady = useCallback(
-        (messageId?: string) => {
-            requestPushUp(messageId);
-        },
-        [requestPushUp]
-    );
-
     return (
         <div className="chat-interface" style={{ position: 'relative' }}>
             <ChatHeader
@@ -118,12 +107,10 @@ function ChatInterfaceContent({ user, onMenuClick }: ChatInterfaceProps) {
                 scrollContainerRef={scrollRef}
                 messagesListRef={messagesListRef}
                 handleScroll={handleScroll}
-                onPushUpReady={handlePushUpReady}
             />
             <ChatInput
                 onSend={handleSend}
                 isConnected={isConnected}
-                scrollToBottom={scrollToBottom}
                 models={models}
                 selectedModel={selectedModel}
                 onSelectModel={setSelectedModel}

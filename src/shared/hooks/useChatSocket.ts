@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Socket } from 'socket.io-client';
-import { ErrorHandler, ApiError } from '../utils/errorHandler';
+import { ApiError } from '../utils/errorHandler';
 import { logger } from '../utils/logger';
 import { socketService } from '../services/SocketService';
 
