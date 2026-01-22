@@ -5,14 +5,6 @@ import { logger } from '../utils/logger';
 import { useChatSocket } from './useChatSocket';
 import { useSendMessage } from './useSendMessage';
 
-// Hardcoded fallback list for Production or when API fails
-const SUPPORTED_MODELS = [
-    { name: 'gemini-2.5-pro' },
-    { name: 'gemini-2.5-flash' },
-    { name: 'gemini-3-flash-preview' },
-    { name: 'gemini-3-pro-preview' },
-];
-
 interface UseChatProps {
     currentSessionId: string | null;
     setCurrentSessionId: (
@@ -369,24 +361,28 @@ export function useChat({
         }
     }, [streamingText, setMessages]);
 
-    // Fetch available models
+    // Fetch available models from backend
     useEffect(() => {
         apiClient
             .get('/api/chat/models')
             .then(res => {
-                if (!res.ok) throw new Error('API not available');
+                if (!res.ok) {
+                    logger.error('[useChat] Failed to fetch models:', res.status);
+                    throw new Error(`API returned status ${res.status}`);
+                }
                 return res.json();
             })
             .then(data => {
                 const list = Array.isArray(data) ? data : data.models || [];
-                if (list.length > 0) {
-                    setModels(list);
-                } else {
-                    setModels(SUPPORTED_MODELS);
+                if (list.length === 0) {
+                    logger.warn('[useChat] Backend returned empty model list');
                 }
+                setModels(list);
             })
-            .catch(() => {
-                setModels(SUPPORTED_MODELS);
+            .catch(error => {
+                logger.error('[useChat] Failed to load models from backend:', error);
+                // Set empty array - UI should handle this gracefully
+                setModels([]);
             });
     }, []);
 

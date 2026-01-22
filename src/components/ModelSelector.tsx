@@ -71,19 +71,29 @@ const ModelSelector = ({
                 <>
                     <div className="model-selector-backdrop" onClick={() => setIsOpen(false)} />
                     <div className={`model-dropdown-menu ${dropUp ? 'drop-up' : ''}`}>
-                        {models.map((model, idx) => {
-                            const name = getModelName(model);
-                            return (
-                                <button
-                                    key={`${name}-${idx}`}
-                                    type="button"
-                                    className={`model-option ${name === selectedModel ? 'selected' : ''}`}
-                                    onClick={() => handleSelect(name)}
-                                >
-                                    {name}
-                                </button>
-                            );
-                        })}
+                        {models.length === 0 ? (
+                            <div className="model-option-empty">
+                                无法加载模型列表
+                                <br />
+                                <span style={{ fontSize: '0.85em', opacity: 0.7 }}>
+                                    请检查后端连接
+                                </span>
+                            </div>
+                        ) : (
+                            models.map((model, idx) => {
+                                const name = getModelName(model);
+                                return (
+                                    <button
+                                        key={`${name}-${idx}`}
+                                        type="button"
+                                        className={`model-option ${name === selectedModel ? 'selected' : ''}`}
+                                        onClick={() => handleSelect(name)}
+                                    >
+                                        {name}
+                                    </button>
+                                );
+                            })
+                        )}
                     </div>
                 </>
             )}
