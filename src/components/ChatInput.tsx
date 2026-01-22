@@ -96,7 +96,8 @@ const ChatInput = ({
                     onCompositionStart={() => setIsComposing(true)}
                     onCompositionEnd={() => setIsComposing(false)}
                     onFocus={() => {
-                        setTimeout(() => scrollToBottom(), 100);
+                        // Don't auto-scroll on focus - let user control the scroll position
+                        // setTimeout(() => scrollToBottom(), 100);
                     }}
                     disabled={false} // [FIX] Allow typing while loading
                     autoFocus
