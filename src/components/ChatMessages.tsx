@@ -140,16 +140,182 @@ const markdownComponents: Partial<Components> = {
     },
 };
 
+import ToolExecution from './ToolExecution';
+import ActivityStatusIndicator from './ActivityStatusIndicator';
+
 // Shared message rendering logic
 const renderMessageContent = (
     msg: Partial<IChatMessage>,
     idx: number,
     isLastMessage: boolean,
     isLoading: boolean,
-    isStreaming: boolean
+    isStreaming: boolean,
+    currentSessionId?: string // Passed for ActivityStatus
 ) => {
     // Determine if this message bubble should have streaming animation
     const isStreamingMessage = isLastMessage && isStreaming && msg.role === ChatRole.ASSISTANT;
+
+    // Helper to parse content for Tool JSON blocks
+    // Uses a brace-counting approach to correctly identify nested JSON objects
+    const renderContent = (content: string) => {
+        if (!content) return null;
+
+        const parts: React.ReactNode[] = [];
+        let currentIndex = 0;
+
+        while (currentIndex < content.length) {
+            // Find the start of a potential tool block
+            // We look for `{ "tool":` or `{"tool":` with regex roughly to find definition
+            // But strict matching is better. Let's start by searching for `{`
+            const openBraceIndex = content.indexOf('{', currentIndex);
+
+            if (openBraceIndex === -1) {
+                // No more JSON starts, push the rest as markdown
+                const text = content.slice(currentIndex);
+                if (text.trim()) {
+                    parts.push(
+                        <div key={`md-${currentIndex}`} className="markdown-content">
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm, remarkMath]}
+                                rehypePlugins={[[rehypeKatex, { strict: false }]]}
+                                components={markdownComponents}
+                            >
+                                {text}
+                            </ReactMarkdown>
+                        </div>
+                    );
+                }
+                break;
+            }
+
+            // Push text before the brace
+            if (openBraceIndex > currentIndex) {
+                const text = content.slice(currentIndex, openBraceIndex);
+                if (text.trim()) {
+                    parts.push(
+                        <div key={`md-${currentIndex}`} className="markdown-content">
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm, remarkMath]}
+                                rehypePlugins={[[rehypeKatex, { strict: false }]]}
+                                components={markdownComponents}
+                            >
+                                {text}
+                            </ReactMarkdown>
+                        </div>
+                    );
+                }
+            }
+
+            // Now try to parse the object starting at openBraceIndex
+            // Heuristic: Check if it looks like a tool before expensive parsing
+            // We check a substring length to see if "tool" is present near the start
+            const peek = content.slice(openBraceIndex, openBraceIndex + 20).replace(/\s/g, '');
+            if (!peek.includes('"tool":')) {
+                // Not a tool block, just markdown containing {
+                // We advance normally. BUT wait, if we consume just `{`, standard markdown might break if it was part of code.
+                // However, since we are splitting by blocks, treating it as text is safer.
+                // We just advance index by 1 to include `{` in next markdown chunk search effectively
+                // Actually, efficient way: treat `{` as text and continue
+                const text = content.slice(openBraceIndex, openBraceIndex + 1);
+                parts.push(
+                    <div
+                        key={`md-char-${openBraceIndex}`}
+                        className="markdown-content"
+                        style={{ display: 'inline' }}
+                    >
+                        {text}
+                    </div>
+                );
+                currentIndex = openBraceIndex + 1;
+                continue;
+            }
+
+            // It looks like a tool. Let's find the matching closing brace.
+            let balance = 0;
+            let closeBraceIndex = -1;
+            let inString = false;
+            let escape = false;
+
+            for (let i = openBraceIndex; i < content.length; i++) {
+                const char = content[i];
+
+                if (escape) {
+                    escape = false;
+                    continue;
+                }
+
+                if (char === '\\') {
+                    escape = true;
+                    continue;
+                }
+
+                if (char === '"') {
+                    inString = !inString;
+                    continue;
+                }
+
+                if (!inString) {
+                    if (char === '{') {
+                        balance++;
+                    } else if (char === '}') {
+                        balance--;
+                        if (balance === 0) {
+                            closeBraceIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (closeBraceIndex !== -1) {
+                // We have a balanced block
+                const jsonStr = content.slice(openBraceIndex, closeBraceIndex + 1);
+                try {
+                    const toolData = JSON.parse(jsonStr);
+                    if (toolData.tool && toolData.parameters) {
+                        parts.push(
+                            <ToolExecution
+                                key={`tool-${openBraceIndex}`}
+                                toolName={toolData.tool}
+                                parameters={toolData.parameters}
+                            />
+                        );
+                        currentIndex = closeBraceIndex + 1;
+                        continue;
+                    } else {
+                        // Valid JSON but not our tool schema? Treat as markdown code
+                        parts.push(
+                            <div key={`md-json-${openBraceIndex}`} className="markdown-content">
+                                <ReactMarkdown
+                                    remarkPlugins={[remarkGfm, remarkMath]}
+                                    rehypePlugins={[[rehypeKatex, { strict: false }]]}
+                                    components={markdownComponents}
+                                >
+                                    {jsonStr}
+                                </ReactMarkdown>
+                            </div>
+                        );
+                        currentIndex = closeBraceIndex + 1;
+                        continue;
+                    }
+                } catch (e) {
+                    logger.warn('Failed to parse balanced block as JSON:', e);
+                    // Failed parse, treat as text
+                    // Advance just past `{` to avoid infinite loop
+                    currentIndex = openBraceIndex + 1;
+                    // We need to output the `{` we skipped
+                    parts.push(<span key={`err-${openBraceIndex}`}>{'{'}</span>);
+                    continue;
+                }
+            } else {
+                // Unbalanced, maybe incomplete stream? Treat as text
+                currentIndex = openBraceIndex + 1;
+                parts.push(<span key={`unbal-${openBraceIndex}`}>{'{'}</span>);
+            }
+        }
+
+        return parts;
+    };
 
     return (
         <div className={`message ${msg.role}`} data-message-id={String(msg.id || idx)}>
@@ -198,23 +364,31 @@ const renderMessageContent = (
                                 )}
                             </div>
                         )}
-                    {msg.content ? (
-                        <ReactMarkdown
-                            remarkPlugins={[remarkGfm, remarkMath]}
-                            rehypePlugins={[[rehypeKatex, { strict: false }]]}
-                            components={markdownComponents}
-                        >
-                            {msg.content}
-                        </ReactMarkdown>
-                    ) : msg.role === ChatRole.ASSISTANT &&
-                      isLastMessage &&
-                      (isLoading || isStreaming) ? (
-                        <div className="typing-dots">
-                            <div className="typing-dot"></div>
-                            <div className="typing-dot"></div>
-                            <div className="typing-dot"></div>
-                        </div>
-                    ) : null}
+
+                    {msg.content ? renderContent(msg.content) : null}
+
+                    {/* Activity Indicator only for the last Assistant message that is loading/streaming */}
+                    {/* OR if this is the very last block and we are waiting for tokens */}
+                    {msg.role === ChatRole.ASSISTANT &&
+                        isLastMessage &&
+                        (isLoading || isStreaming) && (
+                            <div className="status-area">
+                                {/* Show Activity Status if available (e.g. "Searching...") */}
+                                {currentSessionId && (
+                                    <ActivityStatusIndicator
+                                        sessionId={currentSessionId}
+                                        isVisible={true}
+                                    />
+                                )}
+
+                                {/* Fallback dots if no specific activity description but still loading content */}
+                                <div className="typing-dots">
+                                    <div className="typing-dot"></div>
+                                    <div className="typing-dot"></div>
+                                    <div className="typing-dot"></div>
+                                </div>
+                            </div>
+                        )}
                 </div>
             </div>
         </div>
@@ -223,8 +397,16 @@ const renderMessageContent = (
 
 // Memoized component for completed (non-streaming) messages
 const CompletedMessageBubble = memo(
-    ({ msg, idx }: { msg: Partial<IChatMessage>; idx: number }) => {
-        return renderMessageContent(msg, idx, false, false, false);
+    ({
+        msg,
+        idx,
+        currentSessionId,
+    }: {
+        msg: Partial<IChatMessage>;
+        idx: number;
+        currentSessionId?: string;
+    }) => {
+        return renderMessageContent(msg, idx, false, false, false, currentSessionId);
     },
     (prevProps, nextProps) => {
         // Only re-render if content changed
@@ -239,14 +421,16 @@ const StreamingMessageBubble = ({
     isLastMessage,
     isLoading,
     isStreaming,
+    currentSessionId,
 }: {
     msg: Partial<IChatMessage>;
     idx: number;
     isLastMessage: boolean;
     isLoading: boolean;
     isStreaming: boolean;
+    currentSessionId?: string;
 }) => {
-    return renderMessageContent(msg, idx, isLastMessage, isLoading, isStreaming);
+    return renderMessageContent(msg, idx, isLastMessage, isLoading, isStreaming, currentSessionId);
 };
 
 const ChatMessages = ({
@@ -430,6 +614,7 @@ const ChatMessages = ({
                                             isLastMessage={isLastMessage}
                                             isLoading={isLoading}
                                             isStreaming={isStreaming}
+                                            currentSessionId={currentSessionId || undefined}
                                         />
                                     );
                                 } else {
@@ -438,6 +623,7 @@ const ChatMessages = ({
                                             key={msg.id || idx}
                                             msg={msg}
                                             idx={idx}
+                                            currentSessionId={currentSessionId || undefined}
                                         />
                                     );
                                 }

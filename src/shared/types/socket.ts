@@ -84,4 +84,21 @@ export interface ServerToClientEvents {
 // Combined type for typing the Socket instance
 // usage: Socket<ServerToClientEvents, ClientToServerEvents>
 import { Socket as SocketIOSocket } from 'socket.io-client';
+import { ActivityEventPayload } from './activity';
+
 export type ChatSocket = SocketIOSocket<ServerToClientEvents, ClientToServerEvents>;
+
+// ===== Activity Socket Types =====
+
+export interface ClientToServerActivityEvents {
+    join: (payload: { sessionId: string }) => void;
+}
+
+export interface ServerToClientActivityEvents {
+    'activity:status': (payload: ActivityEventPayload) => void;
+}
+
+export type ActivitySocket = SocketIOSocket<
+    ServerToClientActivityEvents,
+    ClientToServerActivityEvents
+>;

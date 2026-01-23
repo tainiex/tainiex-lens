@@ -3,6 +3,7 @@ import { ChatSocket } from '../types/socket';
 import { logger } from '../utils/logger';
 import { apiClient } from '../utils/apiClient';
 import type { CollaborationSocket } from '../types/collaboration';
+import { ActivitySocket } from '../types/socket';
 
 /**
  * SocketService Singleton
@@ -13,6 +14,7 @@ class SocketService {
     private manager: Manager | null = null;
     private chatSocket: ChatSocket | null = null;
     private collaborationSocket: CollaborationSocket | null = null;
+    private activitySocket: ActivitySocket | null = null;
 
     // Track connection state internally to avoid multiple connects
     private connectionPromise: Promise<void> | null = null;
@@ -51,7 +53,12 @@ class SocketService {
     public async connect(force: boolean = false): Promise<void> {
         logger.debug(`[SocketService] connect() called with force=${force}`);
 
-        if (!force && (this.chatSocket?.connected || this.collaborationSocket?.connected)) {
+        if (
+            !force &&
+            (this.chatSocket?.connected ||
+                this.collaborationSocket?.connected ||
+                this.activitySocket?.connected)
+        ) {
             logger.debug('[SocketService] Already connected or partially connected.');
             return;
         }
@@ -116,6 +123,9 @@ class SocketService {
             if (!this.collaborationSocket) {
                 this.createCollaborationSocket();
             }
+            if (!this.activitySocket) {
+                this.createActivitySocket();
+            }
 
             // 4. Manually connect if not connected
             if (this.chatSocket && !this.chatSocket.connected) {
@@ -132,6 +142,11 @@ class SocketService {
                     '[SocketService] CollaborationSocket not connected, calling connect()...'
                 );
                 this.collaborationSocket.connect();
+            }
+
+            if (this.activitySocket && !this.activitySocket.connected) {
+                logger.debug('[SocketService] ActivitySocket not connected, calling connect()...');
+                this.activitySocket.connect();
             }
         } catch (error) {
             logger.error('[SocketService] Connection failed with error:', error);
@@ -152,6 +167,9 @@ class SocketService {
         if (this.collaborationSocket) {
             this.collaborationSocket.disconnect();
         }
+        if (this.activitySocket) {
+            this.activitySocket.disconnect();
+        }
     }
 
     /**
@@ -163,6 +181,26 @@ class SocketService {
 
     public getCollaborationSocket(): CollaborationSocket | null {
         return this.collaborationSocket;
+    }
+
+    public getActivitySocket(): ActivitySocket | null {
+        return this.activitySocket;
+    }
+
+    /**
+     * Join an activity session to receive updates
+     */
+    public joinActivity(sessionId: string) {
+        if (!this.activitySocket) {
+            logger.warn('[SocketService] Cannot join activity: socket not initialized.');
+            return;
+        }
+        if (!this.activitySocket.connected) {
+            logger.warn('[SocketService] Activity socket not connected. Connecting...');
+            this.activitySocket.connect();
+        }
+        logger.log(`[SocketService] Joining activity session: ${sessionId}`);
+        this.activitySocket.emit('join', { sessionId });
     }
 
     // Alias for backward compatibility if needed, but prefer specific getters
@@ -246,6 +284,16 @@ class SocketService {
         logger.debug('[SocketService] Creating Collaboration Socket...');
         this.collaborationSocket = this.manager.socket('/api/collaboration') as CollaborationSocket;
         this.setupSocketEvents(this.collaborationSocket, 'Collaboration');
+    }
+
+    /**
+     * Internal: Create the Activity Socket instance
+     */
+    private createActivitySocket() {
+        if (!this.manager) return;
+        logger.debug('[SocketService] Creating Activity Socket...');
+        this.activitySocket = this.manager.socket('/activity') as ActivitySocket;
+        this.setupSocketEvents(this.activitySocket, 'Activity');
     }
 
     /**

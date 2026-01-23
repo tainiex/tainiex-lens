@@ -184,6 +184,11 @@
 .message {
     display: flex;
     gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.message:last-child {
+    margin-bottom: 0;
 }
 
 .message.user {

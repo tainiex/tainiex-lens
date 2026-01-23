@@ -44,6 +44,12 @@ const ChatInput = ({
         // Reset height explicitly
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
+
+            // [Mobile UX] Blur input to close keyboard after sending
+            // This prevents the keyboard from obscuring the new message or response
+            if (window.innerWidth <= 768) {
+                textareaRef.current.blur();
+            }
         }
     };
 

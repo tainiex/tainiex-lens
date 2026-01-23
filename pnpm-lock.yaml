@@ -21,8 +21,8 @@ importers:
         specifier: ^10.32.1
         version: 10.35.0(react@18.3.1)
       '@tainiex/shared-atlas':
-        specifier: 0.0.30
-        version: 0.0.30
+        specifier: 0.0.32
+        version: 0.0.32
       '@tiptap/core':
         specifier: ^3.15.3
         version: 3.15.3(@tiptap/pm@3.15.3)
@@ -852,8 +852,8 @@ packages:
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
-  '@tainiex/shared-atlas@0.0.30':
-    resolution: {integrity: sha512-DhQ9WT0XIDLDv55MZgg1zQHdNlxDuYi8Xooq3XQYJWs22mnODyT/qBgWam73R+NefmP+Z1DM1x3FOvXoBgEfHw==, tarball: https://npm.pkg.github.com/download/@tainiex/shared-atlas/0.0.30/11ed1d9bede380f0f44b853401b4d8c880f4bf5a}
+  '@tainiex/shared-atlas@0.0.32':
+    resolution: {integrity: sha512-21BBQkrurCnA7GRnCr7DKl5JEax0Y44iUUJFtyIZrDlNXYsCdA3fMoA2CULrRlL48gCCFP87V5Ro1lKt7Eqfvw==, tarball: https://npm.pkg.github.com/download/@tainiex/shared-atlas/0.0.32/b2c7f280eb81f4079e7233ddf70e293139a094b2}
 
   '@testing-library/dom@10.4.1':
     resolution: {integrity: sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==}
@@ -3403,7 +3403,7 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@tainiex/shared-atlas@0.0.30':
+  '@tainiex/shared-atlas@0.0.32':
     dependencies:
       class-transformer: 0.5.1
       class-validator: 0.14.3
