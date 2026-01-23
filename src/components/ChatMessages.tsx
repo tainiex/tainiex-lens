@@ -1,10 +1,10 @@
 import ReactMarkdown from 'react-markdown';
-import React, { useEffect } from 'react';
+import React, { useEffect, memo } from 'react';
 import { logger } from '@/shared/utils/logger';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import { IUser, ChatRole } from '@tainiex/shared-atlas';
+import { IUser, ChatRole, IChatMessage } from '@tainiex/shared-atlas';
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
 import type { SyntaxHighlighterProps } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -39,7 +39,6 @@ SyntaxHighlighter.registerLanguage('csharp', csharp);
 SyntaxHighlighter.registerLanguage('go', go);
 SyntaxHighlighter.registerLanguage('rust', rust);
 SyntaxHighlighter.registerLanguage('css', css);
-import TypewriterEffect from './TypewriterEffect';
 import { useChatContext } from '../contexts/ChatContext';
 
 import Skeleton from './ui/Skeleton';
@@ -78,6 +77,163 @@ const formatMessageTime = (dateStr: string | undefined): string => {
     const offsetStr = `UTC${offsetSign}${offsetHours}${offsetMins > 0 ? `:${offsetMins}` : ''}`;
 
     return `${timeStr} ${timeZoneID} (${offsetStr})`;
+};
+
+// Memoized Markdown components to avoid recreating on every render
+const markdownComponents = {
+    code({ inline, className, children, ...props }: any) {
+        const match = /language-(\w+)/.exec(className || '');
+        return !inline && match ? (
+            (() => {
+                const Highlighter =
+                    SyntaxHighlighter as unknown as React.ComponentType<SyntaxHighlighterProps>;
+                return (
+                    <Highlighter
+                        style={oneLight as any}
+                        language={match[1]}
+                        PreTag="div"
+                        customStyle={{
+                            background: 'transparent',
+                            padding: 0,
+                            margin: 0,
+                        }}
+                        {...props}
+                    >
+                        {String(children).replace(/\n$/, '')}
+                    </Highlighter>
+                );
+            })()
+        ) : (
+            <code className={className} {...props}>
+                {children}
+            </code>
+        );
+    },
+    a({ href, children, ...props }: any) {
+        const handleClick = (e: React.MouseEvent) => {
+            e.preventDefault();
+            if (href) {
+                const confirmed = window.confirm(`即将跳转到外部网站：\n${href}\n\n是否继续访问？`);
+                if (confirmed) {
+                    window.open(href, '_blank', 'noopener,noreferrer');
+                }
+            }
+        };
+        return (
+            <a href={href} onClick={handleClick} style={{ cursor: 'pointer' }} {...props}>
+                {children}
+            </a>
+        );
+    },
+};
+
+// Shared message rendering logic
+const renderMessageContent = (
+    msg: Partial<IChatMessage>,
+    idx: number,
+    isLastMessage: boolean,
+    isLoading: boolean,
+    isStreaming: boolean
+) => {
+    // Determine if this message bubble should have streaming animation
+    const isStreamingMessage = isLastMessage && isStreaming && msg.role === ChatRole.ASSISTANT;
+
+    return (
+        <div className={`message ${msg.role}`} data-message-id={String(msg.id || idx)}>
+            <div
+                className="message-inner-container"
+                style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: msg.role === ChatRole.USER ? 'flex-end' : 'flex-start',
+                    maxWidth: '100%',
+                    flex: 1,
+                    minWidth: 0,
+                }}
+            >
+                {msg.role === ChatRole.USER &&
+                    ((msg as any).createdAt || (msg as any).timestamp) && (
+                        <div
+                            className="message-time-outside"
+                            style={{
+                                fontSize: '0.7rem',
+                                opacity: 0.6,
+                                marginBottom: '4px',
+                                marginRight: '8px',
+                                userSelect: 'none',
+                            }}
+                        >
+                            {formatMessageTime((msg as any).createdAt || (msg as any).timestamp)}
+                        </div>
+                    )}
+
+                <div className={`message-bubble ${isStreamingMessage ? 'streaming' : ''}`}>
+                    {msg.role === ChatRole.ASSISTANT &&
+                        ((msg as any).createdAt || (msg as any).timestamp) && (
+                            <div
+                                className="message-time"
+                                style={{
+                                    fontSize: '0.7rem',
+                                    opacity: 0.6,
+                                    marginBottom: '4px',
+                                    textAlign: 'left',
+                                    userSelect: 'none',
+                                }}
+                            >
+                                {formatMessageTime(
+                                    (msg as any).createdAt || (msg as any).timestamp
+                                )}
+                            </div>
+                        )}
+                    {msg.content ? (
+                        <ReactMarkdown
+                            remarkPlugins={[remarkGfm, remarkMath]}
+                            rehypePlugins={[[rehypeKatex, { strict: false }]]}
+                            components={markdownComponents}
+                        >
+                            {msg.content}
+                        </ReactMarkdown>
+                    ) : msg.role === ChatRole.ASSISTANT &&
+                      isLastMessage &&
+                      (isLoading || isStreaming) ? (
+                        <div className="typing-dots">
+                            <div className="typing-dot"></div>
+                            <div className="typing-dot"></div>
+                            <div className="typing-dot"></div>
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Memoized component for completed (non-streaming) messages
+const CompletedMessageBubble = memo(
+    ({ msg, idx }: { msg: Partial<IChatMessage>; idx: number }) => {
+        return renderMessageContent(msg, idx, false, false, false);
+    },
+    (prevProps, nextProps) => {
+        // Only re-render if content changed
+        return prevProps.msg.content === nextProps.msg.content;
+    }
+);
+
+// Non-memoized component for streaming messages (always re-renders)
+const StreamingMessageBubble = ({
+    msg,
+    idx,
+    isLastMessage,
+    isLoading,
+    isStreaming,
+}: {
+    msg: Partial<IChatMessage>;
+    idx: number;
+    isLastMessage: boolean;
+    isLoading: boolean;
+    isStreaming: boolean;
+}) => {
+    return renderMessageContent(msg, idx, isLastMessage, isLoading, isStreaming);
 };
 
 const ChatMessages = ({
@@ -248,167 +404,31 @@ const ChatMessages = ({
                                 </p>
                             </div>
                         ) : (
-                            messages.map((msg, idx) => (
-                                <div
-                                    key={msg.id || idx}
-                                    className={`message ${msg.role}`}
-                                    data-message-id={String(msg.id || idx)}
-                                >
-                                    <div
-                                        className="message-inner-container"
-                                        style={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems:
-                                                msg.role === ChatRole.USER
-                                                    ? 'flex-end'
-                                                    : 'flex-start',
-                                            maxWidth: '100%',
-                                            flex: 1,
-                                            minWidth: 0,
-                                        }}
-                                    >
-                                        {msg.role === ChatRole.USER &&
-                                            ((msg as any).createdAt || (msg as any).timestamp) && (
-                                                <div
-                                                    className="message-time-outside"
-                                                    style={{
-                                                        fontSize: '0.7rem',
-                                                        opacity: 0.6,
-                                                        marginBottom: '4px',
-                                                        marginRight: '8px', // Slight offset for visual alignment
-                                                        userSelect: 'none',
-                                                    }}
-                                                >
-                                                    {formatMessageTime(
-                                                        (msg as any).createdAt ||
-                                                            (msg as any).timestamp
-                                                    )}
-                                                </div>
-                                            )}
-
-                                        <div className="message-bubble">
-                                            {msg.role === ChatRole.ASSISTANT &&
-                                                ((msg as any).createdAt ||
-                                                    (msg as any).timestamp) && (
-                                                    <div
-                                                        className="message-time"
-                                                        style={{
-                                                            fontSize: '0.7rem',
-                                                            opacity: 0.6,
-                                                            marginBottom: '4px',
-                                                            textAlign: 'left',
-                                                            userSelect: 'none',
-                                                        }}
-                                                    >
-                                                        {formatMessageTime(
-                                                            (msg as any).createdAt ||
-                                                                (msg as any).timestamp
-                                                        )}
-                                                    </div>
-                                                )}
-                                            {msg.role === ChatRole.ASSISTANT &&
-                                            idx === messages.length - 1 &&
-                                            isStreaming ? (
-                                                <TypewriterEffect
-                                                    content={msg.content || ''}
-                                                    isStreaming={true}
-                                                />
-                                            ) : msg.content ? (
-                                                <ReactMarkdown
-                                                    remarkPlugins={[remarkGfm, remarkMath]}
-                                                    rehypePlugins={[
-                                                        [rehypeKatex, { strict: false }],
-                                                    ]}
-                                                    components={{
-                                                        code({
-                                                            inline,
-                                                            className,
-                                                            children,
-                                                            ...props
-                                                        }: any) {
-                                                            const match = /language-(\w+)/.exec(
-                                                                className || ''
-                                                            );
-                                                            return !inline && match ? (
-                                                                (() => {
-                                                                    const Highlighter =
-                                                                        SyntaxHighlighter as unknown as React.ComponentType<SyntaxHighlighterProps>;
-                                                                    return (
-                                                                        <Highlighter
-                                                                            style={oneLight as any}
-                                                                            language={match[1]}
-                                                                            PreTag="div"
-                                                                            customStyle={{
-                                                                                background:
-                                                                                    'transparent',
-                                                                                padding: 0,
-                                                                                margin: 0,
-                                                                            }}
-                                                                            {...props}
-                                                                        >
-                                                                            {String(
-                                                                                children
-                                                                            ).replace(/\n$/, '')}
-                                                                        </Highlighter>
-                                                                    );
-                                                                })()
-                                                            ) : (
-                                                                <code
-                                                                    className={className}
-                                                                    {...props}
-                                                                >
-                                                                    {children}
-                                                                </code>
-                                                            );
-                                                        },
-                                                        a({ href, children, ...props }: any) {
-                                                            const handleClick = (
-                                                                e: React.MouseEvent
-                                                            ) => {
-                                                                e.preventDefault();
-                                                                if (href) {
-                                                                    const confirmed =
-                                                                        window.confirm(
-                                                                            `即将跳转到外部网站：\n${href}\n\n是否继续访问？`
-                                                                        );
-                                                                    if (confirmed) {
-                                                                        window.open(
-                                                                            href,
-                                                                            '_blank',
-                                                                            'noopener,noreferrer'
-                                                                        );
-                                                                    }
-                                                                }
-                                                            };
-                                                            return (
-                                                                <a
-                                                                    href={href}
-                                                                    onClick={handleClick}
-                                                                    style={{ cursor: 'pointer' }}
-                                                                    {...props}
-                                                                >
-                                                                    {children}
-                                                                </a>
-                                                            );
-                                                        },
-                                                    }}
-                                                >
-                                                    {msg.content}
-                                                </ReactMarkdown>
-                                            ) : msg.role === ChatRole.ASSISTANT &&
-                                              idx === messages.length - 1 &&
-                                              (isLoading || isStreaming) ? (
-                                                <div className="typing-dots">
-                                                    <div className="typing-dot"></div>
-                                                    <div className="typing-dot"></div>
-                                                    <div className="typing-dot"></div>
-                                                </div>
-                                            ) : null}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
+                            messages.map((msg, idx) => {
+                                const isLastMessage = idx === messages.length - 1;
+                                // Use non-memoized component for last message during streaming
+                                // Use memoized component for all completed messages
+                                if (isLastMessage && isStreaming) {
+                                    return (
+                                        <StreamingMessageBubble
+                                            key={msg.id || idx}
+                                            msg={msg}
+                                            idx={idx}
+                                            isLastMessage={isLastMessage}
+                                            isLoading={isLoading}
+                                            isStreaming={isStreaming}
+                                        />
+                                    );
+                                } else {
+                                    return (
+                                        <CompletedMessageBubble
+                                            key={msg.id || idx}
+                                            msg={msg}
+                                            idx={idx}
+                                        />
+                                    );
+                                }
+                            })
                         )}
                     </SmoothLoader>
                 </div>

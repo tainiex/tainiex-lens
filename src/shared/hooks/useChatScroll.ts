@@ -101,7 +101,9 @@ export function useChatScroll({
                 forceScrollToBottomRef.current = true; // Force ResizeObserver to scroll
                 isUserScrollingRef.current = false; // Clear user scrolling flag
                 userScrolledUpDuringStreamingRef.current = false; // Reset streaming scroll flag
-                scrollToBottom('smooth');
+                isInitialLoad.current = true; // Treat like initial load to ensure auto-scroll works
+                // Use instant scroll to ensure we reach bottom immediately
+                container.scrollTop = container.scrollHeight;
             } else if (shouldAutoScroll.current) {
                 // For AI messages, only scroll if already at bottom
                 scrollToBottom(isStreaming ? 'auto' : 'smooth');
@@ -116,79 +118,94 @@ export function useChatScroll({
         if (!messagesListRef.current || !scrollContainerRef.current) return;
 
         const container = scrollContainerRef.current;
-        let isUserScrolling = false;
         let scrollTimeout: NodeJS.Timeout;
         let lastScrollTop = container.scrollTop;
-        let scrollStartTop = container.scrollTop; // Track where scrolling started
+        let scrollStartTop = container.scrollTop;
+        let lastProgrammaticScrollTime = 0;
+        let rafId: number | null = null;
+        const PROGRAMMATIC_SCROLL_WINDOW = 100; // ms window to ignore scroll events after programmatic scroll
+        const SCROLL_THRESHOLD = 50; // Minimum scroll distance to trigger user scroll detection
 
         // Detect when user is actively scrolling
         const handleUserScroll = () => {
+            const now = Date.now();
+            // Ignore scroll events within 100ms of programmatic scroll
+            if (now - lastProgrammaticScrollTime < PROGRAMMATIC_SCROLL_WINDOW) {
+                return;
+            }
+
             const currentScrollTop = container.scrollTop;
             const scrollingDown = currentScrollTop > lastScrollTop;
             const { clientHeight } = container;
 
             // Calculate scroll distance from start
-            const scrollDistance = scrollStartTop - currentScrollTop; // Positive = scrolling up
+            const scrollDistance = Math.abs(scrollStartTop - currentScrollTop);
 
             if (scrollingDown) {
                 // User scrolling down
                 if (isAtBottom()) {
-                    // Reached bottom - clear all flags
-                    isUserScrolling = false;
+                    // Reached bottom - clear all flags and enable auto-scroll
                     shouldAutoScroll.current = true;
                     userScrolledUpDuringStreamingRef.current = false;
+                    scrollStartTop = currentScrollTop;
                 }
-                // Reset scroll start when changing direction
-                scrollStartTop = currentScrollTop;
             } else {
-                // User scrolling up
-                isUserScrolling = true;
-
-                // Only mark as "intentionally scrolled up" if they scrolled > half viewport
-                if (isStreaming && scrollDistance > clientHeight / 2) {
-                    userScrolledUpDuringStreamingRef.current = true;
+                // User scrolling up - only trigger if significant movement (>50px)
+                if (scrollDistance > SCROLL_THRESHOLD) {
+                    // Mark as "intentionally scrolled up" if they scrolled up significantly
+                    // Use a smaller threshold during streaming to be more responsive
+                    const threshold = isStreaming ? clientHeight / 4 : clientHeight / 3;
+                    if (scrollDistance > threshold) {
+                        userScrolledUpDuringStreamingRef.current = true;
+                        shouldAutoScroll.current = false;
+                    }
                 }
             }
 
             lastScrollTop = currentScrollTop;
             clearTimeout(scrollTimeout);
 
-            // Consider scrolling done after 150ms of no scroll events
+            // Reset scroll start position after 150ms of no scroll events
             scrollTimeout = setTimeout(() => {
-                isUserScrolling = false;
-                scrollStartTop = container.scrollTop; // Reset start position
+                scrollStartTop = container.scrollTop;
             }, 150);
         };
 
         container.addEventListener('scroll', handleUserScroll, { passive: true });
+
+        // Use requestAnimationFrame to perform scroll operations without blocking rendering
+        const performScroll = () => {
+            if (!container) return;
+
+            lastProgrammaticScrollTime = Date.now();
+            container.scrollTop = container.scrollHeight;
+            rafId = null;
+        };
+
+        const scheduleScroll = () => {
+            // Cancel any pending scroll to avoid stacking multiple RAF calls
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+            }
+            rafId = requestAnimationFrame(performScroll);
+        };
 
         const observer = new ResizeObserver(() => {
             if (!container) return;
 
             // Force scroll if user just sent a message (overrides all checks)
             if (forceScrollToBottomRef.current) {
-                requestAnimationFrame(() => {
-                    if (container) {
-                        // Use smooth scroll for better UX (push-up animation effect)
-                        container.scrollTo({
-                            top: container.scrollHeight,
-                            behavior: 'smooth',
-                        });
-                    }
-                });
+                scheduleScroll();
                 forceScrollToBottomRef.current = false;
                 return;
             }
-
-            // Don't interfere if user is actively scrolling
-            if (isUserScrolling) return;
 
             // Determine if we should auto-scroll based on context
             let shouldScroll = false;
 
             if (isStreaming) {
                 // During AI streaming: only stop if user intentionally scrolled up significantly
-                // Small accidental scrolls (< half viewport) won't stop auto-scroll
+                // Small accidental scrolls won't stop auto-scroll
                 shouldScroll = !userScrolledUpDuringStreamingRef.current || isInitialLoad.current;
             } else {
                 // When not streaming: only scroll if user is very close to bottom
@@ -196,13 +213,8 @@ export function useChatScroll({
             }
 
             if (shouldScroll) {
-                // Use RAF to ensure DOM has updated
-                requestAnimationFrame(() => {
-                    if (container) {
-                        // Instant scroll during streaming for smoother experience
-                        container.scrollTop = container.scrollHeight;
-                    }
-                });
+                // Use RAF to ensure scroll doesn't block rendering
+                scheduleScroll();
             }
         });
 
@@ -212,6 +224,9 @@ export function useChatScroll({
             observer.disconnect();
             container.removeEventListener('scroll', handleUserScroll);
             clearTimeout(scrollTimeout);
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+            }
         };
     }, [isAtBottom, isStreaming]);
 

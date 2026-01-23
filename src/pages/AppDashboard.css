@@ -1059,6 +1059,58 @@
     color: var(--text-primary);
 }
 
+/* Streaming text reveal effect (Gemini-style) */
+.message-bubble.streaming p:last-child,
+.message-bubble.streaming li:last-child,
+.message-bubble.streaming > :last-child {
+    position: relative;
+    animation: textReveal 1s ease-out;
+}
+
+/* Smooth line-height transition for streaming content */
+.message-bubble.streaming p,
+.message-bubble.streaming li,
+.message-bubble.streaming div {
+    transition: line-height 0.3s ease-out, margin 0.3s ease-out;
+}
+
+.message-bubble.streaming p:last-child::after,
+.message-bubble.streaming li:last-child::after,
+.message-bubble.streaming > :last-child::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--bg-primary) 20%,
+        var(--bg-primary) 100%
+    );
+    animation: revealMask 1s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes textReveal {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes revealMask {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
 
 /* Typewriter Cursor */
 .typewriter-container.streaming> :last-child::after {
