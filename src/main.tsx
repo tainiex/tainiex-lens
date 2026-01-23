@@ -5,6 +5,7 @@ import * as Sentry from '@sentry/react';
 import './index.css';
 import 'katex/dist/katex.min.css';
 import App from './App';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Force-load logger at startup so its dev banner always prints.
 import '@/shared/utils/logger';
@@ -48,13 +49,37 @@ if (clarityId) {
 }
 
 msalInstance.initialize().then(() => {
-    createRoot(document.getElementById('root')!).render(
-        <StrictMode>
+    const isDev = import.meta.env.DEV;
+    const root = createRoot(document.getElementById('root')!);
+
+    const AppContent = (
+        <ErrorBoundary
+            onError={(error, errorInfo) => {
+                // Report to Sentry in production
+                if (!isDev) {
+                    Sentry.captureException(error, {
+                        contexts: {
+                            react: {
+                                componentStack: errorInfo.componentStack,
+                            },
+                        },
+                    });
+                }
+            }}
+        >
             <MsalProvider instance={msalInstance}>
                 <GoogleOAuthProvider clientId={googleClientId}>
                     <App />
                 </GoogleOAuthProvider>
             </MsalProvider>
-        </StrictMode>
+        </ErrorBoundary>
     );
+
+    // Only use StrictMode in development
+    // In production, StrictMode can cause errors to bypass ErrorBoundary
+    if (isDev) {
+        root.render(<StrictMode>{AppContent}</StrictMode>);
+    } else {
+        root.render(AppContent);
+    }
 });
