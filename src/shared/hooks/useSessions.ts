@@ -5,8 +5,9 @@ import { logger } from '../utils/logger';
 
 export function useSessions() {
     const [sessions, setSessions] = useState<IChatSession[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true); // Start with true to show skeleton on initial load
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [hasLoadedOnce, setHasLoadedOnce] = useState(false); // Track if we've ever loaded data
 
     const loadSessions = useCallback(async () => {
         setIsLoading(true);
@@ -29,6 +30,7 @@ export function useSessions() {
             logger.error('Failed to load sessions:', error);
         } finally {
             setIsLoading(false);
+            setHasLoadedOnce(true); // Mark that we've completed at least one load attempt
         }
     }, []);
 
@@ -49,6 +51,7 @@ export function useSessions() {
     return {
         sessions,
         isLoading,
+        hasLoadedOnce,
         loadSessions,
         deleteSession,
         isSidebarOpen,

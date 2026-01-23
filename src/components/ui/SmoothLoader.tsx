@@ -4,7 +4,7 @@ import { logger } from '@/shared/utils/logger';
 interface SmoothLoaderProps {
     isLoading: boolean;
     skeleton: React.ReactNode;
-    children: React.ReactNode;
+    children: React.ReactNode | (() => React.ReactNode); // Support function children
     minDuration?: number; // Minimum time to show skeleton in ms
     transitionDuration?: number; // Not used in new implementation
     className?: string;
@@ -27,7 +27,8 @@ const SmoothLoader = ({
     // min-duration timer completes, which can cause missing skeleton or text flashes.
     const startTimeRef = useRef<number | null>(null);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const [canHide, setCanHide] = useState(true);
+    // Start with false to ensure skeleton shows on initial mount when isLoading=true
+    const [canHide, setCanHide] = useState(!isLoading);
 
     useEffect(() => {
         // Keep transitionDuration param for backward compatibility (currently unused)
@@ -88,43 +89,53 @@ const SmoothLoader = ({
         };
     }, [isLoading, minDuration, transitionDuration, canHide]);
 
-    // External gate decides visibility; we keep skeleton visible while we cannot hide yet.
+    // CRITICAL: Compute shouldRenderSkeleton in render phase
     const shouldRenderSkeleton = isLoading || !canHide;
+
+    logger.debug('[SkeletonDebug][SmoothLoader][render]', {
+        isLoading,
+        canHide,
+        shouldRenderSkeleton,
+        willRender: shouldRenderSkeleton ? 'skeleton' : 'children',
+        ts: performance.now(),
+    });
+
+    // PRODUCTION-GRADE: Only evaluate children when NOT showing skeleton
+    // If children is a function, call it only when needed (lazy evaluation)
+    // If children is ReactNode, it's already evaluated (can't prevent)
+    const content = shouldRenderSkeleton ? (
+        <div
+            className="skeleton-wrapper"
+            style={{
+                width: '100%',
+                height: '100%',
+                zIndex: 10,
+                backgroundColor: 'var(--bg-primary)',
+            }}
+        >
+            {skeleton}
+        </div>
+    ) : (
+        <div
+            className="content-wrapper"
+            style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: 'var(--bg-primary)',
+            }}
+        >
+            {typeof children === 'function' ? children() : children}
+        </div>
+    );
 
     return (
         <div
             className={`smooth-loader-container ${className}`}
             style={{ position: 'relative', width: '100%', height: '100%', ...style }}
         >
-            <div
-                className="content-wrapper"
-                style={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    backgroundColor: 'var(--bg-primary)',
-                }}
-            >
-                {children}
-            </div>
-
-            {shouldRenderSkeleton && (
-                <div
-                    className="skeleton-wrapper"
-                    style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        zIndex: 10,
-                        backgroundColor: 'var(--bg-primary)',
-                    }}
-                >
-                    {skeleton}
-                </div>
-            )}
+            {content}
         </div>
     );
 };

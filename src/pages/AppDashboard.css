@@ -1060,6 +1060,7 @@
 }
 
 /* Streaming text reveal effect (Gemini-style) */
+/* Duration: SCROLL_CONFIG.STREAMING_ANIMATION_DURATION (1000ms) */
 .message-bubble.streaming p:last-child,
 .message-bubble.streaming li:last-child,
 .message-bubble.streaming > :last-child {
@@ -1068,12 +1069,14 @@
 }
 
 /* Smooth line-height transition for streaming content */
+/* Duration: SCROLL_CONFIG.LINE_TRANSITION_DURATION (300ms) */
 .message-bubble.streaming p,
 .message-bubble.streaming li,
 .message-bubble.streaming div {
     transition: line-height 0.3s ease-out, margin 0.3s ease-out;
 }
 
+/* Duration: SCROLL_CONFIG.STREAMING_ANIMATION_DURATION (1000ms) */
 .message-bubble.streaming p:last-child::after,
 .message-bubble.streaming li:last-child::after,
 .message-bubble.streaming > :last-child::after {

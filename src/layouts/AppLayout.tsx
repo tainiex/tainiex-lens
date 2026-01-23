@@ -66,9 +66,11 @@ const AppLayout = () => {
     // --- Data State ---
     const [sessions, setSessions] = useState<any[]>([]);
     const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+    const [hasLoadedSessionsOnce, setHasLoadedSessionsOnce] = useState(false); // Track if we've ever loaded sessions
 
     const [notes, setNotes] = useState<INote[]>(() => getCachedNotes() || []);
     const [isLoadingNotes, setIsLoadingNotes] = useState(() => !getCachedNotes());
+    const [hasLoadedNotesOnce, setHasLoadedNotesOnce] = useState(() => !!getCachedNotes()); // True if we have cached notes
 
     // --- Current Selection Derived from URL ---
     // /app/:sessionId -> Chat
@@ -127,6 +129,7 @@ const AppLayout = () => {
             logger.error('Failed to fetch chat sessions:', error);
         } finally {
             setIsLoadingSessions(false);
+            setHasLoadedSessionsOnce(true); // Mark that we've completed at least one load attempt
         }
     }, []);
 
@@ -165,6 +168,7 @@ const AppLayout = () => {
             logger.error('Failed to fetch notes:', error);
         } finally {
             setIsLoadingNotes(false);
+            setHasLoadedNotesOnce(true); // Mark that we've completed at least one load attempt
         }
     }, []);
 
@@ -484,11 +488,13 @@ const AppLayout = () => {
                                     onSessionSelect={handleSessionSelect}
                                     sessions={sessions}
                                     isLoading={isLoadingSessions}
+                                    hasLoadedOnce={hasLoadedSessionsOnce}
                                     onDeleteSession={handleDeleteSession}
                                     onRenameSession={handleRenameSession}
                                     // Note Props
                                     notes={notes}
                                     isLoadingNotes={isLoadingNotes}
+                                    hasLoadedNotesOnce={hasLoadedNotesOnce}
                                     onNoteSelect={handleNoteSelect}
                                     onCreateNote={handleCreateNote}
                                     onDeleteNote={handleDeleteNote}

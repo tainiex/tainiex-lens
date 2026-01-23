@@ -8,6 +8,7 @@ import { IUser, ChatRole, IChatMessage } from '@tainiex/shared-atlas';
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
 import type { SyntaxHighlighterProps } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import type { Components } from 'react-markdown';
 import ts from 'react-syntax-highlighter/dist/esm/languages/prism/typescript';
 import js from 'react-syntax-highlighter/dist/esm/languages/prism/javascript';
 import python from 'react-syntax-highlighter/dist/esm/languages/prism/python';
@@ -79,37 +80,49 @@ const formatMessageTime = (dateStr: string | undefined): string => {
     return `${timeStr} ${timeZoneID} (${offsetStr})`;
 };
 
+// Type definitions for markdown components
+interface CodeProps extends React.HTMLAttributes<HTMLElement> {
+    inline?: boolean;
+    className?: string;
+    children?: React.ReactNode;
+}
+
+interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
+    href?: string;
+    children?: React.ReactNode;
+}
+
 // Memoized Markdown components to avoid recreating on every render
-const markdownComponents = {
-    code({ inline, className, children, ...props }: any) {
+const markdownComponents: Partial<Components> = {
+    code({ inline, className, children, ...props }: CodeProps) {
         const match = /language-(\w+)/.exec(className || '');
-        return !inline && match ? (
-            (() => {
-                const Highlighter =
-                    SyntaxHighlighter as unknown as React.ComponentType<SyntaxHighlighterProps>;
-                return (
-                    <Highlighter
-                        style={oneLight as any}
-                        language={match[1]}
-                        PreTag="div"
-                        customStyle={{
-                            background: 'transparent',
-                            padding: 0,
-                            margin: 0,
-                        }}
-                        {...props}
-                    >
-                        {String(children).replace(/\n$/, '')}
-                    </Highlighter>
-                );
-            })()
-        ) : (
+        if (!inline && match) {
+            const Highlighter =
+                SyntaxHighlighter as unknown as React.ComponentType<SyntaxHighlighterProps>;
+            return (
+                <Highlighter
+                    // @ts-expect-error - react-syntax-highlighter's style prop has complex union types that TypeScript struggles with
+                    style={oneLight}
+                    language={match[1]}
+                    PreTag="div"
+                    customStyle={{
+                        background: 'transparent',
+                        padding: 0,
+                        margin: 0,
+                    }}
+                    {...props}
+                >
+                    {String(children).replace(/\n$/, '')}
+                </Highlighter>
+            );
+        }
+        return (
             <code className={className} {...props}>
                 {children}
             </code>
         );
     },
-    a({ href, children, ...props }: any) {
+    a({ href, children, ...props }: LinkProps) {
         const handleClick = (e: React.MouseEvent) => {
             e.preventDefault();
             if (href) {

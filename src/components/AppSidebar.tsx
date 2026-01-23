@@ -13,11 +13,13 @@ interface AppSidebarProps {
     onSessionSelect: (id: string | null) => void;
     sessions?: IChatSession[];
     isLoading?: boolean;
+    hasLoadedOnce?: boolean;
     onDeleteSession?: (id: string) => void;
     onRenameSession?: (id: string, newTitle: string) => void;
     // Notes props
     notes?: INote[];
     isLoadingNotes?: boolean;
+    hasLoadedNotesOnce?: boolean;
     onNoteSelect?: (id: string | null) => void;
     onCreateNote?: () => void;
     onDeleteNote?: (id: string) => void;
@@ -32,10 +34,12 @@ const AppSidebar = ({
     onSessionSelect,
     sessions = [],
     isLoading = false,
+    hasLoadedOnce = false,
     onDeleteSession,
     onRenameSession,
     notes = [],
     isLoadingNotes = false,
+    hasLoadedNotesOnce = false,
     onNoteSelect,
     onCreateNote,
     onDeleteNote,
@@ -149,6 +153,7 @@ const AppSidebar = ({
                         onDeleteNote={onDeleteNote}
                         onRenameNote={onRenameNote}
                         isLoading={isLoadingNotes}
+                        hasLoadedOnce={hasLoadedNotesOnce}
                     />
                 ) : (
                     <SidebarSessionList
@@ -158,6 +163,7 @@ const AppSidebar = ({
                         onDeleteSession={onDeleteSession}
                         onRenameSession={onRenameSession}
                         isLoading={isLoading}
+                        hasLoadedOnce={hasLoadedOnce}
                     />
                 )}
             </div>

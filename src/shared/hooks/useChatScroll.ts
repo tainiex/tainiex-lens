@@ -1,16 +1,7 @@
 import { useRef, useCallback, useEffect, useLayoutEffect } from 'react';
-import { IChatMessage } from '@tainiex/shared-atlas';
-
-interface UseChatScrollProps {
-    messages: Partial<IChatMessage>[];
-    isLoading: boolean;
-    isStreaming: boolean;
-    isFetchingMore: boolean;
-    hasMore: boolean;
-    nextCursor: string | undefined;
-    scrollHeightBeforeRef: React.MutableRefObject<number>;
-    fetchHistory: (before?: string) => void;
-}
+import { SCROLL_CONFIG } from '@/shared/config/scrollConfig';
+import { logger } from '@/shared/utils/logger';
+import type { UseChatScrollProps, UseChatScrollReturn } from '@/shared/types/scroll';
 
 export function useChatScroll({
     messages,
@@ -20,7 +11,7 @@ export function useChatScroll({
     nextCursor,
     scrollHeightBeforeRef,
     fetchHistory,
-}: UseChatScrollProps) {
+}: UseChatScrollProps): UseChatScrollReturn {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const messagesListRef = useRef<HTMLDivElement>(null);
     const isInitialLoad = useRef(true);
@@ -34,39 +25,51 @@ export function useChatScroll({
     const isAtBottom = useCallback(() => {
         if (!scrollContainerRef.current) return true;
         const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-        // Allow up to 100px offset from bottom
-        return scrollHeight - scrollTop - clientHeight < 100;
+        // Allow up to BOTTOM_THRESHOLD offset from bottom
+        return scrollHeight - scrollTop - clientHeight < SCROLL_CONFIG.BOTTOM_THRESHOLD;
     }, []);
 
     // Simple scroll to bottom
     const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-        if (!scrollContainerRef.current) return;
-        scrollContainerRef.current.scrollTo({
-            top: scrollContainerRef.current.scrollHeight,
-            behavior,
-        });
+        try {
+            if (!scrollContainerRef.current) return;
+            scrollContainerRef.current.scrollTo({
+                top: scrollContainerRef.current.scrollHeight,
+                behavior,
+            });
+        } catch (error) {
+            // Fallback to instant scroll if smooth scrolling fails
+            logger.warn('[useChatScroll] scrollToBottom error, using fallback:', error);
+            if (scrollContainerRef.current) {
+                scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+            }
+        }
     }, []);
 
     // Handle scroll events
     const handleScroll = useCallback(() => {
-        if (!scrollContainerRef.current) return;
+        try {
+            if (!scrollContainerRef.current) return;
 
-        const atBottom = isAtBottom();
+            const atBottom = isAtBottom();
 
-        // Update auto-scroll preference based on user position
-        shouldAutoScroll.current = atBottom;
+            // Update auto-scroll preference based on user position
+            shouldAutoScroll.current = atBottom;
 
-        // Disable initial load behavior once user scrolls
-        if (isInitialLoad.current && !atBottom) {
-            isInitialLoad.current = false;
-        }
-
-        // Pagination: load more when scrolling to top
-        if (!isFetchingMore && hasMore && nextCursor) {
-            const { scrollTop } = scrollContainerRef.current;
-            if (scrollTop < 100) {
-                fetchHistory(nextCursor);
+            // Disable initial load behavior once user scrolls
+            if (isInitialLoad.current && !atBottom) {
+                isInitialLoad.current = false;
             }
+
+            // Pagination: load more when scrolling to top
+            if (!isFetchingMore && hasMore && nextCursor) {
+                const { scrollTop } = scrollContainerRef.current;
+                if (scrollTop < SCROLL_CONFIG.BOTTOM_THRESHOLD) {
+                    fetchHistory(nextCursor);
+                }
+            }
+        } catch (error) {
+            logger.error('[useChatScroll] handleScroll error:', error);
         }
     }, [isAtBottom, isFetchingMore, hasMore, nextCursor, fetchHistory]);
 
@@ -117,20 +120,40 @@ export function useChatScroll({
     useEffect(() => {
         if (!messagesListRef.current || !scrollContainerRef.current) return;
 
+        // Check if ResizeObserver is supported
+        if (typeof ResizeObserver === 'undefined') {
+            logger.warn(
+                '[useChatScroll] ResizeObserver not supported, falling back to mutation observer'
+            );
+            // Fallback: use MutationObserver for older browsers
+            // This is less efficient but provides basic functionality
+            const fallbackObserver = new MutationObserver(() => {
+                if (shouldAutoScroll.current && scrollContainerRef.current) {
+                    scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+                }
+            });
+            fallbackObserver.observe(messagesListRef.current, {
+                childList: true,
+                subtree: true,
+                characterData: true,
+            });
+            return () => {
+                fallbackObserver.disconnect();
+            };
+        }
+
         const container = scrollContainerRef.current;
         let scrollTimeout: NodeJS.Timeout;
         let lastScrollTop = container.scrollTop;
         let scrollStartTop = container.scrollTop;
         let lastProgrammaticScrollTime = 0;
         let rafId: number | null = null;
-        const PROGRAMMATIC_SCROLL_WINDOW = 100; // ms window to ignore scroll events after programmatic scroll
-        const SCROLL_THRESHOLD = 50; // Minimum scroll distance to trigger user scroll detection
 
         // Detect when user is actively scrolling
         const handleUserScroll = () => {
             const now = Date.now();
-            // Ignore scroll events within 100ms of programmatic scroll
-            if (now - lastProgrammaticScrollTime < PROGRAMMATIC_SCROLL_WINDOW) {
+            // Ignore scroll events within PROGRAMMATIC_SCROLL_WINDOW of programmatic scroll
+            if (now - lastProgrammaticScrollTime < SCROLL_CONFIG.PROGRAMMATIC_SCROLL_WINDOW) {
                 return;
             }
 
@@ -150,11 +173,13 @@ export function useChatScroll({
                     scrollStartTop = currentScrollTop;
                 }
             } else {
-                // User scrolling up - only trigger if significant movement (>50px)
-                if (scrollDistance > SCROLL_THRESHOLD) {
+                // User scrolling up - only trigger if significant movement
+                if (scrollDistance > SCROLL_CONFIG.SCROLL_THRESHOLD) {
                     // Mark as "intentionally scrolled up" if they scrolled up significantly
                     // Use a smaller threshold during streaming to be more responsive
-                    const threshold = isStreaming ? clientHeight / 4 : clientHeight / 3;
+                    const threshold = isStreaming
+                        ? clientHeight * SCROLL_CONFIG.STREAMING_SCROLL_RATIO
+                        : clientHeight * SCROLL_CONFIG.NORMAL_SCROLL_RATIO;
                     if (scrollDistance > threshold) {
                         userScrolledUpDuringStreamingRef.current = true;
                         shouldAutoScroll.current = false;
@@ -165,10 +190,10 @@ export function useChatScroll({
             lastScrollTop = currentScrollTop;
             clearTimeout(scrollTimeout);
 
-            // Reset scroll start position after 150ms of no scroll events
+            // Reset scroll start position after DEBOUNCE_DELAY of no scroll events
             scrollTimeout = setTimeout(() => {
                 scrollStartTop = container.scrollTop;
-            }, 150);
+            }, SCROLL_CONFIG.DEBOUNCE_DELAY);
         };
 
         container.addEventListener('scroll', handleUserScroll, { passive: true });
@@ -190,38 +215,60 @@ export function useChatScroll({
             rafId = requestAnimationFrame(performScroll);
         };
 
-        const observer = new ResizeObserver(() => {
-            if (!container) return;
+        let observer: ResizeObserver;
+        try {
+            observer = new ResizeObserver(() => {
+                try {
+                    if (!container) return;
 
-            // Force scroll if user just sent a message (overrides all checks)
-            if (forceScrollToBottomRef.current) {
-                scheduleScroll();
-                forceScrollToBottomRef.current = false;
-                return;
-            }
+                    // Force scroll if user just sent a message (overrides all checks)
+                    if (forceScrollToBottomRef.current) {
+                        scheduleScroll();
+                        forceScrollToBottomRef.current = false;
+                        return;
+                    }
 
-            // Determine if we should auto-scroll based on context
-            let shouldScroll = false;
+                    // Determine if we should auto-scroll based on context
+                    let shouldScroll = false;
 
-            if (isStreaming) {
-                // During AI streaming: only stop if user intentionally scrolled up significantly
-                // Small accidental scrolls won't stop auto-scroll
-                shouldScroll = !userScrolledUpDuringStreamingRef.current || isInitialLoad.current;
-            } else {
-                // When not streaming: only scroll if user is very close to bottom
-                shouldScroll = isAtBottom() || isInitialLoad.current;
-            }
+                    if (isStreaming) {
+                        // During AI streaming: only stop if user intentionally scrolled up significantly
+                        // Small accidental scrolls won't stop auto-scroll
+                        shouldScroll =
+                            !userScrolledUpDuringStreamingRef.current || isInitialLoad.current;
+                    } else {
+                        // When not streaming: only scroll if user is very close to bottom
+                        shouldScroll = isAtBottom() || isInitialLoad.current;
+                    }
 
-            if (shouldScroll) {
-                // Use RAF to ensure scroll doesn't block rendering
-                scheduleScroll();
-            }
-        });
+                    if (shouldScroll) {
+                        // Use RAF to ensure scroll doesn't block rendering
+                        scheduleScroll();
+                    }
+                } catch (error) {
+                    logger.error('[useChatScroll] ResizeObserver callback error:', error);
+                }
+            });
 
-        observer.observe(messagesListRef.current);
+            observer.observe(messagesListRef.current);
+        } catch (error) {
+            logger.error('[useChatScroll] Failed to create ResizeObserver:', error);
+            // If ResizeObserver creation fails, return early cleanup function
+            return () => {
+                container.removeEventListener('scroll', handleUserScroll);
+                clearTimeout(scrollTimeout);
+                if (rafId !== null) {
+                    cancelAnimationFrame(rafId);
+                }
+            };
+        }
 
         return () => {
-            observer.disconnect();
+            try {
+                observer?.disconnect();
+            } catch (error) {
+                logger.error('[useChatScroll] Error disconnecting ResizeObserver:', error);
+            }
             container.removeEventListener('scroll', handleUserScroll);
             clearTimeout(scrollTimeout);
             if (rafId !== null) {

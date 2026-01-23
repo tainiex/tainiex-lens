@@ -12,6 +12,7 @@ interface SidebarSessionListProps {
     onDeleteSession?: (id: string) => void;
     onRenameSession?: (id: string, newTitle: string) => void;
     isLoading?: boolean;
+    hasLoadedOnce?: boolean;
 }
 
 const SidebarSessionList = ({
@@ -21,6 +22,7 @@ const SidebarSessionList = ({
     onDeleteSession,
     onRenameSession,
     isLoading = false,
+    hasLoadedOnce = false,
 }: SidebarSessionListProps) => {
     const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
     const [editTitle, setEditTitle] = useState('');
@@ -130,8 +132,10 @@ const SidebarSessionList = ({
             skeleton={skeletonContent}
             className="history-list-wrapper"
             style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+            minDuration={300}
         >
-            {!isLoading && sessions.length === 0 ? (
+            {/* CRITICAL: Only show "No recent chats" when we've loaded data AND confirmed no sessions exist */}
+            {hasLoadedOnce && !isLoading && sessions.length === 0 ? (
                 <div className="history-list" style={{ flex: 1, overflowY: 'auto' }}>
                     <div
                         style={{
@@ -145,6 +149,9 @@ const SidebarSessionList = ({
                         No recent chats
                     </div>
                 </div>
+            ) : sessions.length === 0 ? (
+                // Before first load or during loading with empty sessions, render empty div (skeleton will show)
+                <div className="history-list" style={{ flex: 1, overflowY: 'auto' }} />
             ) : (
                 <div
                     className="history-list"

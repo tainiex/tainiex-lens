@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { INote } from '@/shared';
 import SidebarNoteItem from '../SidebarNoteItem';
+import Skeleton from '../ui/Skeleton';
+import SmoothLoader from '../ui/SmoothLoader';
 
 interface SidebarNoteListProps {
     notes: INote[];
@@ -11,6 +13,7 @@ interface SidebarNoteListProps {
     onDeleteNote?: (id: string) => void;
     onRenameNote?: (id: string, newTitle: string) => void;
     isLoading?: boolean;
+    hasLoadedOnce?: boolean;
 }
 
 const SidebarNoteList = ({
@@ -20,7 +23,8 @@ const SidebarNoteList = ({
     onCreateNote,
     onDeleteNote,
     onRenameNote,
-    isLoading,
+    isLoading = false,
+    hasLoadedOnce = false,
 }: SidebarNoteListProps) => {
     const [noteSearch, setNoteSearch] = useState('');
     const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -95,81 +99,77 @@ const SidebarNoteList = ({
             </div>
 
             {/* NOTES LIST CONTENT in sidebar-history */}
-            <div className="history-list" style={{ flex: 1, overflowY: 'auto' }}>
-                {isLoading ? (
-                    // Loading skeleton
-                    <div style={{ padding: '0.5rem' }}>
-                        {[1, 2, 3, 4].map(i => (
+            <SmoothLoader
+                isLoading={isLoading}
+                skeleton={
+                    <div
+                        className="history-list skeleton-view"
+                        style={{ padding: '1rem 0.5rem', height: '100%' }}
+                    >
+                        {Array.from({ length: 5 }).map((_, i) => (
                             <div
-                                key={i}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    padding: '6px 12px',
-                                    marginBottom: '4px',
-                                }}
+                                key={`note-skel-${i}`}
+                                style={{ padding: '6px 8px', marginBottom: '4px' }}
                             >
-                                <div
-                                    style={{
-                                        width: '14px',
-                                        height: '14px',
-                                        borderRadius: '2px',
-                                        background: 'var(--bg-tertiary)',
-                                        animation: 'skeleton-pulse 1.5s ease-in-out infinite',
-                                    }}
-                                />
-                                <div
-                                    style={{
-                                        flex: 1,
-                                        height: '14px',
-                                        borderRadius: '4px',
-                                        background: 'var(--bg-tertiary)',
-                                        animation: 'skeleton-pulse 1.5s ease-in-out infinite',
-                                    }}
+                                <Skeleton
+                                    style={{ height: '20px', width: i % 2 === 0 ? '80%' : '65%' }}
                                 />
                             </div>
                         ))}
                     </div>
-                ) : notes.length === 0 ? (
-                    <div
-                        style={{
-                            padding: '1rem',
-                            fontSize: '0.8rem',
-                            color: '#52525b',
-                            textAlign: 'center',
-                        }}
-                    >
-                        No notes yet
+                }
+                className="history-list-wrapper"
+                style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+                minDuration={300}
+            >
+                {/* CRITICAL: Only show "No notes yet" when we've loaded data AND confirmed no notes exist */}
+                {hasLoadedOnce && !isLoading && notes.length === 0 ? (
+                    <div className="history-list" style={{ flex: 1, overflowY: 'auto' }}>
+                        <div
+                            style={{
+                                padding: '0 0.6rem',
+                                fontSize: '0.8rem',
+                                color: '#52525b',
+                                textAlign: 'center',
+                                marginTop: '1rem',
+                            }}
+                        >
+                            No notes yet
+                        </div>
                     </div>
+                ) : notes.length === 0 ? (
+                    // Before first load or during loading with empty notes, render empty div (skeleton will show)
+                    <div className="history-list" style={{ flex: 1, overflowY: 'auto' }} />
                 ) : (
-                    notes
-                        .filter(n => n.title.toLowerCase().includes(noteSearch.toLowerCase()))
-                        .map(note => {
-                            return (
-                                <SidebarNoteItem
-                                    key={note.id}
-                                    note={note}
-                                    level={0}
-                                    activeNoteId={activeNoteId}
-                                    onSelect={id => onNoteSelect?.(id)}
-                                    onMenuOpen={(e, id) => {
-                                        const rect = (
-                                            e.target as HTMLElement
-                                        ).getBoundingClientRect();
-                                        setMenuPosition({ x: rect.right, y: rect.top });
-                                        setActiveNoteMenuId(id);
-                                    }}
-                                    editingNoteId={editingNoteId}
-                                    noteEditTitle={noteEditTitle}
-                                    setNoteEditTitle={setNoteEditTitle}
-                                    onRenameSubmit={handleRenameNote}
-                                    onEditCancel={() => setEditingNoteId(null)}
-                                />
-                            );
-                        })
+                    <div className="history-list" style={{ flex: 1, overflowY: 'auto' }}>
+                        {notes
+                            .filter(n => n.title.toLowerCase().includes(noteSearch.toLowerCase()))
+                            .map(note => {
+                                return (
+                                    <SidebarNoteItem
+                                        key={note.id}
+                                        note={note}
+                                        level={0}
+                                        activeNoteId={activeNoteId}
+                                        onSelect={id => onNoteSelect?.(id)}
+                                        onMenuOpen={(e, id) => {
+                                            const rect = (
+                                                e.target as HTMLElement
+                                            ).getBoundingClientRect();
+                                            setMenuPosition({ x: rect.right, y: rect.top });
+                                            setActiveNoteMenuId(id);
+                                        }}
+                                        editingNoteId={editingNoteId}
+                                        noteEditTitle={noteEditTitle}
+                                        setNoteEditTitle={setNoteEditTitle}
+                                        onRenameSubmit={handleRenameNote}
+                                        onEditCancel={() => setEditingNoteId(null)}
+                                    />
+                                );
+                            })}
+                    </div>
                 )}
-            </div>
+            </SmoothLoader>
 
             {/* Note Action Menu Portal */}
             {activeNoteMenuId &&
