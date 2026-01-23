@@ -112,7 +112,13 @@ class SocketService {
                         Authorization: token ? `Bearer ${token}` : '',
                         'X-Auth-Mode': 'bearer',
                     };
-                    logger.debug('[SocketService] Updated Manager extraHeaders with fresh token.');
+                    // Also update query param for next connection attempt
+                    (this.manager.opts as any).query = {
+                        token: token || '',
+                    };
+                    logger.debug(
+                        '[SocketService] Updated Manager headers and query with fresh token.'
+                    );
                 }
             }
 
@@ -241,7 +247,7 @@ class SocketService {
 
         this.manager = new Manager(baseUrl, {
             path: '/socket.io',
-            transports: ['websocket'],
+            transports: ['polling', 'websocket'], // Start with polling to ensure auth headers are sent
             withCredentials: true,
             auth: (cb: (data: object) => void) => {
                 const currentToken = apiClient.accessToken;
@@ -250,6 +256,9 @@ class SocketService {
                     currentToken ? 'Present' : 'Missing'
                 );
                 cb({ token: currentToken || '' });
+            },
+            query: {
+                token: token || '', // Pass token in query for initial connection
             },
             extraHeaders: {
                 Authorization: token ? `Bearer ${token}` : '',
