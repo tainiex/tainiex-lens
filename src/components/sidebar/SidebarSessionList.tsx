@@ -131,7 +131,7 @@ const SidebarSessionList = ({
             className="history-list-wrapper"
             style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
         >
-            {sessions.length === 0 ? (
+            {!isLoading && sessions.length === 0 ? (
                 <div className="history-list" style={{ flex: 1, overflowY: 'auto' }}>
                     <div
                         style={{
