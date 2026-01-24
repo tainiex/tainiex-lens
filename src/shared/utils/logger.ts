@@ -77,6 +77,42 @@ class Logger {
             // TODO: Add Firebase/Sentry error reporting here
         }
     }
+
+    /**
+     * 捕获并记录结构化错误
+     * @param error - 错误对象
+     * @param context - 错误上下文信息
+     */
+    captureError(
+        error: Error | unknown,
+        context?: {
+            sessionId?: string;
+            messageId?: string;
+            component?: string;
+            action?: string;
+            metadata?: Record<string, any>;
+        }
+    ) {
+        const errorInfo = {
+            timestamp: new Date().toISOString(),
+            error:
+                error instanceof Error
+                    ? {
+                          name: error.name,
+                          message: error.message,
+                          stack: error.stack,
+                      }
+                    : String(error),
+            context,
+        };
+
+        if (shouldLog('error')) {
+            _console.error('[CaptureError]', errorInfo);
+            // TODO: 在生产环境发送到错误监控服务（如 Sentry、Firebase Crashlytics）
+        }
+
+        return errorInfo;
+    }
 }
 
 export const logger = new Logger();

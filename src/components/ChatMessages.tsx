@@ -44,6 +44,7 @@ import { useChatContext } from '../contexts/ChatContext';
 
 import Skeleton from './ui/Skeleton';
 import SmoothLoader from './ui/SmoothLoader';
+import ChatErrorBoundary from './ChatErrorBoundary';
 
 interface ChatMessagesProps {
     user: IUser | null;
@@ -565,70 +566,72 @@ const ChatMessages = ({
                         minDuration={400}
                         transitionDuration={0}
                     >
-                        {(() => {
-                            // Render-path log: confirms what children branch is active at the time of a flash
-                            const branch = messages.length === 0 ? 'empty(null)' : 'messages';
-                            logger.debug('[SkeletonDebug][ChatMessages][render]', {
-                                sessionId: currentSessionId,
-                                branch,
-                                isLoading,
-                                isHistoryReady,
-                                shouldShowSkeleton,
-                                messagesLen: messages.length,
-                                ts: performance.now(),
-                            });
-                            return null;
-                        })()}
-                        {messages.length === 0 ? (
-                            <div
-                                className="welcome-message"
-                                style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flex: 1,
-                                    padding: '2rem',
-                                    textAlign: 'center',
-                                    opacity: 0.7,
-                                }}
-                            >
-                                <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>
-                                    How can I help you today?
-                                </h2>
-                                <p style={{ fontSize: '0.9rem', maxWidth: '600px' }}>
-                                    Start a conversation by typing your message below.
-                                </p>
-                            </div>
-                        ) : (
-                            messages.map((msg, idx) => {
-                                const isLastMessage = idx === messages.length - 1;
-                                // Use non-memoized component for last message during streaming
-                                // Use memoized component for all completed messages
-                                if (isLastMessage && isStreaming) {
-                                    return (
-                                        <StreamingMessageBubble
-                                            key={msg.id || idx}
-                                            msg={msg}
-                                            idx={idx}
-                                            isLastMessage={isLastMessage}
-                                            isLoading={isLoading}
-                                            isStreaming={isStreaming}
-                                            currentSessionId={currentSessionId || undefined}
-                                        />
-                                    );
-                                } else {
-                                    return (
-                                        <CompletedMessageBubble
-                                            key={msg.id || idx}
-                                            msg={msg}
-                                            idx={idx}
-                                            currentSessionId={currentSessionId || undefined}
-                                        />
-                                    );
-                                }
-                            })
-                        )}
+                        <ChatErrorBoundary>
+                            {(() => {
+                                // Render-path log: confirms what children branch is active at the time of a flash
+                                const branch = messages.length === 0 ? 'empty(null)' : 'messages';
+                                logger.debug('[SkeletonDebug][ChatMessages][render]', {
+                                    sessionId: currentSessionId,
+                                    branch,
+                                    isLoading,
+                                    isHistoryReady,
+                                    shouldShowSkeleton,
+                                    messagesLen: messages.length,
+                                    ts: performance.now(),
+                                });
+                                return null;
+                            })()}
+                            {messages.length === 0 ? (
+                                <div
+                                    className="welcome-message"
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flex: 1,
+                                        padding: '2rem',
+                                        textAlign: 'center',
+                                        opacity: 0.7,
+                                    }}
+                                >
+                                    <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>
+                                        How can I help you today?
+                                    </h2>
+                                    <p style={{ fontSize: '0.9rem', maxWidth: '600px' }}>
+                                        Start a conversation by typing your message below.
+                                    </p>
+                                </div>
+                            ) : (
+                                messages.map((msg, idx) => {
+                                    const isLastMessage = idx === messages.length - 1;
+                                    // Use non-memoized component for last message during streaming
+                                    // Use memoized component for all completed messages
+                                    if (isLastMessage && isStreaming) {
+                                        return (
+                                            <StreamingMessageBubble
+                                                key={msg.id || idx}
+                                                msg={msg}
+                                                idx={idx}
+                                                isLastMessage={isLastMessage}
+                                                isLoading={isLoading}
+                                                isStreaming={isStreaming}
+                                                currentSessionId={currentSessionId || undefined}
+                                            />
+                                        );
+                                    } else {
+                                        return (
+                                            <CompletedMessageBubble
+                                                key={msg.id || idx}
+                                                msg={msg}
+                                                idx={idx}
+                                                currentSessionId={currentSessionId || undefined}
+                                            />
+                                        );
+                                    }
+                                })
+                            )}
+                        </ChatErrorBoundary>
                     </SmoothLoader>
                 </div>
             </div>

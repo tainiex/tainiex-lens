@@ -4,6 +4,7 @@ import { apiClient } from '../utils/apiClient';
 import { logger } from '../utils/logger';
 import { useChatSocket } from './useChatSocket';
 import { useSendMessage } from './useSendMessage';
+import { sanitizeMessageContent } from '../utils/messageValidation';
 
 interface UseChatProps {
     currentSessionId: string | null;
@@ -352,8 +353,10 @@ export function useChat({
             setMessages(prev => {
                 const lastMsg = prev[prev.length - 1];
                 if (lastMsg && lastMsg.role === ChatRole.ASSISTANT) {
+                    // 验证并清理流式内容
+                    const sanitizedContent = sanitizeMessageContent(streamingText);
                     return prev.map((msg, idx) =>
-                        idx === prev.length - 1 ? { ...msg, content: streamingText } : msg
+                        idx === prev.length - 1 ? { ...msg, content: sanitizedContent } : msg
                     );
                 }
                 return prev;
@@ -472,7 +475,10 @@ export function useChat({
                     if (lastMsg && lastMsg.role === ChatRole.ASSISTANT) {
                         return prev.map((msg, idx) =>
                             idx === prev.length - 1
-                                ? { ...msg, content: (msg.content || '') + errorMsg }
+                                ? {
+                                      ...msg,
+                                      content: sanitizeMessageContent(msg.content || '') + errorMsg,
+                                  }
                                 : msg
                         );
                     }
