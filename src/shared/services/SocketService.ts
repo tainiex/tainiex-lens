@@ -20,6 +20,12 @@ class SocketService {
     private connectionPromise: Promise<void> | null = null;
     private forcedDisconnect: boolean = false;
 
+    // Reconnection state tracking
+    private reconnectionAttempts: Map<string, number> = new Map(); // Track attempts per socket
+    private reconnectionTimers: Map<string, NodeJS.Timeout> = new Map(); // Track active timers
+    private maxReconnectionDelay: number = 5000; // Max 5 seconds
+    private baseReconnectionDelay: number = 1000; // Start at 1 second
+
     // Simple listener pattern for global state
     private listeners: ((isConnected: boolean) => void)[] = [];
 
@@ -167,6 +173,14 @@ class SocketService {
         this.forcedDisconnect = true;
         logger.log('[SocketService] Disconnecting all sockets...');
 
+        // Clear all reconnection timers
+        this.reconnectionTimers.forEach((timer, socketName) => {
+            clearTimeout(timer);
+            logger.debug(`[SocketService] Cleared reconnection timer for ${socketName}`);
+        });
+        this.reconnectionTimers.clear();
+        this.reconnectionAttempts.clear();
+
         if (this.chatSocket) {
             this.chatSocket.disconnect();
         }
@@ -306,6 +320,62 @@ class SocketService {
     }
 
     /**
+     * Calculate reconnection delay with exponential backoff
+     */
+    private getReconnectionDelay(socketName: string): number {
+        const attempts = this.reconnectionAttempts.get(socketName) || 0;
+        const delay = Math.min(
+            this.baseReconnectionDelay * Math.pow(2, attempts),
+            this.maxReconnectionDelay
+        );
+        return delay;
+    }
+
+    /**
+     * Schedule a reconnection attempt with exponential backoff
+     */
+    private scheduleReconnection(socketName: string) {
+        // Clear any existing timer
+        const existingTimer = this.reconnectionTimers.get(socketName);
+        if (existingTimer) {
+            clearTimeout(existingTimer);
+        }
+
+        // Don't reconnect if forcefully disconnected
+        if (this.forcedDisconnect) {
+            logger.debug(
+                `[SocketService] Skipping reconnection for ${socketName} (forced disconnect)`
+            );
+            return;
+        }
+
+        const attempts = this.reconnectionAttempts.get(socketName) || 0;
+        const delay = this.getReconnectionDelay(socketName);
+
+        logger.debug(
+            `[SocketService] Scheduling ${socketName} reconnection attempt ${attempts + 1} in ${delay}ms`
+        );
+
+        const timer = setTimeout(async () => {
+            this.reconnectionAttempts.set(socketName, attempts + 1);
+
+            try {
+                await this.connect();
+                // Reset counter on successful connection (handled in 'connect' event)
+            } catch (error) {
+                logger.warn(
+                    `[SocketService] Reconnection attempt ${attempts + 1} failed for ${socketName}:`,
+                    error
+                );
+                // Schedule another attempt
+                this.scheduleReconnection(socketName);
+            }
+        }, delay);
+
+        this.reconnectionTimers.set(socketName, timer);
+    }
+
+    /**
      * Setup global listeners for the Manager
      */
     private setupManagerEvents() {
@@ -330,6 +400,15 @@ class SocketService {
         socket.on('connect', () => {
             logger.log(`[SocketService] ${name} Socket Connected! ID: ${socket.id}`);
             // Sentry breadcrumb removed
+
+            // Reset reconnection attempts on successful connection
+            this.reconnectionAttempts.set(name, 0);
+            const timer = this.reconnectionTimers.get(name);
+            if (timer) {
+                clearTimeout(timer);
+                this.reconnectionTimers.delete(name);
+            }
+
             this.notifyListeners(true);
         });
 
@@ -343,11 +422,16 @@ class SocketService {
                 this.notifyListeners(false);
             }
 
-            if (reason === 'io server disconnect') {
+            // Handle server-initiated disconnects with persistent reconnection
+            if (reason === 'io server disconnect' || reason === 'io client disconnect') {
                 if (!this.forcedDisconnect) {
-                    setTimeout(() => this.connect(), 1000);
+                    logger.debug(
+                        `[SocketService] Server disconnected ${name}, scheduling reconnection...`
+                    );
+                    this.scheduleReconnection(name);
                 }
             }
+            // For other disconnect reasons (e.g., transport error), Socket.IO's built-in reconnection handles it
         });
 
         // 2. Auth Lifecycle & Token Renewal
@@ -392,9 +476,30 @@ class SocketService {
                     // 4011: Invalid Token, 4012: Expired
                     if (error.code === 4011 || error.code === 4012) {
                         logger.warn(`[SocketService] ${name} Auth error, attempting refresh...`);
+
+                        // Don't immediately reconnect, let the disconnect handler trigger reconnection
                         apiClient.refreshToken().then(ok => {
-                            if (ok && !this.forcedDisconnect && !socket.connected) {
-                                socket.connect();
+                            if (ok) {
+                                logger.debug(
+                                    `[SocketService] ${name} Token refreshed successfully`
+                                );
+                                // Update manager headers with fresh token
+                                const token = apiClient.accessToken;
+                                if (this.manager?.opts) {
+                                    this.manager.opts.extraHeaders = {
+                                        Authorization: token ? `Bearer ${token}` : '',
+                                        'X-Auth-Mode': 'bearer',
+                                    };
+                                    (this.manager.opts as any).query = {
+                                        token: token || '',
+                                    };
+                                    logger.debug(
+                                        `[SocketService] Updated Manager headers with fresh token for ${name}`
+                                    );
+                                }
+                                // Socket will auto-reconnect or be reconnected by disconnect handler
+                            } else {
+                                logger.error(`[SocketService] ${name} Token refresh failed`);
                             }
                         });
                     }
