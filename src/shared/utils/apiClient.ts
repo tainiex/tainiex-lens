@@ -112,7 +112,7 @@ class ApiClient {
     }
 
     /**
-     * Improved token refresh logic with proper concurrency handling (deduplication)
+     * Improved token refresh logic with proper concurrency handling (deduplication) and retry
      */
     public async refreshToken(notificationCallback?: (error: ApiError) => void): Promise<boolean> {
         // If a refresh is already in progress, return the existing promise
@@ -129,45 +129,97 @@ class ApiClient {
 
         logger.debug('[ApiClient] Starting new token refresh request...');
         this.refreshPromise = (async () => {
-            try {
-                // logger.debug('[ApiClient] Calling /api/auth/refresh endpoint');
+            const maxAttempts = 3;
+            const baseDelay = 1000; // 1 second
 
-                // Web: Use cookie-based refresh (existing logic)
-                const response = await fetch(`${this.getBaseUrl()}/api/auth/refresh`, {
-                    method: 'POST',
-                    credentials: 'include',
-                });
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                try {
+                    logger.debug(`[ApiClient] Refresh attempt ${attempt}/${maxAttempts}`);
 
-                if (response.ok) {
-                    // logger.debug('[ApiClient] Web refresh successful');
-                    return true;
-                } else {
-                    logger.warn('[ApiClient] Refresh failed with status:', response.status);
-                    this.lastRefreshFailureTime = Date.now();
-                    if (notificationCallback) {
-                        const apiError = this.handleError(response, 'refreshToken');
-                        notificationCallback(apiError);
+                    // Web: Use cookie-based refresh (existing logic)
+                    const response = await fetch(`${this.getBaseUrl()}/api/auth/refresh`, {
+                        method: 'POST',
+                        credentials: 'include',
+                    });
+
+                    if (response.ok) {
+                        logger.debug('[ApiClient] Token refresh successful');
+                        // Reset failure time on success
+                        this.lastRefreshFailureTime = 0;
+                        return true;
                     }
-                    return false;
+
+                    // Check if error is retryable (5xx server errors)
+                    const isServerError = response.status >= 500 && response.status < 600;
+                    const isLastAttempt = attempt === maxAttempts;
+
+                    logger.warn(
+                        `[ApiClient] Refresh failed with status: ${response.status} (attempt ${attempt}/${maxAttempts})`
+                    );
+
+                    // If it's not a server error, don't retry
+                    if (!isServerError) {
+                        logger.warn('[ApiClient] Non-retryable error (4xx), not retrying');
+                        this.lastRefreshFailureTime = Date.now();
+                        if (notificationCallback) {
+                            const apiError = this.handleError(response, 'refreshToken');
+                            notificationCallback(apiError);
+                        }
+                        return false;
+                    }
+
+                    // If this is the last attempt, give up
+                    if (isLastAttempt) {
+                        logger.error(`[ApiClient] Refresh failed after ${maxAttempts} attempts`);
+                        this.lastRefreshFailureTime = Date.now();
+                        if (notificationCallback) {
+                            const apiError = this.handleError(response, 'refreshToken');
+                            notificationCallback(apiError);
+                        }
+                        return false;
+                    }
+
+                    // Calculate exponential backoff delay
+                    const delay = baseDelay * Math.pow(2, attempt - 1);
+                    logger.debug(
+                        `[ApiClient] Retrying refresh in ${delay}ms (server error: ${response.status})`
+                    );
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } catch (error) {
+                    const isLastAttempt = attempt === maxAttempts;
+
+                    logger.error(
+                        `[ApiClient] Refresh error on attempt ${attempt}/${maxAttempts}:`,
+                        error
+                    );
+
+                    if (isLastAttempt) {
+                        this.lastRefreshFailureTime = Date.now();
+                        if (notificationCallback) {
+                            const wrappedError =
+                                error instanceof Error
+                                    ? error
+                                    : new Error('Refresh request failed');
+                            const apiError = this.handleError(wrappedError, 'refreshToken');
+                            notificationCallback(apiError);
+                        }
+                        return false;
+                    }
+
+                    // Retry on network errors
+                    const delay = baseDelay * Math.pow(2, attempt - 1);
+                    logger.debug(`[ApiClient] Retrying refresh in ${delay}ms (network error)`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
                 }
-            } catch (error) {
-                logger.error('[ApiClient] Refresh error:', error);
-                this.lastRefreshFailureTime = Date.now();
-                if (notificationCallback) {
-                    const wrappedError =
-                        error instanceof Error ? error : new Error('Refresh request failed');
-                    const apiError = this.handleError(wrappedError, 'refreshToken');
-                    notificationCallback(apiError);
-                }
-                return false;
             }
+
+            return false;
         })();
 
         try {
             return await this.refreshPromise;
         } finally {
             // Clear the promise so subsequent failures can trigger a new refresh
-            // logger.debug('[ApiClient] Clearing refresh promise');
             this.refreshPromise = null;
         }
     }
