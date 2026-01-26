@@ -35,7 +35,14 @@ export function useActivitySocket(sessionId: string) {
             });
         };
 
-        const handleConnect = () => setIsConnected(true);
+        const handleConnect = () => {
+            setIsConnected(true);
+            // Re-join the activity room on reconnection
+            if (sessionId) {
+                logger.debug(`[useActivitySocket] Reconnected. Re-joining session: ${sessionId}`);
+                socketService.joinActivity(sessionId);
+            }
+        };
         const handleDisconnect = () => setIsConnected(false);
 
         // 4. Bind events

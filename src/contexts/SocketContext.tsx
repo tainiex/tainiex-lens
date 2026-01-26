@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect } from 'react';
 import { useMachine } from '@xstate/react';
 import { connectionMachine } from '@/shared/machines/connectionMachine';
 import type { CollaborationConnectionState } from '@/shared';
+import { logger } from '@/shared/utils/logger';
 
 interface SocketContextType {
     connectionState: CollaborationConnectionState;
@@ -41,8 +42,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         };
     }, [send]);
 
-    const reconnect = () => {
+    const reconnect = async () => {
+        logger.log('[SocketContext] User triggered reconnect');
         send({ type: 'RETRY' });
+
+        // Also trigger SocketService manual reconnect
+        const { socketService } = await import('@/shared/services/SocketService');
+        await socketService.reconnect();
     };
 
     return (

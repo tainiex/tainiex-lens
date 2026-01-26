@@ -25,6 +25,23 @@ export function createMockSocket(): Partial<Socket> {
             }
             eventHandlers.get(event)!.push(handler);
         }),
+        once: vi.fn((event: string, handler: Function) => {
+            if (!eventHandlers.has(event)) {
+                eventHandlers.set(event, []);
+            }
+            // Wrap handler to remove itself after first call
+            const onceHandler = (...args: any[]) => {
+                handler(...args);
+                const handlers = eventHandlers.get(event);
+                if (handlers) {
+                    const index = handlers.indexOf(onceHandler);
+                    if (index > -1) {
+                        handlers.splice(index, 1);
+                    }
+                }
+            };
+            eventHandlers.get(event)!.push(onceHandler);
+        }),
         off: vi.fn((event: string, handler: Function) => {
             const handlers = eventHandlers.get(event);
             if (handlers) {
@@ -34,6 +51,7 @@ export function createMockSocket(): Partial<Socket> {
                 }
             }
         }),
+        onAny: vi.fn(),
         disconnect: vi.fn(),
         connect: vi.fn(),
         // Helper to trigger events in tests

@@ -6,8 +6,42 @@ import type { CollaborationSocket } from '../types/collaboration';
 import { ActivitySocket } from '../types/socket';
 
 /**
- * SocketService Singleton
- * Manages the WebSocket connection lifecycle independently of React components.
+ * 连接状态枚举
+ * Connection state enum for aggregated socket status
+ */
+export enum ConnectionStatus {
+    DISCONNECTED = 'disconnected',
+    CONNECTING = 'connecting',
+    CONNECTED = 'connected',
+    RECONNECTING = 'reconnecting',
+    FAILED = 'failed',
+}
+
+/**
+ * 连接质量指标
+ * Connection quality metrics
+ */
+interface ConnectionMetrics {
+    latency: number; // ms
+    lastPingTime: number;
+    reconnectCount: number;
+    failureCount: number;
+    lastSuccessfulConnect: number;
+}
+
+/**
+ * 断路器状态
+ * Circuit breaker for intelligent reconnection management
+ */
+enum CircuitState {
+    CLOSED = 'closed', // 正常工作
+    OPEN = 'open', // 故障，停止重连
+    HALF_OPEN = 'half_open', // 尝试性恢复
+}
+
+/**
+ * SocketService Singleton (Enhanced Industrial-Grade Version)
+ * Manages the WebSocket connection lifecycle with robust reconnection and health monitoring.
  */
 class SocketService {
     private static instance: SocketService;
@@ -20,30 +54,88 @@ class SocketService {
     private connectionPromise: Promise<void> | null = null;
     private forcedDisconnect: boolean = false;
 
-    // Reconnection state tracking
-    private reconnectionAttempts: Map<string, number> = new Map(); // Track attempts per socket
-    private reconnectionTimers: Map<string, NodeJS.Timeout> = new Map(); // Track active timers
-    private maxReconnectionDelay: number = 5000; // Max 5 seconds
+    // Enhanced reconnection state tracking
+    private reconnectionAttempts: number = 0;
+    private reconnectionTimer: NodeJS.Timeout | null = null;
+    private maxReconnectionDelay: number = 30000; // Max 30 seconds
     private baseReconnectionDelay: number = 1000; // Start at 1 second
+    private maxReconnectionAttempts: number = 10; // Before entering circuit breaker
 
-    // Simple listener pattern for global state
-    private listeners: ((isConnected: boolean) => void)[] = [];
+    // Circuit breaker for preventing infinite reconnection attempts
+    private circuitState: CircuitState = CircuitState.CLOSED;
+    private circuitOpenTime: number = 0;
+    private circuitResetTimeout: number = 60000; // 1 minute before trying again
+
+    // Health check mechanism
+    private healthCheckInterval: NodeJS.Timeout | null = null;
+    private healthCheckIntervalMs: number = 30000; // Check every 30 seconds
+    private pingTimeout: NodeJS.Timeout | null = null;
+    private pingTimeoutMs: number = 10000; // 10 second timeout for ping response
+    private lastPongReceived: number = Date.now();
+
+    // Connection quality metrics
+    private metrics: ConnectionMetrics = {
+        latency: 0,
+        lastPingTime: 0,
+        reconnectCount: 0,
+        failureCount: 0,
+        lastSuccessfulConnect: 0,
+    };
+
+    // Enhanced listener pattern with detailed state
+    private listeners: ((status: ConnectionStatus, metrics?: ConnectionMetrics) => void)[] = [];
+
+    // Token refresh tracking
+    private tokenRefreshTimer: NodeJS.Timeout | null = null;
+    private tokenExpiryCheckInterval: number = 60000; // Check every minute
 
     private constructor() {
         // Private constructor for singleton
+        this.startTokenExpiryMonitor();
     }
 
-    public subscribe(callback: (isConnected: boolean) => void): () => void {
+    /**
+     * Subscribe to connection status changes with detailed metrics
+     */
+    public subscribe(
+        callback: (status: ConnectionStatus, metrics?: ConnectionMetrics) => void
+    ): () => void {
         this.listeners.push(callback);
-        // Initial Emit
-        callback(this.chatSocket?.connected || false);
+        // Initial Emit with current state
+        const currentStatus = this.getAggregatedStatus();
+        callback(currentStatus, this.metrics);
         return () => {
             this.listeners = this.listeners.filter(l => l !== callback);
         };
     }
 
-    private notifyListeners(isConnected: boolean) {
-        this.listeners.forEach(l => l(isConnected));
+    /**
+     * Notify all listeners with current connection status
+     */
+    private notifyListeners(status: ConnectionStatus) {
+        logger.debug(`[SocketService] Notifying listeners: ${status}`);
+        this.listeners.forEach(l => l(status, this.metrics));
+    }
+
+    /**
+     * Get aggregated connection status across all sockets
+     */
+    private getAggregatedStatus(): ConnectionStatus {
+        const sockets = [this.chatSocket, this.collaborationSocket, this.activitySocket];
+        const connectedCount = sockets.filter(s => s?.connected).length;
+        const totalCount = sockets.filter(s => s !== null).length;
+
+        if (totalCount === 0) return ConnectionStatus.DISCONNECTED;
+        if (connectedCount === totalCount) return ConnectionStatus.CONNECTED;
+        if (connectedCount > 0) return ConnectionStatus.RECONNECTING;
+
+        // Check if we're in the process of connecting
+        if (this.connectionPromise) return ConnectionStatus.CONNECTING;
+
+        // Check circuit breaker state
+        if (this.circuitState === CircuitState.OPEN) return ConnectionStatus.FAILED;
+
+        return ConnectionStatus.DISCONNECTED;
     }
 
     public static getInstance(): SocketService {
@@ -54,18 +146,32 @@ class SocketService {
     }
 
     /**
-     * Initialize and connect the socket
+     * Initialize and connect the socket with circuit breaker protection
      */
     public async connect(force: boolean = false): Promise<void> {
         logger.debug(`[SocketService] connect() called with force=${force}`);
 
-        if (
-            !force &&
-            (this.chatSocket?.connected ||
-                this.collaborationSocket?.connected ||
-                this.activitySocket?.connected)
-        ) {
-            logger.debug('[SocketService] Already connected or partially connected.');
+        // Check circuit breaker state
+        if (this.circuitState === CircuitState.OPEN && !force) {
+            const now = Date.now();
+            if (now - this.circuitOpenTime < this.circuitResetTimeout) {
+                logger.warn(
+                    '[SocketService] Circuit breaker is OPEN. Rejecting connection attempt.'
+                );
+                this.notifyListeners(ConnectionStatus.FAILED);
+                return;
+            } else {
+                // Try to transition to HALF_OPEN
+                logger.log(
+                    '[SocketService] Circuit breaker timeout expired. Entering HALF_OPEN state.'
+                );
+                this.circuitState = CircuitState.HALF_OPEN;
+            }
+        }
+
+        // Already connected check
+        if (!force && this.getAggregatedStatus() === ConnectionStatus.CONNECTED) {
+            logger.debug('[SocketService] Already fully connected.');
             return;
         }
 
@@ -76,6 +182,7 @@ class SocketService {
         }
 
         this.forcedDisconnect = false;
+        this.notifyListeners(ConnectionStatus.CONNECTING);
 
         // Create a new connection promise
         this.connectionPromise = this.performConnection();
@@ -83,9 +190,6 @@ class SocketService {
         try {
             await this.connectionPromise;
         } finally {
-            // We don't clear the promise immediately if successful?
-            // Actually better to clear it so subsequent calls can retry if disconnected later.
-            // But if it's connected, the first check handles it.
             this.connectionPromise = null;
         }
     }
@@ -98,34 +202,19 @@ class SocketService {
             logger.debug('[SocketService] Checking authentication...');
             const isAuthenticated = await apiClient.ensureAuth();
             if (!isAuthenticated) {
-                logger.warn('[SocketService] Authentication failed. Cannot connect socket.');
-                return;
+                logger.error('[SocketService] Authentication failed. Cannot connect socket.');
+                this.notifyListeners(ConnectionStatus.FAILED);
+                throw new Error('Authentication failed');
             }
             logger.debug('[SocketService] Authentication confirmed.');
 
-            // 2. Create Manager if not exists
+            // 2. Create Manager if not exists, or update existing manager
             if (!this.manager) {
                 logger.debug('[SocketService] Manager not found, creating new Manager...');
                 this.createManager();
             } else {
-                logger.debug('[SocketService] Manager exists, checking socket state...');
-
-                // CRITICAL FIX: Update extraHeaders with LATEST token before reconnecting
-                // This prevents stale tokens causing "io server disconnect" loops
-                const token = apiClient.accessToken;
-                if (this.manager.opts) {
-                    this.manager.opts.extraHeaders = {
-                        Authorization: token ? `Bearer ${token}` : '',
-                        'X-Auth-Mode': 'bearer',
-                    };
-                    // Also update query param for next connection attempt
-                    (this.manager.opts as any).query = {
-                        token: token || '',
-                    };
-                    logger.debug(
-                        '[SocketService] Updated Manager headers and query with fresh token.'
-                    );
-                }
+                logger.debug('[SocketService] Manager exists, updating authentication...');
+                await this.updateManagerAuth();
             }
 
             // 3. Create Sockets if not exists
@@ -140,46 +229,82 @@ class SocketService {
             }
 
             // 4. Manually connect if not connected
+            const connectPromises: Promise<void>[] = [];
+
             if (this.chatSocket && !this.chatSocket.connected) {
-                logger.debug('[SocketService] ChatSocket not connected, calling connect()...');
-                this.chatSocket.connect();
-            } else {
-                logger.debug(
-                    `[SocketService] ChatSocket already connected? ${this.chatSocket?.connected}`
+                logger.debug('[SocketService] Connecting ChatSocket...');
+                connectPromises.push(
+                    new Promise<void>((resolve, reject) => {
+                        const timeout = setTimeout(() => {
+                            reject(new Error('ChatSocket connection timeout'));
+                        }, 20000);
+
+                        this.chatSocket!.once('connect', () => {
+                            clearTimeout(timeout);
+                            resolve();
+                        });
+
+                        this.chatSocket!.once('connect_error', err => {
+                            clearTimeout(timeout);
+                            reject(err);
+                        });
+
+                        this.chatSocket!.connect();
+                    })
                 );
             }
 
             if (this.collaborationSocket && !this.collaborationSocket.connected) {
-                logger.debug(
-                    '[SocketService] CollaborationSocket not connected, calling connect()...'
-                );
+                logger.debug('[SocketService] Connecting CollaborationSocket...');
                 this.collaborationSocket.connect();
             }
 
             if (this.activitySocket && !this.activitySocket.connected) {
-                logger.debug('[SocketService] ActivitySocket not connected, calling connect()...');
+                logger.debug('[SocketService] Connecting ActivitySocket...');
                 this.activitySocket.connect();
             }
+
+            // Wait for at least chat socket to connect
+            if (connectPromises.length > 0) {
+                await Promise.race([
+                    Promise.all(connectPromises),
+                    new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Connection timeout')), 20000)
+                    ),
+                ]);
+            }
+
+            logger.log('[SocketService] Connection established successfully');
         } catch (error) {
             logger.error('[SocketService] Connection failed with error:', error);
-            // Sentry access removed for shared logic
+            this.metrics.failureCount++;
+
+            // Notify failure
+            const status = this.getAggregatedStatus();
+            this.notifyListeners(status);
+
+            // Schedule reconnection if not in circuit breaker
+            if (this.circuitState !== CircuitState.OPEN) {
+                this.scheduleReconnection('connection_failed');
+            }
+
+            throw error;
         }
     }
 
     /**
-     * Disconnects the socket (e.g. on logout)
+     * Disconnects the socket (e.g. on logout) and cleanup all timers
      */
     public disconnect() {
         this.forcedDisconnect = true;
         logger.log('[SocketService] Disconnecting all sockets...');
 
-        // Clear all reconnection timers
-        this.reconnectionTimers.forEach((timer, socketName) => {
-            clearTimeout(timer);
-            logger.debug(`[SocketService] Cleared reconnection timer for ${socketName}`);
-        });
-        this.reconnectionTimers.clear();
-        this.reconnectionAttempts.clear();
+        // Clear all timers
+        this.clearAllTimers();
+
+        // Reset circuit breaker
+        this.circuitState = CircuitState.CLOSED;
+        this.reconnectionAttempts = 0;
 
         if (this.chatSocket) {
             this.chatSocket.disconnect();
@@ -189,6 +314,30 @@ class SocketService {
         }
         if (this.activitySocket) {
             this.activitySocket.disconnect();
+        }
+
+        this.notifyListeners(ConnectionStatus.DISCONNECTED);
+    }
+
+    /**
+     * Clear all timers (reconnection, health check, ping, token refresh)
+     */
+    private clearAllTimers() {
+        if (this.reconnectionTimer) {
+            clearTimeout(this.reconnectionTimer);
+            this.reconnectionTimer = null;
+        }
+        if (this.healthCheckInterval) {
+            clearInterval(this.healthCheckInterval);
+            this.healthCheckInterval = null;
+        }
+        if (this.pingTimeout) {
+            clearTimeout(this.pingTimeout);
+            this.pingTimeout = null;
+        }
+        if (this.tokenRefreshTimer) {
+            clearTimeout(this.tokenRefreshTimer);
+            this.tokenRefreshTimer = null;
         }
     }
 
@@ -320,59 +469,218 @@ class SocketService {
     }
 
     /**
-     * Calculate reconnection delay with exponential backoff
+     * Calculate reconnection delay with exponential backoff + jitter
      */
-    private getReconnectionDelay(socketName: string): number {
-        const attempts = this.reconnectionAttempts.get(socketName) || 0;
-        const delay = Math.min(
-            this.baseReconnectionDelay * Math.pow(2, attempts),
+    private getReconnectionDelay(): number {
+        const exponentialDelay = Math.min(
+            this.baseReconnectionDelay * Math.pow(2, this.reconnectionAttempts),
             this.maxReconnectionDelay
         );
-        return delay;
+        // Add jitter (random 0-25% of delay) to prevent thundering herd
+        const jitter = Math.random() * exponentialDelay * 0.25;
+        return exponentialDelay + jitter;
     }
 
     /**
-     * Schedule a reconnection attempt with exponential backoff
+     * Schedule a reconnection attempt with intelligent backoff and circuit breaker
      */
-    private scheduleReconnection(socketName: string) {
+    private scheduleReconnection(reason: string) {
         // Clear any existing timer
-        const existingTimer = this.reconnectionTimers.get(socketName);
-        if (existingTimer) {
-            clearTimeout(existingTimer);
+        if (this.reconnectionTimer) {
+            clearTimeout(this.reconnectionTimer);
+            this.reconnectionTimer = null;
         }
 
         // Don't reconnect if forcefully disconnected
         if (this.forcedDisconnect) {
-            logger.debug(
-                `[SocketService] Skipping reconnection for ${socketName} (forced disconnect)`
-            );
+            logger.debug('[SocketService] Skipping reconnection (forced disconnect)');
             return;
         }
 
-        const attempts = this.reconnectionAttempts.get(socketName) || 0;
-        const delay = this.getReconnectionDelay(socketName);
+        // Check if we've exceeded max attempts
+        if (this.reconnectionAttempts >= this.maxReconnectionAttempts) {
+            logger.error(
+                `[SocketService] Max reconnection attempts (${this.maxReconnectionAttempts}) reached. Opening circuit breaker.`
+            );
+            this.circuitState = CircuitState.OPEN;
+            this.circuitOpenTime = Date.now();
+            this.metrics.failureCount++;
+            this.notifyListeners(ConnectionStatus.FAILED);
+            return;
+        }
 
-        logger.debug(
-            `[SocketService] Scheduling ${socketName} reconnection attempt ${attempts + 1} in ${delay}ms`
+        const delay = this.getReconnectionDelay();
+        this.reconnectionAttempts++;
+        this.metrics.reconnectCount++;
+
+        logger.log(
+            `[SocketService] Scheduling reconnection attempt ${this.reconnectionAttempts}/${this.maxReconnectionAttempts} in ${Math.round(delay)}ms (reason: ${reason})`
         );
 
-        const timer = setTimeout(async () => {
-            this.reconnectionAttempts.set(socketName, attempts + 1);
+        this.notifyListeners(ConnectionStatus.RECONNECTING);
 
+        this.reconnectionTimer = setTimeout(async () => {
             try {
-                await this.connect();
-                // Reset counter on successful connection (handled in 'connect' event)
+                logger.debug(
+                    `[SocketService] Executing reconnection attempt ${this.reconnectionAttempts}...`
+                );
+                await this.connect(true); // Force reconnection
             } catch (error) {
                 logger.warn(
-                    `[SocketService] Reconnection attempt ${attempts + 1} failed for ${socketName}:`,
+                    `[SocketService] Reconnection attempt ${this.reconnectionAttempts} failed:`,
                     error
                 );
-                // Schedule another attempt
-                this.scheduleReconnection(socketName);
+                this.metrics.failureCount++;
+                // Schedule another attempt (will be handled by disconnect event)
             }
         }, delay);
+    }
 
-        this.reconnectionTimers.set(socketName, timer);
+    /**
+     * Start health check mechanism with ping/pong
+     */
+    private startHealthCheck() {
+        // Clear existing interval
+        if (this.healthCheckInterval) {
+            clearInterval(this.healthCheckInterval);
+        }
+
+        logger.debug('[SocketService] Starting health check mechanism');
+
+        this.healthCheckInterval = setInterval(() => {
+            const status = this.getAggregatedStatus();
+
+            // Only ping if we think we're connected
+            if (status === ConnectionStatus.CONNECTED) {
+                this.performHealthCheck();
+            }
+        }, this.healthCheckIntervalMs);
+    }
+
+    /**
+     * Perform a health check by sending ping and waiting for pong
+     */
+    private performHealthCheck() {
+        const now = Date.now();
+
+        // Check if we haven't received a pong in too long
+        if (now - this.lastPongReceived > this.pingTimeoutMs * 2) {
+            logger.warn('[SocketService] Health check failed: No pong received for too long');
+            this.handleHealthCheckFailure();
+            return;
+        }
+
+        // Send ping to primary socket (chat)
+        if (this.chatSocket?.connected) {
+            const pingTime = Date.now();
+            this.metrics.lastPingTime = pingTime;
+
+            // Set timeout for pong response
+            if (this.pingTimeout) {
+                clearTimeout(this.pingTimeout);
+            }
+
+            this.pingTimeout = setTimeout(() => {
+                logger.warn('[SocketService] Health check timeout: No pong received');
+                this.handleHealthCheckFailure();
+            }, this.pingTimeoutMs);
+
+            // Emit ping (server should respond with pong)
+            // Use 'any' to bypass strict type checking for custom events
+            (this.chatSocket as any).emit('ping', { timestamp: pingTime });
+        }
+    }
+
+    /**
+     * Handle health check failure
+     */
+    private handleHealthCheckFailure() {
+        logger.error('[SocketService] Health check failed. Triggering reconnection...');
+        this.metrics.failureCount++;
+
+        // Disconnect and schedule reconnection
+        if (this.chatSocket?.connected) {
+            this.chatSocket.disconnect();
+        }
+
+        this.scheduleReconnection('health_check_failed');
+    }
+
+    /**
+     * Start token expiry monitoring
+     */
+    private startTokenExpiryMonitor() {
+        // Clear existing timer
+        if (this.tokenRefreshTimer) {
+            clearTimeout(this.tokenRefreshTimer);
+        }
+
+        // Check token expiry periodically
+        this.tokenRefreshTimer = setTimeout(() => {
+            this.checkAndRefreshToken();
+            this.startTokenExpiryMonitor(); // Reschedule
+        }, this.tokenExpiryCheckInterval);
+    }
+
+    /**
+     * Check if token is about to expire and refresh if needed
+     */
+    private async checkAndRefreshToken() {
+        try {
+            const token = apiClient.accessToken;
+            if (!token) return;
+
+            // Parse JWT to check expiry (simple decode without verification)
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const expiryTime = payload.exp * 1000; // Convert to ms
+            const now = Date.now();
+            const timeUntilExpiry = expiryTime - now;
+
+            // Refresh if expiring within 5 minutes
+            if (timeUntilExpiry < 5 * 60 * 1000 && timeUntilExpiry > 0) {
+                logger.log('[SocketService] Token expiring soon, refreshing...');
+                const success = await apiClient.refreshToken();
+
+                if (success) {
+                    logger.log('[SocketService] Token refreshed successfully');
+                    // Update manager with new token
+                    await this.updateManagerAuth();
+                } else {
+                    logger.error('[SocketService] Token refresh failed');
+                }
+            }
+        } catch (error) {
+            logger.debug('[SocketService] Token expiry check skipped:', error);
+        }
+    }
+
+    /**
+     * Update manager authentication with latest token
+     */
+    private async updateManagerAuth() {
+        const token = apiClient.accessToken;
+        if (this.manager?.opts && token) {
+            this.manager.opts.extraHeaders = {
+                Authorization: `Bearer ${token}`,
+                'X-Auth-Mode': 'bearer',
+            };
+            (this.manager.opts as any).query = {
+                token: token,
+            };
+
+            // Update auth for all sockets
+            if (this.chatSocket) {
+                this.chatSocket.auth = { token };
+            }
+            if (this.collaborationSocket) {
+                this.collaborationSocket.auth = { token };
+            }
+            if (this.activitySocket) {
+                this.activitySocket.auth = { token };
+            }
+
+            logger.debug('[SocketService] Updated authentication for all sockets');
+        }
     }
 
     /**
@@ -382,11 +690,11 @@ class SocketService {
         if (!this.manager) return;
 
         this.manager.on('reconnect_attempt', misc => {
-            logger.debug(`[SocketService] Reconnecting... (${misc})`);
+            logger.debug(`[SocketService] Manager reconnect attempt (${misc})`);
         });
 
         this.manager.on('reconnect_failed', () => {
-            logger.error('[SocketService] Reconnection failed.');
+            logger.error('[SocketService] Manager reconnection failed');
         });
     }
 
@@ -399,39 +707,69 @@ class SocketService {
         // 1. Connection Lifecycle
         socket.on('connect', () => {
             logger.log(`[SocketService] ${name} Socket Connected! ID: ${socket.id}`);
-            // Sentry breadcrumb removed
 
-            // Reset reconnection attempts on successful connection
-            this.reconnectionAttempts.set(name, 0);
-            const timer = this.reconnectionTimers.get(name);
-            if (timer) {
-                clearTimeout(timer);
-                this.reconnectionTimers.delete(name);
+            // Reset reconnection attempts and circuit breaker on successful connection
+            this.reconnectionAttempts = 0;
+            if (this.reconnectionTimer) {
+                clearTimeout(this.reconnectionTimer);
+                this.reconnectionTimer = null;
             }
 
-            this.notifyListeners(true);
+            // Update metrics
+            this.metrics.lastSuccessfulConnect = Date.now();
+            this.lastPongReceived = Date.now();
+
+            // Reset or close circuit breaker
+            if (this.circuitState === CircuitState.HALF_OPEN) {
+                logger.log('[SocketService] Circuit breaker closed after successful connection');
+                this.circuitState = CircuitState.CLOSED;
+            }
+
+            // Start health check if all sockets are connected
+            const status = this.getAggregatedStatus();
+            if (status === ConnectionStatus.CONNECTED) {
+                this.startHealthCheck();
+            }
+
+            this.notifyListeners(status);
         });
 
         socket.on('disconnect', reason => {
             logger.warn(`[SocketService] ${name} Socket Disconnected: ${reason}`);
-            // Sentry breadcrumb removed
 
-            // Only notify false if BOTH are disconnected, or we just care about chat being primary
-            // For simplicity, if Chat disconnects, we consider it offline.
-            if (name === 'Chat') {
-                this.notifyListeners(false);
+            // Stop health check
+            if (this.healthCheckInterval) {
+                clearInterval(this.healthCheckInterval);
+                this.healthCheckInterval = null;
             }
 
-            // Handle server-initiated disconnects with persistent reconnection
-            if (reason === 'io server disconnect' || reason === 'io client disconnect') {
-                if (!this.forcedDisconnect) {
-                    logger.debug(
-                        `[SocketService] Server disconnected ${name}, scheduling reconnection...`
-                    );
-                    this.scheduleReconnection(name);
-                }
+            const status = this.getAggregatedStatus();
+            this.notifyListeners(status);
+
+            // Handle different disconnect reasons
+            if (this.forcedDisconnect) {
+                logger.debug(`[SocketService] ${name} disconnected by user request`);
+                return;
             }
-            // For other disconnect reasons (e.g., transport error), Socket.IO's built-in reconnection handles it
+
+            // Determine if we should reconnect
+            const shouldReconnect =
+                reason === 'io server disconnect' ||
+                reason === 'io client disconnect' ||
+                reason === 'transport close' ||
+                reason === 'transport error';
+
+            if (shouldReconnect) {
+                logger.debug(
+                    `[SocketService] ${name} disconnected (${reason}), scheduling reconnection...`
+                );
+                this.scheduleReconnection(reason);
+            } else {
+                // Let Socket.IO's built-in reconnection handle other cases
+                logger.debug(
+                    `[SocketService] ${name} disconnected (${reason}), relying on Socket.IO auto-reconnect`
+                );
+            }
         });
 
         // 2. Auth Lifecycle & Token Renewal
@@ -526,17 +864,42 @@ class SocketService {
 
             if (
                 err.message &&
-                (err.message.includes('401') || err.message.includes('Unauthorized'))
+                (err.message.includes('401') ||
+                    err.message.includes('Unauthorized') ||
+                    err.message.includes('Authentication error') ||
+                    err.message.includes('No token provided'))
             ) {
                 apiClient.ensureAuth().then(ok => {
-                    if (ok && !this.forcedDisconnect && socket && !socket.connected) {
-                        socket.connect();
+                    // Retry connection if auth is resolved
+                    // Use force=false to respect existing promise if any, but since we are in error state,
+                    // we might need to be careful. connect() handles joining existing promise.
+                    if (ok && !this.forcedDisconnect) {
+                        // We must ensure the socket is actually disconnected before calling connect() on it directly
+                        // OR better: call the main connect() method to orchestrate everything
+                        logger.debug(
+                            `[SocketService] ${name} Auth resolved after error, retrying connection...`
+                        );
+                        this.connect();
                     }
                 });
             }
         });
 
-        // 5. Reliability & ACK
+        // 5. Health Check Response
+        socket.on('pong', (data: { timestamp: number }) => {
+            const latency = Date.now() - data.timestamp;
+            this.metrics.latency = latency;
+            this.lastPongReceived = Date.now();
+
+            if (this.pingTimeout) {
+                clearTimeout(this.pingTimeout);
+                this.pingTimeout = null;
+            }
+
+            logger.debug(`[SocketService] ${name} pong received (latency: ${latency}ms)`);
+        });
+
+        // 6. Reliability & ACK
         socket.onAny((event, ...args) => {
             // Debug Spy
             if (event.includes('chat') || event.includes('stream')) {
@@ -549,6 +912,42 @@ class SocketService {
                 socket.emit('message:ack', { messageId: data.messageId });
             }
         });
+    }
+
+    /**
+     * Get current connection metrics
+     */
+    public getMetrics(): ConnectionMetrics {
+        return { ...this.metrics };
+    }
+
+    /**
+     * Get current connection status
+     */
+    public getConnectionStatus(): ConnectionStatus {
+        return this.getAggregatedStatus();
+    }
+
+    /**
+     * Manual reconnect trigger (for user-initiated reconnection)
+     */
+    public async reconnect(): Promise<void> {
+        logger.log('[SocketService] Manual reconnect triggered');
+
+        // Reset circuit breaker if open
+        if (this.circuitState === CircuitState.OPEN) {
+            logger.log('[SocketService] Resetting circuit breaker for manual reconnect');
+            this.circuitState = CircuitState.HALF_OPEN;
+            this.reconnectionAttempts = 0;
+        }
+
+        // Disconnect all sockets first
+        if (this.chatSocket?.connected) this.chatSocket.disconnect();
+        if (this.collaborationSocket?.connected) this.collaborationSocket.disconnect();
+        if (this.activitySocket?.connected) this.activitySocket.disconnect();
+
+        // Force reconnection
+        await this.connect(true);
     }
 }
 

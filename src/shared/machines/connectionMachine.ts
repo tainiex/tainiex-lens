@@ -1,9 +1,9 @@
 import { setup, fromCallback, assign } from 'xstate';
-import { socketService } from '../services/SocketService';
+import { socketService, ConnectionStatus } from '../services/SocketService';
 import { logger } from '../utils/logger';
 
 /**
- * WebSocket 连接状态机
+ * WebSocket 连接状态机 (Enhanced)
  * WebSocket Connection State Machine
  *
  * 状态图可视化: https://stately.ai/viz
@@ -16,26 +16,32 @@ export const connectionMachine = setup({
     types: {
         context: {} as {
             error?: string;
+            latency?: number;
+            reconnectCount?: number;
         },
         events: {} as
-            | { type: 'CONNECT' }
-            | { type: 'CONNECTED' }
-            | { type: 'DISCONNECTED'; error?: string }
+            | {
+                  type: 'STATUS_CHANGE';
+                  status: ConnectionStatus;
+                  latency?: number;
+                  reconnectCount?: number;
+              }
             | { type: 'NETWORK_ONLINE' }
             | { type: 'NETWORK_OFFLINE' }
             | { type: 'RETRY' },
     },
 
     actors: {
-        // 订阅 SocketService 的连接状态
-        // Subscribe to SocketService connection state
+        // 订阅 SocketService 的连接状态（增强版）
+        // Subscribe to SocketService connection state (Enhanced)
         socketSubscription: fromCallback(({ sendBack }) => {
-            const unsubscribe = socketService.subscribe(isConnected => {
-                if (isConnected) {
-                    sendBack({ type: 'CONNECTED' });
-                } else {
-                    sendBack({ type: 'DISCONNECTED' });
-                }
+            const unsubscribe = socketService.subscribe((status, metrics) => {
+                sendBack({
+                    type: 'STATUS_CHANGE',
+                    status,
+                    latency: metrics?.latency,
+                    reconnectCount: metrics?.reconnectCount,
+                });
             });
 
             return () => {
@@ -45,9 +51,12 @@ export const connectionMachine = setup({
     },
 
     actions: {
-        setError: assign({
-            error: ({ event }) => {
-                return event.type === 'DISCONNECTED' ? event.error : undefined;
+        updateMetrics: assign({
+            latency: ({ event }) => {
+                return event.type === 'STATUS_CHANGE' ? event.latency : undefined;
+            },
+            reconnectCount: ({ event }) => {
+                return event.type === 'STATUS_CHANGE' ? event.reconnectCount : undefined;
             },
         }),
         clearError: assign({
@@ -56,21 +65,32 @@ export const connectionMachine = setup({
         setOfflineError: assign({
             error: () => 'No Internet Connection',
         }),
+        setFailedError: assign({
+            error: () => 'Connection failed. Please try again.',
+        }),
     },
 }).createMachine({
     id: 'websocket-connection',
     initial: 'initializing',
     context: {
         error: undefined,
+        latency: undefined,
+        reconnectCount: undefined,
     },
 
     states: {
         initializing: {
-            // 启动时检查初始状态
-            // Check initial state on startup
+            // 启动时立即开始订阅
+            // Start subscription immediately on startup
+            entry: () => {
+                logger.log('[ConnectionMachine] State: initializing');
+            },
+            invoke: {
+                src: 'socketSubscription',
+            },
             always: [
                 {
-                    guard: () => socketService.getChatSocket()?.connected === true,
+                    guard: () => socketService.getConnectionStatus() === ConnectionStatus.CONNECTED,
                     target: 'connected',
                 },
                 {
@@ -83,8 +103,23 @@ export const connectionMachine = setup({
             entry: () => {
                 logger.log('[ConnectionMachine] State: disconnected');
             },
+            invoke: {
+                src: 'socketSubscription',
+            },
             on: {
-                CONNECT: 'connecting',
+                STATUS_CHANGE: [
+                    {
+                        guard: ({ event }) => event.status === ConnectionStatus.CONNECTING,
+                        target: 'connecting',
+                        actions: 'updateMetrics',
+                    },
+                    {
+                        guard: ({ event }) => event.status === ConnectionStatus.CONNECTED,
+                        target: 'connected',
+                        actions: 'updateMetrics',
+                    },
+                ],
+                RETRY: 'connecting',
                 NETWORK_ONLINE: 'connecting',
             },
         },
@@ -98,11 +133,28 @@ export const connectionMachine = setup({
                 src: 'socketSubscription',
             },
             on: {
-                CONNECTED: 'connected',
-                DISCONNECTED: {
-                    target: 'reconnecting',
-                    actions: 'setError',
-                },
+                STATUS_CHANGE: [
+                    {
+                        guard: ({ event }) => event.status === ConnectionStatus.CONNECTED,
+                        target: 'connected',
+                        actions: ['clearError', 'updateMetrics'],
+                    },
+                    {
+                        guard: ({ event }) => event.status === ConnectionStatus.RECONNECTING,
+                        target: 'reconnecting',
+                        actions: 'updateMetrics',
+                    },
+                    {
+                        guard: ({ event }) => event.status === ConnectionStatus.FAILED,
+                        target: 'failed',
+                        actions: ['setFailedError', 'updateMetrics'],
+                    },
+                    {
+                        guard: ({ event }) => event.status === ConnectionStatus.DISCONNECTED,
+                        target: 'reconnecting',
+                        actions: 'updateMetrics',
+                    },
+                ],
                 NETWORK_OFFLINE: 'offline',
             },
         },
@@ -113,10 +165,27 @@ export const connectionMachine = setup({
                 src: 'socketSubscription',
             },
             on: {
-                DISCONNECTED: {
-                    target: 'reconnecting',
-                    actions: 'setError',
-                },
+                STATUS_CHANGE: [
+                    {
+                        guard: ({ event }) => event.status === ConnectionStatus.RECONNECTING,
+                        target: 'reconnecting',
+                        actions: 'updateMetrics',
+                    },
+                    {
+                        guard: ({ event }) => event.status === ConnectionStatus.DISCONNECTED,
+                        target: 'reconnecting',
+                        actions: 'updateMetrics',
+                    },
+                    {
+                        guard: ({ event }) => event.status === ConnectionStatus.FAILED,
+                        target: 'failed',
+                        actions: ['setFailedError', 'updateMetrics'],
+                    },
+                    {
+                        // Stay in connected, just update metrics
+                        actions: 'updateMetrics',
+                    },
+                ],
                 NETWORK_OFFLINE: 'offline',
             },
         },
@@ -129,15 +198,68 @@ export const connectionMachine = setup({
                 src: 'socketSubscription',
             },
             on: {
-                CONNECTED: 'connected',
+                STATUS_CHANGE: [
+                    {
+                        guard: ({ event }) => event.status === ConnectionStatus.CONNECTED,
+                        target: 'connected',
+                        actions: ['clearError', 'updateMetrics'],
+                    },
+                    {
+                        guard: ({ event }) => event.status === ConnectionStatus.FAILED,
+                        target: 'failed',
+                        actions: ['setFailedError', 'updateMetrics'],
+                    },
+                    {
+                        guard: ({ event }) => event.status === ConnectionStatus.CONNECTING,
+                        target: 'connecting',
+                        actions: 'updateMetrics',
+                    },
+                    {
+                        // Stay in reconnecting, just update metrics
+                        actions: 'updateMetrics',
+                    },
+                ],
                 NETWORK_OFFLINE: 'offline',
                 RETRY: 'connecting',
             },
         },
 
+        failed: {
+            entry: ['setFailedError', () => logger.error('[ConnectionMachine] State: failed')],
+            invoke: {
+                src: 'socketSubscription',
+            },
+            on: {
+                STATUS_CHANGE: [
+                    {
+                        guard: ({ event }) => event.status === ConnectionStatus.CONNECTING,
+                        target: 'connecting',
+                        actions: 'updateMetrics',
+                    },
+                    {
+                        guard: ({ event }) => event.status === ConnectionStatus.CONNECTED,
+                        target: 'connected',
+                        actions: ['clearError', 'updateMetrics'],
+                    },
+                ],
+                RETRY: 'connecting',
+                NETWORK_ONLINE: 'connecting',
+            },
+        },
+
         offline: {
             entry: ['setOfflineError', () => logger.warn('[ConnectionMachine] State: offline')],
+            invoke: {
+                src: 'socketSubscription',
+            },
             on: {
+                STATUS_CHANGE: [
+                    {
+                        guard: ({ event }) => event.status === ConnectionStatus.CONNECTING,
+                        target: 'connecting',
+                        actions: ['clearError', 'updateMetrics'],
+                    },
+                ],
                 NETWORK_ONLINE: 'connecting',
             },
         },
@@ -152,4 +274,5 @@ export type ConnectionStateValue =
     | 'connecting'
     | 'connected'
     | 'reconnecting'
+    | 'failed'
     | 'offline';
