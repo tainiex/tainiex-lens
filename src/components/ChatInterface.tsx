@@ -45,6 +45,8 @@ function ChatInterfaceContent({ user, onMenuClick }: ChatInterfaceProps) {
         scrollContainerRef: scrollRef,
         messagesListRef,
         handleScroll,
+        resetScrollState,
+        scrollToBottom,
     } = useChatScroll({
         messages,
         isLoading,
@@ -62,6 +64,23 @@ function ChatInterfaceContent({ user, onMenuClick }: ChatInterfaceProps) {
             scrollContainerRef.current = scrollRef.current;
         }
     }, [scrollRef]);
+
+    // Reset scroll state and scroll to bottom when session changes
+    const prevSessionIdRef = useRef(currentSessionId);
+    useEffect(() => {
+        if (currentSessionId !== prevSessionIdRef.current) {
+            // Session changed - reset scroll state to ensure new messages scroll to bottom
+            resetScrollState();
+
+            // Immediately scroll to bottom to prevent keyboard from affecting scroll position
+            // Use requestAnimationFrame to ensure DOM has rendered
+            requestAnimationFrame(() => {
+                scrollToBottom('auto'); // Use 'auto' for instant scroll
+            });
+
+            prevSessionIdRef.current = currentSessionId;
+        }
+    }, [currentSessionId, resetScrollState, scrollToBottom]);
 
     // [FIX] Removed chat-scroll-request listener to prevent scrollToBottom conflict with Push-Up effect.
     // The push-up effect (handled by ChatMessages -> triggerPushUp) now manages the scroll on send.

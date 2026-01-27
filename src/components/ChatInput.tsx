@@ -17,10 +17,11 @@ const ChatInput = ({
     selectedModel,
     onSelectModel,
 }: ChatInputProps) => {
-    const { isLoading } = useChatContext();
+    const { isLoading, currentSessionId } = useChatContext();
     const [inputValue, setInputValue] = useState('');
     const [isComposing, setIsComposing] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const prevSessionIdRef = useRef<string | null>(currentSessionId);
 
     // Restore draft on mount
     useEffect(() => {
@@ -32,6 +33,21 @@ const ChatInput = ({
     useEffect(() => {
         localStorage.setItem('chat_input_draft', inputValue);
     }, [inputValue]);
+
+    // Blur input when switching sessions on mobile to prevent keyboard popup
+    useEffect(() => {
+        const isMobile = window.innerWidth <= 768;
+
+        // Check if session changed
+        if (currentSessionId !== prevSessionIdRef.current && prevSessionIdRef.current !== null) {
+            // Session switched - blur input on mobile to prevent keyboard
+            if (isMobile && textareaRef.current) {
+                textareaRef.current.blur();
+            }
+        }
+
+        prevSessionIdRef.current = currentSessionId;
+    }, [currentSessionId]);
 
     const handleSend = (e?: React.MouseEvent | React.KeyboardEvent) => {
         if (e) e.preventDefault();
@@ -104,7 +120,6 @@ const ChatInput = ({
                         // setTimeout(() => scrollToBottom(), 100);
                     }}
                     disabled={false} // [FIX] Allow typing while loading
-                    autoFocus
                     style={{ width: '100%', marginBottom: '8px', flex: 'none', resize: 'none' }}
                 />
                 <div

@@ -79,9 +79,17 @@ export function useChatScroll({
 
         const container = scrollContainerRef.current;
 
-        // Initial load: always scroll to bottom
+        // Initial load: always scroll to bottom IMMEDIATELY (no animation)
+        // Use requestAnimationFrame to ensure DOM has updated
         if (isInitialLoad.current && messages.length > 0) {
+            // Immediate scroll
             container.scrollTop = container.scrollHeight;
+            // Also schedule a RAF scroll to catch any late-rendered content
+            requestAnimationFrame(() => {
+                if (container) {
+                    container.scrollTop = container.scrollHeight;
+                }
+            });
             return;
         }
 
