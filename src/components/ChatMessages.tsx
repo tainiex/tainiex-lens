@@ -157,87 +157,41 @@ const renderMessageContent = (
     const isStreamingMessage = isLastMessage && isStreaming && msg.role === ChatRole.ASSISTANT;
 
     // Helper to parse content for Tool JSON blocks
-    // Uses a brace-counting approach to correctly identify nested JSON objects
+    // Strategy: Find tool JSON blocks that are standalone (not inside markdown code blocks)
+    // We check if the JSON appears to be outside of code fences (```)
     const renderContent = (content: string) => {
         if (!content) return null;
 
         const parts: React.ReactNode[] = [];
         let currentIndex = 0;
 
-        while (currentIndex < content.length) {
-            // Find the start of a potential tool block
-            // We look for `{ "tool":` or `{"tool":` with regex roughly to find definition
-            // But strict matching is better. Let's start by searching for `{`
-            const openBraceIndex = content.indexOf('{', currentIndex);
+        // Regex to find potential tool JSON blocks at line boundaries
+        // Match { followed by "tool": at start of line (with optional whitespace)
+        const toolPattern = /^\s*\{\s*"tool"\s*:/gm;
 
-            if (openBraceIndex === -1) {
-                // No more JSON starts, push the rest as markdown
-                const text = content.slice(currentIndex);
-                if (text.trim()) {
-                    parts.push(
-                        <div key={`md-${currentIndex}`} className="markdown-content">
-                            <ReactMarkdown
-                                remarkPlugins={[remarkGfm, remarkMath]}
-                                rehypePlugins={[[rehypeKatex, { strict: false }]]}
-                                components={markdownComponents}
-                            >
-                                {text}
-                            </ReactMarkdown>
-                        </div>
-                    );
-                }
-                break;
-            }
+        let match: RegExpExecArray | null;
+        toolPattern.lastIndex = 0;
 
-            // Push text before the brace
-            if (openBraceIndex > currentIndex) {
-                const text = content.slice(currentIndex, openBraceIndex);
-                if (text.trim()) {
-                    parts.push(
-                        <div key={`md-${currentIndex}`} className="markdown-content">
-                            <ReactMarkdown
-                                remarkPlugins={[remarkGfm, remarkMath]}
-                                rehypePlugins={[[rehypeKatex, { strict: false }]]}
-                                components={markdownComponents}
-                            >
-                                {text}
-                            </ReactMarkdown>
-                        </div>
-                    );
-                }
-            }
+        while ((match = toolPattern.exec(content)) !== null) {
+            const jsonStartIndex = match.index + match[0].indexOf('{');
 
-            // Now try to parse the object starting at openBraceIndex
-            // Heuristic: Check if it looks like a tool before expensive parsing
-            // We check a substring length to see if "tool" is present near the start
-            const peek = content.slice(openBraceIndex, openBraceIndex + 20).replace(/\s/g, '');
-            if (!peek.includes('"tool":')) {
-                // Not a tool block, just markdown containing {
-                // We advance normally. BUT wait, if we consume just `{`, standard markdown might break if it was part of code.
-                // However, since we are splitting by blocks, treating it as text is safer.
-                // We just advance index by 1 to include `{` in next markdown chunk search effectively
-                // Actually, efficient way: treat `{` as text and continue
-                const text = content.slice(openBraceIndex, openBraceIndex + 1);
-                parts.push(
-                    <div
-                        key={`md-char-${openBraceIndex}`}
-                        className="markdown-content"
-                        style={{ display: 'inline' }}
-                    >
-                        {text}
-                    </div>
-                );
-                currentIndex = openBraceIndex + 1;
+            // Check if this JSON is inside a markdown code block
+            // Count code fences before this position
+            const beforeContent = content.slice(0, jsonStartIndex);
+            const codeFenceCount = (beforeContent.match(/```/g) || []).length;
+
+            // If odd number of code fences, we're inside a code block - skip
+            if (codeFenceCount % 2 !== 0) {
                 continue;
             }
 
-            // It looks like a tool. Let's find the matching closing brace.
+            // Find the matching closing brace
             let balance = 0;
             let closeBraceIndex = -1;
             let inString = false;
             let escape = false;
 
-            for (let i = openBraceIndex; i < content.length; i++) {
+            for (let i = jsonStartIndex; i < content.length; i++) {
                 const char = content[i];
 
                 if (escape) {
@@ -269,53 +223,84 @@ const renderMessageContent = (
             }
 
             if (closeBraceIndex !== -1) {
-                // We have a balanced block
-                const jsonStr = content.slice(openBraceIndex, closeBraceIndex + 1);
+                const jsonStr = content.slice(jsonStartIndex, closeBraceIndex + 1);
                 try {
                     const toolData = JSON.parse(jsonStr);
                     if (toolData.tool && toolData.parameters) {
+                        // Render markdown before the tool block
+                        if (currentIndex < jsonStartIndex) {
+                            const mdText = content.slice(currentIndex, jsonStartIndex);
+                            if (mdText.trim()) {
+                                parts.push(
+                                    <div key={`md-${currentIndex}`} className="markdown-content">
+                                        <ReactMarkdown
+                                            remarkPlugins={[remarkGfm, remarkMath]}
+                                            rehypePlugins={[[rehypeKatex, { strict: false }]]}
+                                            components={markdownComponents}
+                                        >
+                                            {mdText}
+                                        </ReactMarkdown>
+                                    </div>
+                                );
+                            }
+                        }
+
+                        // Render the tool block
                         parts.push(
                             <ToolExecution
-                                key={`tool-${openBraceIndex}`}
+                                key={`tool-${jsonStartIndex}`}
                                 toolName={toolData.tool}
                                 parameters={toolData.parameters}
                             />
                         );
+
+                        // Update current index
                         currentIndex = closeBraceIndex + 1;
-                        continue;
-                    } else {
-                        // Valid JSON but not our tool schema? Treat as markdown code
-                        parts.push(
-                            <div key={`md-json-${openBraceIndex}`} className="markdown-content">
-                                <ReactMarkdown
-                                    remarkPlugins={[remarkGfm, remarkMath]}
-                                    rehypePlugins={[[rehypeKatex, { strict: false }]]}
-                                    components={markdownComponents}
-                                >
-                                    {jsonStr}
-                                </ReactMarkdown>
-                            </div>
-                        );
-                        currentIndex = closeBraceIndex + 1;
-                        continue;
+
+                        // Update regex lastIndex to continue searching after this block
+                        toolPattern.lastIndex = closeBraceIndex + 1;
                     }
                 } catch (e) {
-                    logger.warn('Failed to parse balanced block as JSON:', e);
-                    // Failed parse, treat as text
-                    // Advance just past `{` to avoid infinite loop
-                    currentIndex = openBraceIndex + 1;
-                    // We need to output the `{` we skipped
-                    parts.push(<span key={`err-${openBraceIndex}`}>{'{'}</span>);
-                    continue;
+                    // Invalid JSON, continue searching
+                    logger.debug('Failed to parse potential tool JSON:', e);
                 }
-            } else {
-                // Unbalanced, maybe incomplete stream? Treat as text
-                currentIndex = openBraceIndex + 1;
-                parts.push(<span key={`unbal-${openBraceIndex}`}>{'{'}</span>);
             }
         }
 
-        return parts;
+        // Render any remaining markdown content
+        if (currentIndex < content.length) {
+            const remainingText = content.slice(currentIndex);
+            if (remainingText.trim()) {
+                parts.push(
+                    <div key={`md-${currentIndex}`} className="markdown-content">
+                        <ReactMarkdown
+                            remarkPlugins={[remarkGfm, remarkMath]}
+                            rehypePlugins={[[rehypeKatex, { strict: false }]]}
+                            components={markdownComponents}
+                        >
+                            {remainingText}
+                        </ReactMarkdown>
+                    </div>
+                );
+            }
+        }
+
+        // If no tool blocks were found, just render as markdown
+        if (parts.length === 0 && content.trim()) {
+            return (
+                <div className="markdown-content">
+                    <ReactMarkdown
+                        remarkPlugins={[remarkGfm, remarkMath]}
+                        rehypePlugins={[[rehypeKatex, { strict: false }]]}
+                        components={markdownComponents}
+                    >
+                        {content}
+                    </ReactMarkdown>
+                </div>
+            );
+        }
+
+        return parts.length > 0 ? parts : null;
     };
 
     return (
