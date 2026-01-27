@@ -66,13 +66,6 @@ class SocketService {
     private circuitOpenTime: number = 0;
     private circuitResetTimeout: number = 60000; // 1 minute before trying again
 
-    // Health check mechanism
-    private healthCheckInterval: NodeJS.Timeout | null = null;
-    private healthCheckIntervalMs: number = 30000; // Check every 30 seconds
-    private pingTimeout: NodeJS.Timeout | null = null;
-    private pingTimeoutMs: number = 10000; // 10 second timeout for ping response
-    private lastPongReceived: number = Date.now();
-
     // Connection quality metrics
     private metrics: ConnectionMetrics = {
         latency: 0,
@@ -327,14 +320,7 @@ class SocketService {
             clearTimeout(this.reconnectionTimer);
             this.reconnectionTimer = null;
         }
-        if (this.healthCheckInterval) {
-            clearInterval(this.healthCheckInterval);
-            this.healthCheckInterval = null;
-        }
-        if (this.pingTimeout) {
-            clearTimeout(this.pingTimeout);
-            this.pingTimeout = null;
-        }
+
         if (this.tokenRefreshTimer) {
             clearTimeout(this.tokenRefreshTimer);
             this.tokenRefreshTimer = null;
@@ -537,80 +523,6 @@ class SocketService {
     }
 
     /**
-     * Start health check mechanism with ping/pong
-     */
-    private startHealthCheck() {
-        // Clear existing interval
-        if (this.healthCheckInterval) {
-            clearInterval(this.healthCheckInterval);
-        }
-
-        logger.debug('[SocketService] Starting health check mechanism');
-
-        this.healthCheckInterval = setInterval(() => {
-            const status = this.getAggregatedStatus();
-
-            // Only ping if we think we're connected
-            if (status === ConnectionStatus.CONNECTED) {
-                this.performHealthCheck();
-            }
-        }, this.healthCheckIntervalMs);
-    }
-
-    /**
-     * Perform a health check by sending ping and waiting for pong
-     */
-    private performHealthCheck() {
-        const now = Date.now();
-
-        // Check if we haven't received a pong in too long
-        if (now - this.lastPongReceived > this.pingTimeoutMs * 2) {
-            logger.warn('[SocketService] Health check failed: No pong received for too long');
-            this.handleHealthCheckFailure();
-            return;
-        }
-
-        // Send ping to primary socket (chat)
-        if (this.chatSocket?.connected) {
-            const pingTime = Date.now();
-            this.metrics.lastPingTime = pingTime;
-
-            // Set timeout for pong response
-            if (this.pingTimeout) {
-                clearTimeout(this.pingTimeout);
-            }
-
-            this.pingTimeout = setTimeout(() => {
-                logger.warn('[SocketService] Health check timeout: No pong received');
-                this.handleHealthCheckFailure();
-            }, this.pingTimeoutMs);
-
-            // Emit ping (server should respond with pong)
-            // Use 'any' to bypass strict type checking for custom events
-            (this.chatSocket as any).emit('ping', { timestamp: pingTime });
-        }
-    }
-
-    /**
-     * Handle health check failure
-     */
-    private handleHealthCheckFailure() {
-        logger.error('[SocketService] Health check failed. Triggering reconnection...');
-        this.metrics.failureCount++;
-
-        // Ensure forcedDisconnect is false so reconnection can proceed
-        // Health check failures should always trigger reconnection attempts
-        this.forcedDisconnect = false;
-
-        // Disconnect and schedule reconnection
-        if (this.chatSocket?.connected) {
-            this.chatSocket.disconnect();
-        }
-
-        this.scheduleReconnection('health_check_failed');
-    }
-
-    /**
      * Start token expiry monitoring
      */
     private startTokenExpiryMonitor() {
@@ -721,7 +633,6 @@ class SocketService {
 
             // Update metrics
             this.metrics.lastSuccessfulConnect = Date.now();
-            this.lastPongReceived = Date.now();
 
             // Reset or close circuit breaker
             if (this.circuitState === CircuitState.HALF_OPEN) {
@@ -729,23 +640,12 @@ class SocketService {
                 this.circuitState = CircuitState.CLOSED;
             }
 
-            // Start health check if all sockets are connected
             const status = this.getAggregatedStatus();
-            if (status === ConnectionStatus.CONNECTED) {
-                this.startHealthCheck();
-            }
-
             this.notifyListeners(status);
         });
 
         socket.on('disconnect', reason => {
             logger.warn(`[SocketService] ${name} Socket Disconnected: ${reason}`);
-
-            // Stop health check
-            if (this.healthCheckInterval) {
-                clearInterval(this.healthCheckInterval);
-                this.healthCheckInterval = null;
-            }
 
             const status = this.getAggregatedStatus();
             this.notifyListeners(status);
@@ -890,18 +790,6 @@ class SocketService {
         });
 
         // 5. Health Check Response
-        socket.on('pong', (data: { timestamp: number }) => {
-            const latency = Date.now() - data.timestamp;
-            this.metrics.latency = latency;
-            this.lastPongReceived = Date.now();
-
-            if (this.pingTimeout) {
-                clearTimeout(this.pingTimeout);
-                this.pingTimeout = null;
-            }
-
-            logger.debug(`[SocketService] ${name} pong received (latency: ${latency}ms)`);
-        });
 
         // 6. Reliability & ACK
         socket.onAny((event, ...args) => {
