@@ -598,6 +598,10 @@ class SocketService {
         logger.error('[SocketService] Health check failed. Triggering reconnection...');
         this.metrics.failureCount++;
 
+        // Ensure forcedDisconnect is false so reconnection can proceed
+        // Health check failures should always trigger reconnection attempts
+        this.forcedDisconnect = false;
+
         // Disconnect and schedule reconnection
         if (this.chatSocket?.connected) {
             this.chatSocket.disconnect();
